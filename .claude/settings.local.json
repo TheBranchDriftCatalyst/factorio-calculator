@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm view *)",
+      "Bash(python3 *)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(ln -sf ../../data data)",
+      "Bash(ln -sf ../../images images)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm --prefix /Users/panda/catalyst-devspace/.scratch/kirkmcdonald.github.io/app run typecheck)",
+      "Bash(npm --prefix /Users/panda/catalyst-devspace/.scratch/kirkmcdonald.github.io/app run dev)",
+      "Bash(echo \"started pid=$!\")",
+      "Read(//tmp/**)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_evaluate",
+      "Bash(npm --prefix /Users/panda/catalyst-devspace/.scratch/kirkmcdonald.github.io/app run test)",
+      "Bash(npm --prefix /Users/panda/catalyst-devspace/.scratch/kirkmcdonald.github.io/app install --no-audit --no-fund)",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_console_messages",
+      "Bash(npx playwright *)",
+      "Bash(npm i *)",
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(npm run *)",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_press_key",
+      "Bash(yarn tsc *)",
+      "Bash(yarn vitest *)",
+      "Bash(yarn dev *)",
+      "mcp__playwright__browser_resize"
+    ]
+  }
+}

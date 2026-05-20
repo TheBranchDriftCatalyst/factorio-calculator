@@ -1,0 +1,1640 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Factorio Blueprint Calculator" [level=1] [ref=e6]
+      - paragraph [ref=e7]:
+        - text: "Dataset:"
+        - code [ref=e8]: space-age-2.0.55.json
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - heading "Targets" [level=2] [ref=e12]
+        - button "+ Add target" [ref=e13] [cursor=pointer]
+      - list [ref=e14]:
+        - listitem [ref=e15]:
+          - generic [ref=e16]:
+            - button "Electronic circuit Electronic circuit electronics · Assembling machine 1" [expanded] [ref=e17]:
+              - img "Electronic circuit" [ref=e18]
+              - generic [ref=e19]: Electronic circuit
+              - generic [ref=e20]: electronics · Assembling machine 1
+              - img [ref=e21]
+            - generic [ref=e1662]:
+              - combobox [expanded] [active] [ref=e1664]
+              - listbox "Suggestions" [ref=e1665]:
+                - generic [ref=e1666]:
+                  - option "Accumulator Accumulator electronics · Assembling machine 1" [selected] [ref=e1667] [cursor=pointer]:
+                    - img "Accumulator" [ref=e1668]
+                    - generic [ref=e1669]:
+                      - generic [ref=e1670]: Accumulator
+                      - generic [ref=e1671]: electronics · Assembling machine 1
+                  - option "Active provider chest Active provider chest crafting · Assembling machine 1" [ref=e1672] [cursor=pointer]:
+                    - img "Active provider chest" [ref=e1673]
+                    - generic [ref=e1674]:
+                      - generic [ref=e1675]: Active provider chest
+                      - generic [ref=e1676]: crafting · Assembling machine 1
+                  - option "Advanced circuit Advanced circuit electronics · Assembling machine 1" [ref=e1677] [cursor=pointer]:
+                    - img "Advanced circuit" [ref=e1678]
+                    - generic [ref=e1679]:
+                      - generic [ref=e1680]: Advanced circuit
+                      - generic [ref=e1681]: electronics · Assembling machine 1
+                  - option "Agricultural science pack Agricultural science pack organic · Biochamber" [ref=e1682] [cursor=pointer]:
+                    - img "Agricultural science pack" [ref=e1683]
+                    - generic [ref=e1684]:
+                      - generic [ref=e1685]: Agricultural science pack
+                      - generic [ref=e1686]: organic · Biochamber
+                  - option "Agricultural tower Agricultural tower crafting · Assembling machine 1" [ref=e1687] [cursor=pointer]:
+                    - img "Agricultural tower" [ref=e1688]
+                    - generic [ref=e1689]:
+                      - generic [ref=e1690]: Agricultural tower
+                      - generic [ref=e1691]: crafting · Assembling machine 1
+                  - option "Ammonia Ammonia chemistry-or-cryogenics · Chemical plant" [ref=e1692] [cursor=pointer]:
+                    - img "Ammonia" [ref=e1693]
+                    - generic [ref=e1694]:
+                      - generic [ref=e1695]: Ammonia
+                      - generic [ref=e1696]: chemistry-or-cryogenics · Chemical plant
+                  - option "Arithmetic combinator Arithmetic combinator crafting · Assembling machine 1" [ref=e1697] [cursor=pointer]:
+                    - img "Arithmetic combinator" [ref=e1698]
+                    - generic [ref=e1699]:
+                      - generic [ref=e1700]: Arithmetic combinator
+                      - generic [ref=e1701]: crafting · Assembling machine 1
+                  - option "Artificial jellynut soil Artificial jellynut soil crafting · Assembling machine 1" [ref=e1702] [cursor=pointer]:
+                    - img "Artificial jellynut soil" [ref=e1703]
+                    - generic [ref=e1704]:
+                      - generic [ref=e1705]: Artificial jellynut soil
+                      - generic [ref=e1706]: crafting · Assembling machine 1
+                  - option "Artificial yumako soil Artificial yumako soil crafting · Assembling machine 1" [ref=e1707] [cursor=pointer]:
+                    - img "Artificial yumako soil" [ref=e1708]
+                    - generic [ref=e1709]:
+                      - generic [ref=e1710]: Artificial yumako soil
+                      - generic [ref=e1711]: crafting · Assembling machine 1
+                  - option "Artillery shell Artillery shell crafting · Assembling machine 1" [ref=e1712] [cursor=pointer]:
+                    - img "Artillery shell" [ref=e1713]
+                    - generic [ref=e1714]:
+                      - generic [ref=e1715]: Artillery shell
+                      - generic [ref=e1716]: crafting · Assembling machine 1
+                  - option "Artillery turret Artillery turret crafting · Assembling machine 1" [ref=e1717] [cursor=pointer]:
+                    - img "Artillery turret" [ref=e1718]
+                    - generic [ref=e1719]:
+                      - generic [ref=e1720]: Artillery turret
+                      - generic [ref=e1721]: crafting · Assembling machine 1
+                  - option "Artillery wagon Artillery wagon crafting · Assembling machine 1" [ref=e1722] [cursor=pointer]:
+                    - img "Artillery wagon" [ref=e1723]
+                    - generic [ref=e1724]:
+                      - generic [ref=e1725]: Artillery wagon
+                      - generic [ref=e1726]: crafting · Assembling machine 1
+                  - option "Assembling machine 1 Assembling machine 1 crafting · Assembling machine 1" [ref=e1727] [cursor=pointer]:
+                    - img "Assembling machine 1" [ref=e1728]
+                    - generic [ref=e1729]:
+                      - generic [ref=e1730]: Assembling machine 1
+                      - generic [ref=e1731]: crafting · Assembling machine 1
+                  - option "Assembling machine 2 Assembling machine 2 crafting · Assembling machine 1" [ref=e1732] [cursor=pointer]:
+                    - img "Assembling machine 2" [ref=e1733]
+                    - generic [ref=e1734]:
+                      - generic [ref=e1735]: Assembling machine 2
+                      - generic [ref=e1736]: crafting · Assembling machine 1
+                  - option "Assembling machine 3 Assembling machine 3 crafting · Assembling machine 1" [ref=e1737] [cursor=pointer]:
+                    - img "Assembling machine 3" [ref=e1738]
+                    - generic [ref=e1739]:
+                      - generic [ref=e1740]: Assembling machine 3
+                      - generic [ref=e1741]: crafting · Assembling machine 1
+                  - option "Asteroid collector Asteroid collector crafting · Assembling machine 1" [ref=e1742] [cursor=pointer]:
+                    - img "Asteroid collector" [ref=e1743]
+                    - generic [ref=e1744]:
+                      - generic [ref=e1745]: Asteroid collector
+                      - generic [ref=e1746]: crafting · Assembling machine 1
+                  - option "Atomic bomb Atomic bomb crafting · Assembling machine 1" [ref=e1747] [cursor=pointer]:
+                    - img "Atomic bomb" [ref=e1748]
+                    - generic [ref=e1749]:
+                      - generic [ref=e1750]: Atomic bomb
+                      - generic [ref=e1751]: crafting · Assembling machine 1
+                  - option "Automation science pack Automation science pack crafting · Assembling machine 1" [ref=e1752] [cursor=pointer]:
+                    - img "Automation science pack" [ref=e1753]
+                    - generic [ref=e1754]:
+                      - generic [ref=e1755]: Automation science pack
+                      - generic [ref=e1756]: crafting · Assembling machine 1
+                  - option "Barrel Barrel crafting · Assembling machine 1" [ref=e1757] [cursor=pointer]:
+                    - img "Barrel" [ref=e1758]
+                    - generic [ref=e1759]:
+                      - generic [ref=e1760]: Barrel
+                      - generic [ref=e1761]: crafting · Assembling machine 1
+                  - option "Battery Battery chemistry-or-cryogenics · Chemical plant" [ref=e1762] [cursor=pointer]:
+                    - img "Battery" [ref=e1763]
+                    - generic [ref=e1764]:
+                      - generic [ref=e1765]: Battery
+                      - generic [ref=e1766]: chemistry-or-cryogenics · Chemical plant
+                  - option "Beacon Beacon electronics · Assembling machine 1" [ref=e1767] [cursor=pointer]:
+                    - img "Beacon" [ref=e1768]
+                    - generic [ref=e1769]:
+                      - generic [ref=e1770]: Beacon
+                      - generic [ref=e1771]: electronics · Assembling machine 1
+                  - option "Belt immunity equipment Belt immunity equipment crafting · Assembling machine 1" [ref=e1772] [cursor=pointer]:
+                    - img "Belt immunity equipment" [ref=e1773]
+                    - generic [ref=e1774]:
+                      - generic [ref=e1775]: Belt immunity equipment
+                      - generic [ref=e1776]: crafting · Assembling machine 1
+                  - option "Big electric pole Big electric pole electronics · Assembling machine 1" [ref=e1777] [cursor=pointer]:
+                    - img "Big electric pole" [ref=e1778]
+                    - generic [ref=e1779]:
+                      - generic [ref=e1780]: Big electric pole
+                      - generic [ref=e1781]: electronics · Assembling machine 1
+                  - option "Big mining drill Big mining drill metallurgy · Foundry" [ref=e1782] [cursor=pointer]:
+                    - img "Big mining drill" [ref=e1783]
+                    - generic [ref=e1784]:
+                      - generic [ref=e1785]: Big mining drill
+                      - generic [ref=e1786]: metallurgy · Foundry
+                  - option "Biochamber Biochamber organic-or-assembling · Assembling machine 2" [ref=e1787] [cursor=pointer]:
+                    - img "Biochamber" [ref=e1788]
+                    - generic [ref=e1789]:
+                      - generic [ref=e1790]: Biochamber
+                      - generic [ref=e1791]: organic-or-assembling · Assembling machine 2
+                  - option "Bioflux Bioflux organic · Biochamber" [ref=e1792] [cursor=pointer]:
+                    - img "Bioflux" [ref=e1793]
+                    - generic [ref=e1794]:
+                      - generic [ref=e1795]: Bioflux
+                      - generic [ref=e1796]: organic · Biochamber
+                  - option "Biolab Biolab crafting · Assembling machine 1" [ref=e1797] [cursor=pointer]:
+                    - img "Biolab" [ref=e1798]
+                    - generic [ref=e1799]:
+                      - generic [ref=e1800]: Biolab
+                      - generic [ref=e1801]: crafting · Assembling machine 1
+                  - option "Biter egg Biter egg captive-spawner-process · Captive biter spawner" [ref=e1802] [cursor=pointer]:
+                    - img "Biter egg" [ref=e1803]
+                    - generic [ref=e1804]:
+                      - generic [ref=e1805]: Biter egg
+                      - generic [ref=e1806]: captive-spawner-process · Captive biter spawner
+                  - option "Blueprint Blueprint recycling · Recycler" [ref=e1807] [cursor=pointer]:
+                    - img "Blueprint" [ref=e1808]
+                    - generic [ref=e1809]:
+                      - generic [ref=e1810]: Blueprint
+                      - generic [ref=e1811]: recycling · Recycler
+                  - option "Blueprint book Blueprint book recycling · Recycler" [ref=e1812] [cursor=pointer]:
+                    - img "Blueprint book" [ref=e1813]
+                    - generic [ref=e1814]:
+                      - generic [ref=e1815]: Blueprint book
+                      - generic [ref=e1816]: recycling · Recycler
+                  - option "Boiler Boiler crafting · Assembling machine 1" [ref=e1817] [cursor=pointer]:
+                    - img "Boiler" [ref=e1818]
+                    - generic [ref=e1819]:
+                      - generic [ref=e1820]: Boiler
+                      - generic [ref=e1821]: crafting · Assembling machine 1
+                  - option "Buffer chest Buffer chest crafting · Assembling machine 1" [ref=e1822] [cursor=pointer]:
+                    - img "Buffer chest" [ref=e1823]
+                    - generic [ref=e1824]:
+                      - generic [ref=e1825]: Buffer chest
+                      - generic [ref=e1826]: crafting · Assembling machine 1
+                  - option "Bulk inserter Bulk inserter crafting · Assembling machine 1" [ref=e1827] [cursor=pointer]:
+                    - img "Bulk inserter" [ref=e1828]
+                    - generic [ref=e1829]:
+                      - generic [ref=e1830]: Bulk inserter
+                      - generic [ref=e1831]: crafting · Assembling machine 1
+                  - option "Burner generator Burner generator recycling · Recycler" [ref=e1832] [cursor=pointer]:
+                    - img "Burner generator" [ref=e1833]
+                    - generic [ref=e1834]:
+                      - generic [ref=e1835]: Burner generator
+                      - generic [ref=e1836]: recycling · Recycler
+                  - option "Burner inserter Burner inserter crafting · Assembling machine 1" [ref=e1837] [cursor=pointer]:
+                    - img "Burner inserter" [ref=e1838]
+                    - generic [ref=e1839]:
+                      - generic [ref=e1840]: Burner inserter
+                      - generic [ref=e1841]: crafting · Assembling machine 1
+                  - option "Burner mining drill Burner mining drill crafting · Assembling machine 1" [ref=e1842] [cursor=pointer]:
+                    - img "Burner mining drill" [ref=e1843]
+                    - generic [ref=e1844]:
+                      - generic [ref=e1845]: Burner mining drill
+                      - generic [ref=e1846]: crafting · Assembling machine 1
+                  - option "Calcite Calcite crushing · Crusher" [ref=e1847] [cursor=pointer]:
+                    - img "Calcite" [ref=e1848]
+                    - generic [ref=e1849]:
+                      - generic [ref=e1850]: Calcite
+                      - generic [ref=e1851]: crushing · Crusher
+                  - option "Cannon shell Cannon shell crafting · Assembling machine 1" [ref=e1852] [cursor=pointer]:
+                    - img "Cannon shell" [ref=e1853]
+                    - generic [ref=e1854]:
+                      - generic [ref=e1855]: Cannon shell
+                      - generic [ref=e1856]: crafting · Assembling machine 1
+                  - option "Captive biter spawner Captive biter spawner cryogenics · Cryogenic plant" [ref=e1857] [cursor=pointer]:
+                    - img "Captive biter spawner" [ref=e1858]
+                    - generic [ref=e1859]:
+                      - generic [ref=e1860]: Captive biter spawner
+                      - generic [ref=e1861]: cryogenics · Cryogenic plant
+                  - option "Capture bot rocket Capture bot rocket crafting · Assembling machine 1" [ref=e1862] [cursor=pointer]:
+                    - img "Capture bot rocket" [ref=e1863]
+                    - generic [ref=e1864]:
+                      - generic [ref=e1865]: Capture bot rocket
+                      - generic [ref=e1866]: crafting · Assembling machine 1
+                  - option "Car Car crafting · Assembling machine 1" [ref=e1867] [cursor=pointer]:
+                    - img "Car" [ref=e1868]
+                    - generic [ref=e1869]:
+                      - generic [ref=e1870]: Car
+                      - generic [ref=e1871]: crafting · Assembling machine 1
+                  - option "Carbon Carbon chemistry-or-cryogenics · Chemical plant" [ref=e1872] [cursor=pointer]:
+                    - img "Carbon" [ref=e1873]
+                    - generic [ref=e1874]:
+                      - generic [ref=e1875]: Carbon
+                      - generic [ref=e1876]: chemistry-or-cryogenics · Chemical plant
+                  - option "Carbon fiber Carbon fiber organic · Biochamber" [ref=e1877] [cursor=pointer]:
+                    - img "Carbon fiber" [ref=e1878]
+                    - generic [ref=e1879]:
+                      - generic [ref=e1880]: Carbon fiber
+                      - generic [ref=e1881]: organic · Biochamber
+                  - option "Carbonic asteroid chunk Carbonic asteroid chunk crushing · Crusher" [ref=e1882] [cursor=pointer]:
+                    - img "Carbonic asteroid chunk" [ref=e1883]
+                    - generic [ref=e1884]:
+                      - generic [ref=e1885]: Carbonic asteroid chunk
+                      - generic [ref=e1886]: crushing · Crusher
+                  - option "Cargo bay Cargo bay crafting · Assembling machine 1" [ref=e1887] [cursor=pointer]:
+                    - img "Cargo bay" [ref=e1888]
+                    - generic [ref=e1889]:
+                      - generic [ref=e1890]: Cargo bay
+                      - generic [ref=e1891]: crafting · Assembling machine 1
+                  - option "Cargo landing pad Cargo landing pad crafting · Assembling machine 1" [ref=e1892] [cursor=pointer]:
+                    - img "Cargo landing pad" [ref=e1893]
+                    - generic [ref=e1894]:
+                      - generic [ref=e1895]: Cargo landing pad
+                      - generic [ref=e1896]: crafting · Assembling machine 1
+                  - option "Cargo wagon Cargo wagon crafting · Assembling machine 1" [ref=e1897] [cursor=pointer]:
+                    - img "Cargo wagon" [ref=e1898]
+                    - generic [ref=e1899]:
+                      - generic [ref=e1900]: Cargo wagon
+                      - generic [ref=e1901]: crafting · Assembling machine 1
+                  - option "Centrifuge Centrifuge crafting · Assembling machine 1" [ref=e1902] [cursor=pointer]:
+                    - img "Centrifuge" [ref=e1903]
+                    - generic [ref=e1904]:
+                      - generic [ref=e1905]: Centrifuge
+                      - generic [ref=e1906]: crafting · Assembling machine 1
+                  - option "Chemical plant Chemical plant crafting · Assembling machine 1" [ref=e1907] [cursor=pointer]:
+                    - img "Chemical plant" [ref=e1908]
+                    - generic [ref=e1909]:
+                      - generic [ref=e1910]: Chemical plant
+                      - generic [ref=e1911]: crafting · Assembling machine 1
+                  - option "Chemical science pack Chemical science pack crafting · Assembling machine 1" [ref=e1912] [cursor=pointer]:
+                    - img "Chemical science pack" [ref=e1913]
+                    - generic [ref=e1914]:
+                      - generic [ref=e1915]: Chemical science pack
+                      - generic [ref=e1916]: crafting · Assembling machine 1
+                  - option "Cliff explosives Cliff explosives crafting · Assembling machine 1" [ref=e1917] [cursor=pointer]:
+                    - img "Cliff explosives" [ref=e1918]
+                    - generic [ref=e1919]:
+                      - generic [ref=e1920]: Cliff explosives
+                      - generic [ref=e1921]: crafting · Assembling machine 1
+                  - option "Cluster grenade Cluster grenade crafting · Assembling machine 1" [ref=e1922] [cursor=pointer]:
+                    - img "Cluster grenade" [ref=e1923]
+                    - generic [ref=e1924]:
+                      - generic [ref=e1925]: Cluster grenade
+                      - generic [ref=e1926]: crafting · Assembling machine 1
+                  - option "Coal Coal recycling · Recycler" [ref=e1927] [cursor=pointer]:
+                    - img "Coal" [ref=e1928]
+                    - generic [ref=e1929]:
+                      - generic [ref=e1930]: Coal
+                      - generic [ref=e1931]: recycling · Recycler
+                  - option "Coin Coin recycling · Recycler" [ref=e1932] [cursor=pointer]:
+                    - img "Coin" [ref=e1933]
+                    - generic [ref=e1934]:
+                      - generic [ref=e1935]: Coin
+                      - generic [ref=e1936]: recycling · Recycler
+                  - option "Combat shotgun Combat shotgun crafting · Assembling machine 1" [ref=e1937] [cursor=pointer]:
+                    - img "Combat shotgun" [ref=e1938]
+                    - generic [ref=e1939]:
+                      - generic [ref=e1940]: Combat shotgun
+                      - generic [ref=e1941]: crafting · Assembling machine 1
+                  - option "Concrete Concrete crafting-with-fluid · Assembling machine 2" [ref=e1942] [cursor=pointer]:
+                    - img "Concrete" [ref=e1943]
+                    - generic [ref=e1944]:
+                      - generic [ref=e1945]: Concrete
+                      - generic [ref=e1946]: crafting-with-fluid · Assembling machine 2
+                  - option "Constant combinator Constant combinator crafting · Assembling machine 1" [ref=e1947] [cursor=pointer]:
+                    - img "Constant combinator" [ref=e1948]
+                    - generic [ref=e1949]:
+                      - generic [ref=e1950]: Constant combinator
+                      - generic [ref=e1951]: crafting · Assembling machine 1
+                  - option "Construction robot Construction robot crafting · Assembling machine 1" [ref=e1952] [cursor=pointer]:
+                    - img "Construction robot" [ref=e1953]
+                    - generic [ref=e1954]:
+                      - generic [ref=e1955]: Construction robot
+                      - generic [ref=e1956]: crafting · Assembling machine 1
+                  - option "Copper bacteria Copper bacteria organic-or-hand-crafting · Assembling machine 2" [ref=e1957] [cursor=pointer]:
+                    - img "Copper bacteria" [ref=e1958]
+                    - generic [ref=e1959]:
+                      - generic [ref=e1960]: Copper bacteria
+                      - generic [ref=e1961]: organic-or-hand-crafting · Assembling machine 2
+                  - option "Copper cable Copper cable electronics · Assembling machine 1" [ref=e1962] [cursor=pointer]:
+                    - img "Copper cable" [ref=e1963]
+                    - generic [ref=e1964]:
+                      - generic [ref=e1965]: Copper cable
+                      - generic [ref=e1966]: electronics · Assembling machine 1
+                  - option "Copper ore Copper ore crushing · Crusher" [ref=e1967] [cursor=pointer]:
+                    - img "Copper ore" [ref=e1968]
+                    - generic [ref=e1969]:
+                      - generic [ref=e1970]: Copper ore
+                      - generic [ref=e1971]: crushing · Crusher
+                  - option "Copper plate Copper plate smelting · Electric furnace" [ref=e1972] [cursor=pointer]:
+                    - img "Copper plate" [ref=e1973]
+                    - generic [ref=e1974]:
+                      - generic [ref=e1975]: Copper plate
+                      - generic [ref=e1976]: smelting · Electric furnace
+                  - option "copy-paste-tool recycling · Recycler" [ref=e1977] [cursor=pointer]:
+                    - generic [ref=e1978]:
+                      - generic [ref=e1979]: copy-paste-tool
+                      - generic [ref=e1980]: recycling · Recycler
+                  - option "Crusher Crusher crafting · Assembling machine 1" [ref=e1981] [cursor=pointer]:
+                    - img "Crusher" [ref=e1982]
+                    - generic [ref=e1983]:
+                      - generic [ref=e1984]: Crusher
+                      - generic [ref=e1985]: crafting · Assembling machine 1
+                  - option "Cryogenic plant Cryogenic plant cryogenics-or-assembling · Assembling machine 2" [ref=e1986] [cursor=pointer]:
+                    - img "Cryogenic plant" [ref=e1987]
+                    - generic [ref=e1988]:
+                      - generic [ref=e1989]: Cryogenic plant
+                      - generic [ref=e1990]: cryogenics-or-assembling · Assembling machine 2
+                  - option "Cryogenic science pack Cryogenic science pack cryogenics · Cryogenic plant" [ref=e1991] [cursor=pointer]:
+                    - img "Cryogenic science pack" [ref=e1992]
+                    - generic [ref=e1993]:
+                      - generic [ref=e1994]: Cryogenic science pack
+                      - generic [ref=e1995]: cryogenics · Cryogenic plant
+                  - option "cut-paste-tool recycling · Recycler" [ref=e1996] [cursor=pointer]:
+                    - generic [ref=e1997]:
+                      - generic [ref=e1998]: cut-paste-tool
+                      - generic [ref=e1999]: recycling · Recycler
+                  - option "Decider combinator Decider combinator crafting · Assembling machine 1" [ref=e2000] [cursor=pointer]:
+                    - img "Decider combinator" [ref=e2001]
+                    - generic [ref=e2002]:
+                      - generic [ref=e2003]: Decider combinator
+                      - generic [ref=e2004]: crafting · Assembling machine 1
+                  - option "Deconstruction planner Deconstruction planner recycling · Recycler" [ref=e2005] [cursor=pointer]:
+                    - img "Deconstruction planner" [ref=e2006]
+                    - generic [ref=e2007]:
+                      - generic [ref=e2008]: Deconstruction planner
+                      - generic [ref=e2009]: recycling · Recycler
+                  - option "Defender capsule Defender capsule crafting · Assembling machine 1" [ref=e2010] [cursor=pointer]:
+                    - img "Defender capsule" [ref=e2011]
+                    - generic [ref=e2012]:
+                      - generic [ref=e2013]: Defender capsule
+                      - generic [ref=e2014]: crafting · Assembling machine 1
+                  - option "Depleted uranium fuel cell Depleted uranium fuel cell recycling · Recycler" [ref=e2015] [cursor=pointer]:
+                    - img "Depleted uranium fuel cell" [ref=e2016]
+                    - generic [ref=e2017]:
+                      - generic [ref=e2018]: Depleted uranium fuel cell
+                      - generic [ref=e2019]: recycling · Recycler
+                  - option "Destroyer capsule Destroyer capsule crafting · Assembling machine 1" [ref=e2020] [cursor=pointer]:
+                    - img "Destroyer capsule" [ref=e2021]
+                    - generic [ref=e2022]:
+                      - generic [ref=e2023]: Destroyer capsule
+                      - generic [ref=e2024]: crafting · Assembling machine 1
+                  - option "Discharge defense Discharge defense electronics · Assembling machine 1" [ref=e2025] [cursor=pointer]:
+                    - img "Discharge defense" [ref=e2026]
+                    - generic [ref=e2027]:
+                      - generic [ref=e2028]: Discharge defense
+                      - generic [ref=e2029]: electronics · Assembling machine 1
+                  - option "Display panel Display panel crafting · Assembling machine 1" [ref=e2030] [cursor=pointer]:
+                    - img "Display panel" [ref=e2031]
+                    - generic [ref=e2032]:
+                      - generic [ref=e2033]: Display panel
+                      - generic [ref=e2034]: crafting · Assembling machine 1
+                  - option "Distractor capsule Distractor capsule crafting · Assembling machine 1" [ref=e2035] [cursor=pointer]:
+                    - img "Distractor capsule" [ref=e2036]
+                    - generic [ref=e2037]:
+                      - generic [ref=e2038]: Distractor capsule
+                      - generic [ref=e2039]: crafting · Assembling machine 1
+                  - option "Efficiency module Efficiency module electronics · Assembling machine 1" [ref=e2040] [cursor=pointer]:
+                    - img "Efficiency module" [ref=e2041]
+                    - generic [ref=e2042]:
+                      - generic [ref=e2043]: Efficiency module
+                      - generic [ref=e2044]: electronics · Assembling machine 1
+                  - option "Efficiency module 2 Efficiency module 2 electronics · Assembling machine 1" [ref=e2045] [cursor=pointer]:
+                    - img "Efficiency module 2" [ref=e2046]
+                    - generic [ref=e2047]:
+                      - generic [ref=e2048]: Efficiency module 2
+                      - generic [ref=e2049]: electronics · Assembling machine 1
+                  - option "Efficiency module 3 Efficiency module 3 electronics · Assembling machine 1" [ref=e2050] [cursor=pointer]:
+                    - img "Efficiency module 3" [ref=e2051]
+                    - generic [ref=e2052]:
+                      - generic [ref=e2053]: Efficiency module 3
+                      - generic [ref=e2054]: electronics · Assembling machine 1
+                  - option "Electric energy interface Electric energy interface recycling · Recycler" [ref=e2055] [cursor=pointer]:
+                    - img "Electric energy interface" [ref=e2056]
+                    - generic [ref=e2057]:
+                      - generic [ref=e2058]: Electric energy interface
+                      - generic [ref=e2059]: recycling · Recycler
+                  - option "Electric engine unit Electric engine unit crafting-with-fluid · Assembling machine 2" [ref=e2060] [cursor=pointer]:
+                    - img "Electric engine unit" [ref=e2061]
+                    - generic [ref=e2062]:
+                      - generic [ref=e2063]: Electric engine unit
+                      - generic [ref=e2064]: crafting-with-fluid · Assembling machine 2
+                  - option "Electric furnace Electric furnace crafting · Assembling machine 1" [ref=e2065] [cursor=pointer]:
+                    - img "Electric furnace" [ref=e2066]
+                    - generic [ref=e2067]:
+                      - generic [ref=e2068]: Electric furnace
+                      - generic [ref=e2069]: crafting · Assembling machine 1
+                  - option "Electric mining drill Electric mining drill crafting · Assembling machine 1" [ref=e2070] [cursor=pointer]:
+                    - img "Electric mining drill" [ref=e2071]
+                    - generic [ref=e2072]:
+                      - generic [ref=e2073]: Electric mining drill
+                      - generic [ref=e2074]: crafting · Assembling machine 1
+                  - option "Electrolyte Electrolyte electromagnetics · Electromagnetic plant" [ref=e2075] [cursor=pointer]:
+                    - img "Electrolyte" [ref=e2076]
+                    - generic [ref=e2077]:
+                      - generic [ref=e2078]: Electrolyte
+                      - generic [ref=e2079]: electromagnetics · Electromagnetic plant
+                  - option "Electromagnetic plant Electromagnetic plant electronics-or-assembling · Assembling machine 2" [ref=e2080] [cursor=pointer]:
+                    - img "Electromagnetic plant" [ref=e2081]
+                    - generic [ref=e2082]:
+                      - generic [ref=e2083]: Electromagnetic plant
+                      - generic [ref=e2084]: electronics-or-assembling · Assembling machine 2
+                  - option "Electromagnetic science pack Electromagnetic science pack electromagnetics · Electromagnetic plant" [ref=e2085] [cursor=pointer]:
+                    - img "Electromagnetic science pack" [ref=e2086]
+                    - generic [ref=e2087]:
+                      - generic [ref=e2088]: Electromagnetic science pack
+                      - generic [ref=e2089]: electromagnetics · Electromagnetic plant
+                  - option "Electronic circuit Electronic circuit electronics · Assembling machine 1" [ref=e2090] [cursor=pointer]:
+                    - img "Electronic circuit" [ref=e2091]
+                    - generic [ref=e2092]:
+                      - generic [ref=e2093]: Electronic circuit
+                      - generic [ref=e2094]: electronics · Assembling machine 1
+                    - img [ref=e2095]
+                  - option "Empty module slot Empty module slot recycling · Recycler" [ref=e2097] [cursor=pointer]:
+                    - img "Empty module slot" [ref=e2098]
+                    - generic [ref=e2099]:
+                      - generic [ref=e2100]: Empty module slot
+                      - generic [ref=e2101]: recycling · Recycler
+                  - option "Energy shield Energy shield crafting · Assembling machine 1" [ref=e2102] [cursor=pointer]:
+                    - img "Energy shield" [ref=e2103]
+                    - generic [ref=e2104]:
+                      - generic [ref=e2105]: Energy shield
+                      - generic [ref=e2106]: crafting · Assembling machine 1
+                  - option "Energy shield MK2 Energy shield MK2 crafting · Assembling machine 1" [ref=e2107] [cursor=pointer]:
+                    - img "Energy shield MK2" [ref=e2108]
+                    - generic [ref=e2109]:
+                      - generic [ref=e2110]: Energy shield MK2
+                      - generic [ref=e2111]: crafting · Assembling machine 1
+                  - option "Engine unit Engine unit advanced-crafting · Assembling machine 1" [ref=e2112] [cursor=pointer]:
+                    - img "Engine unit" [ref=e2113]
+                    - generic [ref=e2114]:
+                      - generic [ref=e2115]: Engine unit
+                      - generic [ref=e2116]: advanced-crafting · Assembling machine 1
+                  - option "Exoskeleton Exoskeleton crafting · Assembling machine 1" [ref=e2117] [cursor=pointer]:
+                    - img "Exoskeleton" [ref=e2118]
+                    - generic [ref=e2119]:
+                      - generic [ref=e2120]: Exoskeleton
+                      - generic [ref=e2121]: crafting · Assembling machine 1
+                  - option "Explosive cannon shell Explosive cannon shell crafting · Assembling machine 1" [ref=e2122] [cursor=pointer]:
+                    - img "Explosive cannon shell" [ref=e2123]
+                    - generic [ref=e2124]:
+                      - generic [ref=e2125]: Explosive cannon shell
+                      - generic [ref=e2126]: crafting · Assembling machine 1
+                  - option "Explosive rocket Explosive rocket crafting · Assembling machine 1" [ref=e2127] [cursor=pointer]:
+                    - img "Explosive rocket" [ref=e2128]
+                    - generic [ref=e2129]:
+                      - generic [ref=e2130]: Explosive rocket
+                      - generic [ref=e2131]: crafting · Assembling machine 1
+                  - option "Explosive uranium cannon shell Explosive uranium cannon shell crafting · Assembling machine 1" [ref=e2132] [cursor=pointer]:
+                    - img "Explosive uranium cannon shell" [ref=e2133]
+                    - generic [ref=e2134]:
+                      - generic [ref=e2135]: Explosive uranium cannon shell
+                      - generic [ref=e2136]: crafting · Assembling machine 1
+                  - option "Explosives Explosives chemistry-or-cryogenics · Chemical plant" [ref=e2137] [cursor=pointer]:
+                    - img "Explosives" [ref=e2138]
+                    - generic [ref=e2139]:
+                      - generic [ref=e2140]: Explosives
+                      - generic [ref=e2141]: chemistry-or-cryogenics · Chemical plant
+                  - option "Express loader Express loader crafting · Assembling machine 1" [ref=e2142] [cursor=pointer]:
+                    - img "Express loader" [ref=e2143]
+                    - generic [ref=e2144]:
+                      - generic [ref=e2145]: Express loader
+                      - generic [ref=e2146]: crafting · Assembling machine 1
+                  - option "Express splitter Express splitter crafting-with-fluid-or-metallurgy · Assembling machine 2" [ref=e2147] [cursor=pointer]:
+                    - img "Express splitter" [ref=e2148]
+                    - generic [ref=e2149]:
+                      - generic [ref=e2150]: Express splitter
+                      - generic [ref=e2151]: crafting-with-fluid-or-metallurgy · Assembling machine 2
+                  - option "Express transport belt Express transport belt crafting-with-fluid-or-metallurgy · Assembling machine 2" [ref=e2152] [cursor=pointer]:
+                    - img "Express transport belt" [ref=e2153]
+                    - generic [ref=e2154]:
+                      - generic [ref=e2155]: Express transport belt
+                      - generic [ref=e2156]: crafting-with-fluid-or-metallurgy · Assembling machine 2
+                  - option "Express underground belt Express underground belt crafting-with-fluid-or-metallurgy · Assembling machine 2" [ref=e2157] [cursor=pointer]:
+                    - img "Express underground belt" [ref=e2158]
+                    - generic [ref=e2159]:
+                      - generic [ref=e2160]: Express underground belt
+                      - generic [ref=e2161]: crafting-with-fluid-or-metallurgy · Assembling machine 2
+                  - option "Fast inserter Fast inserter crafting · Assembling machine 1" [ref=e2162] [cursor=pointer]:
+                    - img "Fast inserter" [ref=e2163]
+                    - generic [ref=e2164]:
+                      - generic [ref=e2165]: Fast inserter
+                      - generic [ref=e2166]: crafting · Assembling machine 1
+                  - option "Fast loader Fast loader crafting · Assembling machine 1" [ref=e2167] [cursor=pointer]:
+                    - img "Fast loader" [ref=e2168]
+                    - generic [ref=e2169]:
+                      - generic [ref=e2170]: Fast loader
+                      - generic [ref=e2171]: crafting · Assembling machine 1
+                  - option "Fast splitter Fast splitter pressing · Assembling machine 1" [ref=e2172] [cursor=pointer]:
+                    - img "Fast splitter" [ref=e2173]
+                    - generic [ref=e2174]:
+                      - generic [ref=e2175]: Fast splitter
+                      - generic [ref=e2176]: pressing · Assembling machine 1
+                  - option "Fast transport belt Fast transport belt pressing · Assembling machine 1" [ref=e2177] [cursor=pointer]:
+                    - img "Fast transport belt" [ref=e2178]
+                    - generic [ref=e2179]:
+                      - generic [ref=e2180]: Fast transport belt
+                      - generic [ref=e2181]: pressing · Assembling machine 1
+                  - option "Fast underground belt Fast underground belt pressing · Assembling machine 1" [ref=e2182] [cursor=pointer]:
+                    - img "Fast underground belt" [ref=e2183]
+                    - generic [ref=e2184]:
+                      - generic [ref=e2185]: Fast underground belt
+                      - generic [ref=e2186]: pressing · Assembling machine 1
+                  - option "Firearm magazine Firearm magazine crafting · Assembling machine 1" [ref=e2187] [cursor=pointer]:
+                    - img "Firearm magazine" [ref=e2188]
+                    - generic [ref=e2189]:
+                      - generic [ref=e2190]: Firearm magazine
+                      - generic [ref=e2191]: crafting · Assembling machine 1
+                  - option "Flamethrower Flamethrower crafting · Assembling machine 1" [ref=e2192] [cursor=pointer]:
+                    - img "Flamethrower" [ref=e2193]
+                    - generic [ref=e2194]:
+                      - generic [ref=e2195]: Flamethrower
+                      - generic [ref=e2196]: crafting · Assembling machine 1
+                  - option "Flamethrower ammo Flamethrower ammo chemistry · Chemical plant" [ref=e2197] [cursor=pointer]:
+                    - img "Flamethrower ammo" [ref=e2198]
+                    - generic [ref=e2199]:
+                      - generic [ref=e2200]: Flamethrower ammo
+                      - generic [ref=e2201]: chemistry · Chemical plant
+                  - option "Flamethrower turret Flamethrower turret crafting · Assembling machine 1" [ref=e2202] [cursor=pointer]:
+                    - img "Flamethrower turret" [ref=e2203]
+                    - generic [ref=e2204]:
+                      - generic [ref=e2205]: Flamethrower turret
+                      - generic [ref=e2206]: crafting · Assembling machine 1
+                  - option "Fluid wagon Fluid wagon crafting · Assembling machine 1" [ref=e2207] [cursor=pointer]:
+                    - img "Fluid wagon" [ref=e2208]
+                    - generic [ref=e2209]:
+                      - generic [ref=e2210]: Fluid wagon
+                      - generic [ref=e2211]: crafting · Assembling machine 1
+                  - option "Fluoroketone (Cold) Fluoroketone (Cold) cryogenics · Cryogenic plant" [ref=e2212] [cursor=pointer]:
+                    - img "Fluoroketone (Cold)" [ref=e2213]
+                    - generic [ref=e2214]:
+                      - generic [ref=e2215]: Fluoroketone (Cold)
+                      - generic [ref=e2216]: cryogenics · Cryogenic plant
+                  - option "Fluoroketone (Hot) Fluoroketone (Hot) cryogenics · Cryogenic plant" [ref=e2217] [cursor=pointer]:
+                    - img "Fluoroketone (Hot)" [ref=e2218]
+                    - generic [ref=e2219]:
+                      - generic [ref=e2220]: Fluoroketone (Hot)
+                      - generic [ref=e2221]: cryogenics · Cryogenic plant
+                  - option "Flying robot frame Flying robot frame crafting · Assembling machine 1" [ref=e2222] [cursor=pointer]:
+                    - img "Flying robot frame" [ref=e2223]
+                    - generic [ref=e2224]:
+                      - generic [ref=e2225]: Flying robot frame
+                      - generic [ref=e2226]: crafting · Assembling machine 1
+                  - option "Foundation Foundation crafting-with-fluid · Assembling machine 2" [ref=e2227] [cursor=pointer]:
+                    - img "Foundation" [ref=e2228]
+                    - generic [ref=e2229]:
+                      - generic [ref=e2230]: Foundation
+                      - generic [ref=e2231]: crafting-with-fluid · Assembling machine 2
+                  - option "Foundry Foundry metallurgy-or-assembling · Assembling machine 2" [ref=e2232] [cursor=pointer]:
+                    - img "Foundry" [ref=e2233]
+                    - generic [ref=e2234]:
+                      - generic [ref=e2235]: Foundry
+                      - generic [ref=e2236]: metallurgy-or-assembling · Assembling machine 2
+                  - option "Fusion generator Fusion generator cryogenics · Cryogenic plant" [ref=e2237] [cursor=pointer]:
+                    - img "Fusion generator" [ref=e2238]
+                    - generic [ref=e2239]:
+                      - generic [ref=e2240]: Fusion generator
+                      - generic [ref=e2241]: cryogenics · Cryogenic plant
+                  - option "Fusion power cell Fusion power cell cryogenics · Cryogenic plant" [ref=e2242] [cursor=pointer]:
+                    - img "Fusion power cell" [ref=e2243]
+                    - generic [ref=e2244]:
+                      - generic [ref=e2245]: Fusion power cell
+                      - generic [ref=e2246]: cryogenics · Cryogenic plant
+                  - option "Fusion reactor Fusion reactor cryogenics · Cryogenic plant" [ref=e2247] [cursor=pointer]:
+                    - img "Fusion reactor" [ref=e2248]
+                    - generic [ref=e2249]:
+                      - generic [ref=e2250]: Fusion reactor
+                      - generic [ref=e2251]: cryogenics · Cryogenic plant
+                  - option "Gate Gate crafting · Assembling machine 1" [ref=e2252] [cursor=pointer]:
+                    - img "Gate" [ref=e2253]
+                    - generic [ref=e2254]:
+                      - generic [ref=e2255]: Gate
+                      - generic [ref=e2256]: crafting · Assembling machine 1
+                  - option "Grenade Grenade crafting · Assembling machine 1" [ref=e2257] [cursor=pointer]:
+                    - img "Grenade" [ref=e2258]
+                    - generic [ref=e2259]:
+                      - generic [ref=e2260]: Grenade
+                      - generic [ref=e2261]: crafting · Assembling machine 1
+                  - option "Gun turret Gun turret crafting · Assembling machine 1" [ref=e2262] [cursor=pointer]:
+                    - img "Gun turret" [ref=e2263]
+                    - generic [ref=e2264]:
+                      - generic [ref=e2265]: Gun turret
+                      - generic [ref=e2266]: crafting · Assembling machine 1
+                  - option "Hazard concrete Hazard concrete crafting · Assembling machine 1" [ref=e2267] [cursor=pointer]:
+                    - img "Hazard concrete" [ref=e2268]
+                    - generic [ref=e2269]:
+                      - generic [ref=e2270]: Hazard concrete
+                      - generic [ref=e2271]: crafting · Assembling machine 1
+                  - option "Heat exchanger Heat exchanger crafting · Assembling machine 1" [ref=e2272] [cursor=pointer]:
+                    - img "Heat exchanger" [ref=e2273]
+                    - generic [ref=e2274]:
+                      - generic [ref=e2275]: Heat exchanger
+                      - generic [ref=e2276]: crafting · Assembling machine 1
+                  - option "Heat interface Heat interface crafting · Assembling machine 1" [ref=e2277] [cursor=pointer]:
+                    - img "Heat interface" [ref=e2278]
+                    - generic [ref=e2279]:
+                      - generic [ref=e2280]: Heat interface
+                      - generic [ref=e2281]: crafting · Assembling machine 1
+                  - option "Heat pipe Heat pipe crafting · Assembling machine 1" [ref=e2282] [cursor=pointer]:
+                    - img "Heat pipe" [ref=e2283]
+                    - generic [ref=e2284]:
+                      - generic [ref=e2285]: Heat pipe
+                      - generic [ref=e2286]: crafting · Assembling machine 1
+                  - option "Heating tower Heating tower crafting · Assembling machine 1" [ref=e2287] [cursor=pointer]:
+                    - img "Heating tower" [ref=e2288]
+                    - generic [ref=e2289]:
+                      - generic [ref=e2290]: Heating tower
+                      - generic [ref=e2291]: crafting · Assembling machine 1
+                  - option "Heavy armor Heavy armor crafting · Assembling machine 1" [ref=e2292] [cursor=pointer]:
+                    - img "Heavy armor" [ref=e2293]
+                    - generic [ref=e2294]:
+                      - generic [ref=e2295]: Heavy armor
+                      - generic [ref=e2296]: crafting · Assembling machine 1
+                  - option "Heavy oil Heavy oil oil-processing · Oil refinery" [ref=e2297] [cursor=pointer]:
+                    - img "Heavy oil" [ref=e2298]
+                    - generic [ref=e2299]:
+                      - generic [ref=e2300]: Heavy oil
+                      - generic [ref=e2301]: oil-processing · Oil refinery
+                  - option "Holmium ore Holmium ore recycling · Recycler" [ref=e2302] [cursor=pointer]:
+                    - img "Holmium ore" [ref=e2303]
+                    - generic [ref=e2304]:
+                      - generic [ref=e2305]: Holmium ore
+                      - generic [ref=e2306]: recycling · Recycler
+                  - option "Holmium plate Holmium plate crafting-with-fluid-or-metallurgy · Assembling machine 2" [ref=e2307] [cursor=pointer]:
+                    - img "Holmium plate" [ref=e2308]
+                    - generic [ref=e2309]:
+                      - generic [ref=e2310]: Holmium plate
+                      - generic [ref=e2311]: crafting-with-fluid-or-metallurgy · Assembling machine 2
+                  - option "Holmium solution Holmium solution chemistry · Chemical plant" [ref=e2312] [cursor=pointer]:
+                    - img "Holmium solution" [ref=e2313]
+                    - generic [ref=e2314]:
+                      - generic [ref=e2315]: Holmium solution
+                      - generic [ref=e2316]: chemistry · Chemical plant
+                  - option "Ice Ice crushing · Crusher" [ref=e2317] [cursor=pointer]:
+                    - img "Ice" [ref=e2318]
+                    - generic [ref=e2319]:
+                      - generic [ref=e2320]: Ice
+                      - generic [ref=e2321]: crushing · Crusher
+                  - option "Ice platform Ice platform crafting-with-fluid · Assembling machine 2" [ref=e2322] [cursor=pointer]:
+                    - img "Ice platform" [ref=e2323]
+                    - generic [ref=e2324]:
+                      - generic [ref=e2325]: Ice platform
+                      - generic [ref=e2326]: crafting-with-fluid · Assembling machine 2
+                  - option "Infinity cargo wagon Infinity cargo wagon recycling · Recycler" [ref=e2327] [cursor=pointer]:
+                    - img "Infinity cargo wagon" [ref=e2328]
+                    - generic [ref=e2329]:
+                      - generic [ref=e2330]: Infinity cargo wagon
+                      - generic [ref=e2331]: recycling · Recycler
+                  - option "Infinity chest Infinity chest crafting · Assembling machine 1" [ref=e2332] [cursor=pointer]:
+                    - img "Infinity chest" [ref=e2333]
+                    - generic [ref=e2334]:
+                      - generic [ref=e2335]: Infinity chest
+                      - generic [ref=e2336]: crafting · Assembling machine 1
+                  - option "Infinity pipe Infinity pipe crafting · Assembling machine 1" [ref=e2337] [cursor=pointer]:
+                    - img "Infinity pipe" [ref=e2338]
+                    - generic [ref=e2339]:
+                      - generic [ref=e2340]: Infinity pipe
+                      - generic [ref=e2341]: crafting · Assembling machine 1
+                  - option "Inserter Inserter crafting · Assembling machine 1" [ref=e2342] [cursor=pointer]:
+                    - img "Inserter" [ref=e2343]
+                    - generic [ref=e2344]:
+                      - generic [ref=e2345]: Inserter
+                      - generic [ref=e2346]: crafting · Assembling machine 1
+                  - option "Iron bacteria Iron bacteria organic-or-hand-crafting · Assembling machine 2" [ref=e2347] [cursor=pointer]:
+                    - img "Iron bacteria" [ref=e2348]
+                    - generic [ref=e2349]:
+                      - generic [ref=e2350]: Iron bacteria
+                      - generic [ref=e2351]: organic-or-hand-crafting · Assembling machine 2
+                  - option "Iron chest Iron chest crafting · Assembling machine 1" [ref=e2352] [cursor=pointer]:
+                    - img "Iron chest" [ref=e2353]
+                    - generic [ref=e2354]:
+                      - generic [ref=e2355]: Iron chest
+                      - generic [ref=e2356]: crafting · Assembling machine 1
+                  - option "Iron gear wheel Iron gear wheel crafting · Assembling machine 1" [ref=e2357] [cursor=pointer]:
+                    - img "Iron gear wheel" [ref=e2358]
+                    - generic [ref=e2359]:
+                      - generic [ref=e2360]: Iron gear wheel
+                      - generic [ref=e2361]: crafting · Assembling machine 1
+                  - option "Iron ore Iron ore crushing · Crusher" [ref=e2362] [cursor=pointer]:
+                    - img "Iron ore" [ref=e2363]
+                    - generic [ref=e2364]:
+                      - generic [ref=e2365]: Iron ore
+                      - generic [ref=e2366]: crushing · Crusher
+                  - option "Iron plate Iron plate smelting · Electric furnace" [ref=e2367] [cursor=pointer]:
+                    - img "Iron plate" [ref=e2368]
+                    - generic [ref=e2369]:
+                      - generic [ref=e2370]: Iron plate
+                      - generic [ref=e2371]: smelting · Electric furnace
+                  - option "Iron stick Iron stick crafting · Assembling machine 1" [ref=e2372] [cursor=pointer]:
+                    - img "Iron stick" [ref=e2373]
+                    - generic [ref=e2374]:
+                      - generic [ref=e2375]: Iron stick
+                      - generic [ref=e2376]: crafting · Assembling machine 1
+                  - option "item-unknown recycling · Recycler" [ref=e2377] [cursor=pointer]:
+                    - generic [ref=e2378]:
+                      - generic [ref=e2379]: item-unknown
+                      - generic [ref=e2380]: recycling · Recycler
+                  - option "Jelly Jelly recycling · Recycler" [ref=e2381] [cursor=pointer]:
+                    - img "Jelly" [ref=e2382]
+                    - generic [ref=e2383]:
+                      - generic [ref=e2384]: Jelly
+                      - generic [ref=e2385]: recycling · Recycler
+                  - option "Jellynut Jellynut recycling · Recycler" [ref=e2386] [cursor=pointer]:
+                    - img "Jellynut" [ref=e2387]
+                    - generic [ref=e2388]:
+                      - generic [ref=e2389]: Jellynut
+                      - generic [ref=e2390]: recycling · Recycler
+                  - option "Jellynut seed Jellynut seed recycling · Recycler" [ref=e2391] [cursor=pointer]:
+                    - img "Jellynut seed" [ref=e2392]
+                    - generic [ref=e2393]:
+                      - generic [ref=e2394]: Jellynut seed
+                      - generic [ref=e2395]: recycling · Recycler
+                  - option "Lab Lab crafting · Assembling machine 1" [ref=e2396] [cursor=pointer]:
+                    - img "Lab" [ref=e2397]
+                    - generic [ref=e2398]:
+                      - generic [ref=e2399]: Lab
+                      - generic [ref=e2400]: crafting · Assembling machine 1
+                  - option "Lamp Lamp crafting · Assembling machine 1" [ref=e2401] [cursor=pointer]:
+                    - img "Lamp" [ref=e2402]
+                    - generic [ref=e2403]:
+                      - generic [ref=e2404]: Lamp
+                      - generic [ref=e2405]: crafting · Assembling machine 1
+                  - option "Land mine Land mine crafting · Assembling machine 1" [ref=e2406] [cursor=pointer]:
+                    - img "Land mine" [ref=e2407]
+                    - generic [ref=e2408]:
+                      - generic [ref=e2409]: Land mine
+                      - generic [ref=e2410]: crafting · Assembling machine 1
+                  - option "Landfill Landfill crafting · Assembling machine 1" [ref=e2411] [cursor=pointer]:
+                    - img "Landfill" [ref=e2412]
+                    - generic [ref=e2413]:
+                      - generic [ref=e2414]: Landfill
+                      - generic [ref=e2415]: crafting · Assembling machine 1
+                  - option "Lane splitter Lane splitter recycling · Recycler" [ref=e2416] [cursor=pointer]:
+                    - img "Lane splitter" [ref=e2417]
+                    - generic [ref=e2418]:
+                      - generic [ref=e2419]: Lane splitter
+                      - generic [ref=e2420]: recycling · Recycler
+                  - option "Laser turret Laser turret crafting · Assembling machine 1" [ref=e2421] [cursor=pointer]:
+                    - img "Laser turret" [ref=e2422]
+                    - generic [ref=e2423]:
+                      - generic [ref=e2424]: Laser turret
+                      - generic [ref=e2425]: crafting · Assembling machine 1
+                  - option "Light armor Light armor crafting · Assembling machine 1" [ref=e2426] [cursor=pointer]:
+                    - img "Light armor" [ref=e2427]
+                    - generic [ref=e2428]:
+                      - generic [ref=e2429]: Light armor
+                      - generic [ref=e2430]: crafting · Assembling machine 1
+                  - option "Light oil Light oil oil-processing · Oil refinery" [ref=e2431] [cursor=pointer]:
+                    - img "Light oil" [ref=e2432]
+                    - generic [ref=e2433]:
+                      - generic [ref=e2434]: Light oil
+                      - generic [ref=e2435]: oil-processing · Oil refinery
+                  - option "Lightning collector Lightning collector electromagnetics · Electromagnetic plant" [ref=e2436] [cursor=pointer]:
+                    - img "Lightning collector" [ref=e2437]
+                    - generic [ref=e2438]:
+                      - generic [ref=e2439]: Lightning collector
+                      - generic [ref=e2440]: electromagnetics · Electromagnetic plant
+                  - option "Lightning rod Lightning rod electronics · Assembling machine 1" [ref=e2441] [cursor=pointer]:
+                    - img "Lightning rod" [ref=e2442]
+                    - generic [ref=e2443]:
+                      - generic [ref=e2444]: Lightning rod
+                      - generic [ref=e2445]: electronics · Assembling machine 1
+                  - option "Linked belt Linked belt recycling · Recycler" [ref=e2446] [cursor=pointer]:
+                    - img "Linked belt" [ref=e2447]
+                    - generic [ref=e2448]:
+                      - generic [ref=e2449]: Linked belt
+                      - generic [ref=e2450]: recycling · Recycler
+                  - option "Linked chest Linked chest recycling · Recycler" [ref=e2451] [cursor=pointer]:
+                    - img "Linked chest" [ref=e2452]
+                    - generic [ref=e2453]:
+                      - generic [ref=e2454]: Linked chest
+                      - generic [ref=e2455]: recycling · Recycler
+                  - option "Lithium Lithium chemistry-or-cryogenics · Chemical plant" [ref=e2456] [cursor=pointer]:
+                    - img "Lithium" [ref=e2457]
+                    - generic [ref=e2458]:
+                      - generic [ref=e2459]: Lithium
+                      - generic [ref=e2460]: chemistry-or-cryogenics · Chemical plant
+                  - option "Lithium plate Lithium plate smelting · Electric furnace" [ref=e2461] [cursor=pointer]:
+                    - img "Lithium plate" [ref=e2462]
+                    - generic [ref=e2463]:
+                      - generic [ref=e2464]: Lithium plate
+                      - generic [ref=e2465]: smelting · Electric furnace
+                  - option "Loader Loader crafting · Assembling machine 1" [ref=e2466] [cursor=pointer]:
+                    - img "Loader" [ref=e2467]
+                    - generic [ref=e2468]:
+                      - generic [ref=e2469]: Loader
+                      - generic [ref=e2470]: crafting · Assembling machine 1
+                  - option "Locomotive Locomotive crafting · Assembling machine 1" [ref=e2471] [cursor=pointer]:
+                    - img "Locomotive" [ref=e2472]
+                    - generic [ref=e2473]:
+                      - generic [ref=e2474]: Locomotive
+                      - generic [ref=e2475]: crafting · Assembling machine 1
+                  - option "Logistic robot Logistic robot crafting · Assembling machine 1" [ref=e2476] [cursor=pointer]:
+                    - img "Logistic robot" [ref=e2477]
+                    - generic [ref=e2478]:
+                      - generic [ref=e2479]: Logistic robot
+                      - generic [ref=e2480]: crafting · Assembling machine 1
+                  - option "Logistic science pack Logistic science pack crafting · Assembling machine 1" [ref=e2481] [cursor=pointer]:
+                    - img "Logistic science pack" [ref=e2482]
+                    - generic [ref=e2483]:
+                      - generic [ref=e2484]: Logistic science pack
+                      - generic [ref=e2485]: crafting · Assembling machine 1
+                  - option "Long-handed inserter Long-handed inserter crafting · Assembling machine 1" [ref=e2486] [cursor=pointer]:
+                    - img "Long-handed inserter" [ref=e2487]
+                    - generic [ref=e2488]:
+                      - generic [ref=e2489]: Long-handed inserter
+                      - generic [ref=e2490]: crafting · Assembling machine 1
+                  - option "Low density structure Low density structure crafting · Assembling machine 1" [ref=e2491] [cursor=pointer]:
+                    - img "Low density structure" [ref=e2492]
+                    - generic [ref=e2493]:
+                      - generic [ref=e2494]: Low density structure
+                      - generic [ref=e2495]: crafting · Assembling machine 1
+                  - option "Lubricant Lubricant chemistry · Chemical plant" [ref=e2496] [cursor=pointer]:
+                    - img "Lubricant" [ref=e2497]
+                    - generic [ref=e2498]:
+                      - generic [ref=e2499]: Lubricant
+                      - generic [ref=e2500]: chemistry · Chemical plant
+                  - option "Mech armor Mech armor crafting · Assembling machine 1" [ref=e2501] [cursor=pointer]:
+                    - img "Mech armor" [ref=e2502]
+                    - generic [ref=e2503]:
+                      - generic [ref=e2504]: Mech armor
+                      - generic [ref=e2505]: crafting · Assembling machine 1
+                  - option "Medium electric pole Medium electric pole electronics · Assembling machine 1" [ref=e2506] [cursor=pointer]:
+                    - img "Medium electric pole" [ref=e2507]
+                    - generic [ref=e2508]:
+                      - generic [ref=e2509]: Medium electric pole
+                      - generic [ref=e2510]: electronics · Assembling machine 1
+                  - option "Metallic asteroid chunk Metallic asteroid chunk crushing · Crusher" [ref=e2511] [cursor=pointer]:
+                    - img "Metallic asteroid chunk" [ref=e2512]
+                    - generic [ref=e2513]:
+                      - generic [ref=e2514]: Metallic asteroid chunk
+                      - generic [ref=e2515]: crushing · Crusher
+                  - option "Metallurgic science pack Metallurgic science pack metallurgy · Foundry" [ref=e2516] [cursor=pointer]:
+                    - img "Metallurgic science pack" [ref=e2517]
+                    - generic [ref=e2518]:
+                      - generic [ref=e2519]: Metallurgic science pack
+                      - generic [ref=e2520]: metallurgy · Foundry
+                  - option "Military science pack Military science pack crafting · Assembling machine 1" [ref=e2521] [cursor=pointer]:
+                    - img "Military science pack" [ref=e2522]
+                    - generic [ref=e2523]:
+                      - generic [ref=e2524]: Military science pack
+                      - generic [ref=e2525]: crafting · Assembling machine 1
+                  - option "Modular armor Modular armor crafting · Assembling machine 1" [ref=e2526] [cursor=pointer]:
+                    - img "Modular armor" [ref=e2527]
+                    - generic [ref=e2528]:
+                      - generic [ref=e2529]: Modular armor
+                      - generic [ref=e2530]: crafting · Assembling machine 1
+                  - option "Molten copper Molten copper metallurgy · Foundry" [ref=e2531] [cursor=pointer]:
+                    - img "Molten copper" [ref=e2532]
+                    - generic [ref=e2533]:
+                      - generic [ref=e2534]: Molten copper
+                      - generic [ref=e2535]: metallurgy · Foundry
+                  - option "Molten iron Molten iron metallurgy · Foundry" [ref=e2536] [cursor=pointer]:
+                    - img "Molten iron" [ref=e2537]
+                    - generic [ref=e2538]:
+                      - generic [ref=e2539]: Molten iron
+                      - generic [ref=e2540]: metallurgy · Foundry
+                  - option "Nightvision Nightvision crafting · Assembling machine 1" [ref=e2541] [cursor=pointer]:
+                    - img "Nightvision" [ref=e2542]
+                    - generic [ref=e2543]:
+                      - generic [ref=e2544]: Nightvision
+                      - generic [ref=e2545]: crafting · Assembling machine 1
+                  - option "Nuclear fuel Nuclear fuel centrifuging · Centrifuge" [ref=e2546] [cursor=pointer]:
+                    - img "Nuclear fuel" [ref=e2547]
+                    - generic [ref=e2548]:
+                      - generic [ref=e2549]: Nuclear fuel
+                      - generic [ref=e2550]: centrifuging · Centrifuge
+                  - option "Nuclear reactor Nuclear reactor crafting · Assembling machine 1" [ref=e2551] [cursor=pointer]:
+                    - img "Nuclear reactor" [ref=e2552]
+                    - generic [ref=e2553]:
+                      - generic [ref=e2554]: Nuclear reactor
+                      - generic [ref=e2555]: crafting · Assembling machine 1
+                  - option "Nutrients Nutrients recycling · Recycler" [ref=e2556] [cursor=pointer]:
+                    - img "Nutrients" [ref=e2557]
+                    - generic [ref=e2558]:
+                      - generic [ref=e2559]: Nutrients
+                      - generic [ref=e2560]: recycling · Recycler
+                  - option "Offshore pump Offshore pump crafting · Assembling machine 1" [ref=e2561] [cursor=pointer]:
+                    - img "Offshore pump" [ref=e2562]
+                    - generic [ref=e2563]:
+                      - generic [ref=e2564]: Offshore pump
+                      - generic [ref=e2565]: crafting · Assembling machine 1
+                  - option "Oil refinery Oil refinery crafting · Assembling machine 1" [ref=e2566] [cursor=pointer]:
+                    - img "Oil refinery" [ref=e2567]
+                    - generic [ref=e2568]:
+                      - generic [ref=e2569]: Oil refinery
+                      - generic [ref=e2570]: crafting · Assembling machine 1
+                  - option "One-way valve One-way valve recycling · Recycler" [ref=e2571] [cursor=pointer]:
+                    - img "One-way valve" [ref=e2572]
+                    - generic [ref=e2573]:
+                      - generic [ref=e2574]: One-way valve
+                      - generic [ref=e2575]: recycling · Recycler
+                  - option "Overflow valve Overflow valve recycling · Recycler" [ref=e2576] [cursor=pointer]:
+                    - img "Overflow valve" [ref=e2577]
+                    - generic [ref=e2578]:
+                      - generic [ref=e2579]: Overflow valve
+                      - generic [ref=e2580]: recycling · Recycler
+                  - option "Overgrowth jellynut soil Overgrowth jellynut soil crafting-with-fluid · Assembling machine 2" [ref=e2581] [cursor=pointer]:
+                    - img "Overgrowth jellynut soil" [ref=e2582]
+                    - generic [ref=e2583]:
+                      - generic [ref=e2584]: Overgrowth jellynut soil
+                      - generic [ref=e2585]: crafting-with-fluid · Assembling machine 2
+                  - option "Overgrowth yumako soil Overgrowth yumako soil crafting-with-fluid · Assembling machine 2" [ref=e2586] [cursor=pointer]:
+                    - img "Overgrowth yumako soil" [ref=e2587]
+                    - generic [ref=e2588]:
+                      - generic [ref=e2589]: Overgrowth yumako soil
+                      - generic [ref=e2590]: crafting-with-fluid · Assembling machine 2
+                  - option "Oxide asteroid chunk Oxide asteroid chunk crushing · Crusher" [ref=e2591] [cursor=pointer]:
+                    - img "Oxide asteroid chunk" [ref=e2592]
+                    - generic [ref=e2593]:
+                      - generic [ref=e2594]: Oxide asteroid chunk
+                      - generic [ref=e2595]: crushing · Crusher
+                  - option "Passive provider chest Passive provider chest crafting · Assembling machine 1" [ref=e2596] [cursor=pointer]:
+                    - img "Passive provider chest" [ref=e2597]
+                    - generic [ref=e2598]:
+                      - generic [ref=e2599]: Passive provider chest
+                      - generic [ref=e2600]: crafting · Assembling machine 1
+                  - option "Pentapod egg Pentapod egg organic · Biochamber" [ref=e2601] [cursor=pointer]:
+                    - img "Pentapod egg" [ref=e2602]
+                    - generic [ref=e2603]:
+                      - generic [ref=e2604]: Pentapod egg
+                      - generic [ref=e2605]: organic · Biochamber
+                  - option "Personal battery Personal battery crafting · Assembling machine 1" [ref=e2606] [cursor=pointer]:
+                    - img "Personal battery" [ref=e2607]
+                    - generic [ref=e2608]:
+                      - generic [ref=e2609]: Personal battery
+                      - generic [ref=e2610]: crafting · Assembling machine 1
+                  - option "Personal battery MK2 Personal battery MK2 crafting · Assembling machine 1" [ref=e2611] [cursor=pointer]:
+                    - img "Personal battery MK2" [ref=e2612]
+                    - generic [ref=e2613]:
+                      - generic [ref=e2614]: Personal battery MK2
+                      - generic [ref=e2615]: crafting · Assembling machine 1
+                  - option "Personal battery MK3 Personal battery MK3 crafting · Assembling machine 1" [ref=e2616] [cursor=pointer]:
+                    - img "Personal battery MK3" [ref=e2617]
+                    - generic [ref=e2618]:
+                      - generic [ref=e2619]: Personal battery MK3
+                      - generic [ref=e2620]: crafting · Assembling machine 1
+                  - option "Personal laser defense Personal laser defense crafting · Assembling machine 1" [ref=e2621] [cursor=pointer]:
+                    - img "Personal laser defense" [ref=e2622]
+                    - generic [ref=e2623]:
+                      - generic [ref=e2624]: Personal laser defense
+                      - generic [ref=e2625]: crafting · Assembling machine 1
+                  - option "Personal roboport Personal roboport crafting · Assembling machine 1" [ref=e2626] [cursor=pointer]:
+                    - img "Personal roboport" [ref=e2627]
+                    - generic [ref=e2628]:
+                      - generic [ref=e2629]: Personal roboport
+                      - generic [ref=e2630]: crafting · Assembling machine 1
+                  - option "Personal roboport MK2 Personal roboport MK2 crafting · Assembling machine 1" [ref=e2631] [cursor=pointer]:
+                    - img "Personal roboport MK2" [ref=e2632]
+                    - generic [ref=e2633]:
+                      - generic [ref=e2634]: Personal roboport MK2
+                      - generic [ref=e2635]: crafting · Assembling machine 1
+                  - option "Petroleum gas Petroleum gas oil-processing · Oil refinery" [ref=e2636] [cursor=pointer]:
+                    - img "Petroleum gas" [ref=e2637]
+                    - generic [ref=e2638]:
+                      - generic [ref=e2639]: Petroleum gas
+                      - generic [ref=e2640]: oil-processing · Oil refinery
+                  - option "Piercing rounds magazine Piercing rounds magazine crafting · Assembling machine 1" [ref=e2641] [cursor=pointer]:
+                    - img "Piercing rounds magazine" [ref=e2642]
+                    - generic [ref=e2643]:
+                      - generic [ref=e2644]: Piercing rounds magazine
+                      - generic [ref=e2645]: crafting · Assembling machine 1
+                  - option "Piercing shotgun shells Piercing shotgun shells crafting · Assembling machine 1" [ref=e2646] [cursor=pointer]:
+                    - img "Piercing shotgun shells" [ref=e2647]
+                    - generic [ref=e2648]:
+                      - generic [ref=e2649]: Piercing shotgun shells
+                      - generic [ref=e2650]: crafting · Assembling machine 1
+                  - option "Pipe Pipe crafting · Assembling machine 1" [ref=e2651] [cursor=pointer]:
+                    - img "Pipe" [ref=e2652]
+                    - generic [ref=e2653]:
+                      - generic [ref=e2654]: Pipe
+                      - generic [ref=e2655]: crafting · Assembling machine 1
+                  - option "Pipe to ground Pipe to ground crafting · Assembling machine 1" [ref=e2656] [cursor=pointer]:
+                    - img "Pipe to ground" [ref=e2657]
+                    - generic [ref=e2658]:
+                      - generic [ref=e2659]: Pipe to ground
+                      - generic [ref=e2660]: crafting · Assembling machine 1
+                  - option "Pistol Pistol crafting · Assembling machine 1" [ref=e2661] [cursor=pointer]:
+                    - img "Pistol" [ref=e2662]
+                    - generic [ref=e2663]:
+                      - generic [ref=e2664]: Pistol
+                      - generic [ref=e2665]: crafting · Assembling machine 1
+                  - option "Plastic bar Plastic bar chemistry-or-cryogenics · Chemical plant" [ref=e2666] [cursor=pointer]:
+                    - img "Plastic bar" [ref=e2667]
+                    - generic [ref=e2668]:
+                      - generic [ref=e2669]: Plastic bar
+                      - generic [ref=e2670]: chemistry-or-cryogenics · Chemical plant
+                  - option "Poison capsule Poison capsule crafting · Assembling machine 1" [ref=e2671] [cursor=pointer]:
+                    - img "Poison capsule" [ref=e2672]
+                    - generic [ref=e2673]:
+                      - generic [ref=e2674]: Poison capsule
+                      - generic [ref=e2675]: crafting · Assembling machine 1
+                  - option "Portable fission reactor Portable fission reactor crafting · Assembling machine 1" [ref=e2676] [cursor=pointer]:
+                    - img "Portable fission reactor" [ref=e2677]
+                    - generic [ref=e2678]:
+                      - generic [ref=e2679]: Portable fission reactor
+                      - generic [ref=e2680]: crafting · Assembling machine 1
+                  - option "Portable fusion reactor Portable fusion reactor crafting · Assembling machine 1" [ref=e2681] [cursor=pointer]:
+                    - img "Portable fusion reactor" [ref=e2682]
+                    - generic [ref=e2683]:
+                      - generic [ref=e2684]: Portable fusion reactor
+                      - generic [ref=e2685]: crafting · Assembling machine 1
+                  - option "Portable solar panel Portable solar panel crafting · Assembling machine 1" [ref=e2686] [cursor=pointer]:
+                    - img "Portable solar panel" [ref=e2687]
+                    - generic [ref=e2688]:
+                      - generic [ref=e2689]: Portable solar panel
+                      - generic [ref=e2690]: crafting · Assembling machine 1
+                  - option "Power armor Power armor crafting · Assembling machine 1" [ref=e2691] [cursor=pointer]:
+                    - img "Power armor" [ref=e2692]
+                    - generic [ref=e2693]:
+                      - generic [ref=e2694]: Power armor
+                      - generic [ref=e2695]: crafting · Assembling machine 1
+                  - option "Power armor MK2 Power armor MK2 crafting · Assembling machine 1" [ref=e2696] [cursor=pointer]:
+                    - img "Power armor MK2" [ref=e2697]
+                    - generic [ref=e2698]:
+                      - generic [ref=e2699]: Power armor MK2
+                      - generic [ref=e2700]: crafting · Assembling machine 1
+                  - option "Power switch Power switch crafting · Assembling machine 1" [ref=e2701] [cursor=pointer]:
+                    - img "Power switch" [ref=e2702]
+                    - generic [ref=e2703]:
+                      - generic [ref=e2704]: Power switch
+                      - generic [ref=e2705]: crafting · Assembling machine 1
+                  - option "Processing unit Processing unit electronics-with-fluid · Assembling machine 2" [ref=e2706] [cursor=pointer]:
+                    - img "Processing unit" [ref=e2707]
+                    - generic [ref=e2708]:
+                      - generic [ref=e2709]: Processing unit
+                      - generic [ref=e2710]: electronics-with-fluid · Assembling machine 2
+                  - option "Production science pack Production science pack crafting · Assembling machine 1" [ref=e2711] [cursor=pointer]:
+                    - img "Production science pack" [ref=e2712]
+                    - generic [ref=e2713]:
+                      - generic [ref=e2714]: Production science pack
+                      - generic [ref=e2715]: crafting · Assembling machine 1
+                  - option "Productivity module Productivity module electronics · Assembling machine 1" [ref=e2716] [cursor=pointer]:
+                    - img "Productivity module" [ref=e2717]
+                    - generic [ref=e2718]:
+                      - generic [ref=e2719]: Productivity module
+                      - generic [ref=e2720]: electronics · Assembling machine 1
+                  - option "Productivity module 2 Productivity module 2 electronics · Assembling machine 1" [ref=e2721] [cursor=pointer]:
+                    - img "Productivity module 2" [ref=e2722]
+                    - generic [ref=e2723]:
+                      - generic [ref=e2724]: Productivity module 2
+                      - generic [ref=e2725]: electronics · Assembling machine 1
+                  - option "Productivity module 3 Productivity module 3 electronics · Assembling machine 1" [ref=e2726] [cursor=pointer]:
+                    - img "Productivity module 3" [ref=e2727]
+                    - generic [ref=e2728]:
+                      - generic [ref=e2729]: Productivity module 3
+                      - generic [ref=e2730]: electronics · Assembling machine 1
+                  - option "Programmable speaker Programmable speaker crafting · Assembling machine 1" [ref=e2731] [cursor=pointer]:
+                    - img "Programmable speaker" [ref=e2732]
+                    - generic [ref=e2733]:
+                      - generic [ref=e2734]: Programmable speaker
+                      - generic [ref=e2735]: crafting · Assembling machine 1
+                  - option "Promethium asteroid chunk Promethium asteroid chunk recycling · Recycler" [ref=e2736] [cursor=pointer]:
+                    - img "Promethium asteroid chunk" [ref=e2737]
+                    - generic [ref=e2738]:
+                      - generic [ref=e2739]: Promethium asteroid chunk
+                      - generic [ref=e2740]: recycling · Recycler
+                  - option "Promethium science pack Promethium science pack cryogenics · Cryogenic plant" [ref=e2741] [cursor=pointer]:
+                    - img "Promethium science pack" [ref=e2742]
+                    - generic [ref=e2743]:
+                      - generic [ref=e2744]: Promethium science pack
+                      - generic [ref=e2745]: cryogenics · Cryogenic plant
+                  - option "Proxy container Proxy container recycling · Recycler" [ref=e2746] [cursor=pointer]:
+                    - img "Proxy container" [ref=e2747]
+                    - generic [ref=e2748]:
+                      - generic [ref=e2749]: Proxy container
+                      - generic [ref=e2750]: recycling · Recycler
+                  - option "Pump Pump crafting · Assembling machine 1" [ref=e2751] [cursor=pointer]:
+                    - img "Pump" [ref=e2752]
+                    - generic [ref=e2753]:
+                      - generic [ref=e2754]: Pump
+                      - generic [ref=e2755]: crafting · Assembling machine 1
+                  - option "Pumpjack Pumpjack crafting · Assembling machine 1" [ref=e2756] [cursor=pointer]:
+                    - img "Pumpjack" [ref=e2757]
+                    - generic [ref=e2758]:
+                      - generic [ref=e2759]: Pumpjack
+                      - generic [ref=e2760]: crafting · Assembling machine 1
+                  - option "Quality module Quality module electronics · Assembling machine 1" [ref=e2761] [cursor=pointer]:
+                    - img "Quality module" [ref=e2762]
+                    - generic [ref=e2763]:
+                      - generic [ref=e2764]: Quality module
+                      - generic [ref=e2765]: electronics · Assembling machine 1
+                  - option "Quality module 2 Quality module 2 electronics · Assembling machine 1" [ref=e2766] [cursor=pointer]:
+                    - img "Quality module 2" [ref=e2767]
+                    - generic [ref=e2768]:
+                      - generic [ref=e2769]: Quality module 2
+                      - generic [ref=e2770]: electronics · Assembling machine 1
+                  - option "Quality module 3 Quality module 3 electronics · Assembling machine 1" [ref=e2771] [cursor=pointer]:
+                    - img "Quality module 3" [ref=e2772]
+                    - generic [ref=e2773]:
+                      - generic [ref=e2774]: Quality module 3
+                      - generic [ref=e2775]: electronics · Assembling machine 1
+                  - option "Quantum processor Quantum processor electromagnetics · Electromagnetic plant" [ref=e2776] [cursor=pointer]:
+                    - img "Quantum processor" [ref=e2777]
+                    - generic [ref=e2778]:
+                      - generic [ref=e2779]: Quantum processor
+                      - generic [ref=e2780]: electromagnetics · Electromagnetic plant
+                  - option "Radar Radar crafting · Assembling machine 1" [ref=e2781] [cursor=pointer]:
+                    - img "Radar" [ref=e2782]
+                    - generic [ref=e2783]:
+                      - generic [ref=e2784]: Radar
+                      - generic [ref=e2785]: crafting · Assembling machine 1
+                  - option "Rail Rail crafting · Assembling machine 1" [ref=e2786] [cursor=pointer]:
+                    - img "Rail" [ref=e2787]
+                    - generic [ref=e2788]:
+                      - generic [ref=e2789]: Rail
+                      - generic [ref=e2790]: crafting · Assembling machine 1
+                  - option "Rail chain signal Rail chain signal crafting · Assembling machine 1" [ref=e2791] [cursor=pointer]:
+                    - img "Rail chain signal" [ref=e2792]
+                    - generic [ref=e2793]:
+                      - generic [ref=e2794]: Rail chain signal
+                      - generic [ref=e2795]: crafting · Assembling machine 1
+                  - option "Rail ramp Rail ramp crafting · Assembling machine 1" [ref=e2796] [cursor=pointer]:
+                    - img "Rail ramp" [ref=e2797]
+                    - generic [ref=e2798]:
+                      - generic [ref=e2799]: Rail ramp
+                      - generic [ref=e2800]: crafting · Assembling machine 1
+                  - option "Rail signal Rail signal crafting · Assembling machine 1" [ref=e2801] [cursor=pointer]:
+                    - img "Rail signal" [ref=e2802]
+                    - generic [ref=e2803]:
+                      - generic [ref=e2804]: Rail signal
+                      - generic [ref=e2805]: crafting · Assembling machine 1
+                  - option "Rail support Rail support crafting · Assembling machine 1" [ref=e2806] [cursor=pointer]:
+                    - img "Rail support" [ref=e2807]
+                    - generic [ref=e2808]:
+                      - generic [ref=e2809]: Rail support
+                      - generic [ref=e2810]: crafting · Assembling machine 1
+                  - option "Railgun Railgun cryogenics · Cryogenic plant" [ref=e2811] [cursor=pointer]:
+                    - img "Railgun" [ref=e2812]
+                    - generic [ref=e2813]:
+                      - generic [ref=e2814]: Railgun
+                      - generic [ref=e2815]: cryogenics · Cryogenic plant
+                  - option "Railgun ammo Railgun ammo crafting · Assembling machine 1" [ref=e2816] [cursor=pointer]:
+                    - img "Railgun ammo" [ref=e2817]
+                    - generic [ref=e2818]:
+                      - generic [ref=e2819]: Railgun ammo
+                      - generic [ref=e2820]: crafting · Assembling machine 1
+                  - option "Railgun turret Railgun turret cryogenics · Cryogenic plant" [ref=e2821] [cursor=pointer]:
+                    - img "Railgun turret" [ref=e2822]
+                    - generic [ref=e2823]:
+                      - generic [ref=e2824]: Railgun turret
+                      - generic [ref=e2825]: cryogenics · Cryogenic plant
+                  - option "Raw fish Raw fish organic-or-chemistry · Biochamber" [ref=e2826] [cursor=pointer]:
+                    - img "Raw fish" [ref=e2827]
+                    - generic [ref=e2828]:
+                      - generic [ref=e2829]: Raw fish
+                      - generic [ref=e2830]: organic-or-chemistry · Biochamber
+                  - option "Recycler Recycler crafting · Assembling machine 1" [ref=e2831] [cursor=pointer]:
+                    - img "Recycler" [ref=e2832]
+                    - generic [ref=e2833]:
+                      - generic [ref=e2834]: Recycler
+                      - generic [ref=e2835]: crafting · Assembling machine 1
+                  - option "Refined concrete Refined concrete crafting-with-fluid · Assembling machine 2" [ref=e2836] [cursor=pointer]:
+                    - img "Refined concrete" [ref=e2837]
+                    - generic [ref=e2838]:
+                      - generic [ref=e2839]: Refined concrete
+                      - generic [ref=e2840]: crafting-with-fluid · Assembling machine 2
+                  - option "Refined hazard concrete Refined hazard concrete crafting · Assembling machine 1" [ref=e2841] [cursor=pointer]:
+                    - img "Refined hazard concrete" [ref=e2842]
+                    - generic [ref=e2843]:
+                      - generic [ref=e2844]: Refined hazard concrete
+                      - generic [ref=e2845]: crafting · Assembling machine 1
+                  - option "Repair pack Repair pack crafting · Assembling machine 1" [ref=e2846] [cursor=pointer]:
+                    - img "Repair pack" [ref=e2847]
+                    - generic [ref=e2848]:
+                      - generic [ref=e2849]: Repair pack
+                      - generic [ref=e2850]: crafting · Assembling machine 1
+                  - option "Requester chest Requester chest crafting · Assembling machine 1" [ref=e2851] [cursor=pointer]:
+                    - img "Requester chest" [ref=e2852]
+                    - generic [ref=e2853]:
+                      - generic [ref=e2854]: Requester chest
+                      - generic [ref=e2855]: crafting · Assembling machine 1
+                  - option "Roboport Roboport crafting · Assembling machine 1" [ref=e2856] [cursor=pointer]:
+                    - img "Roboport" [ref=e2857]
+                    - generic [ref=e2858]:
+                      - generic [ref=e2859]: Roboport
+                      - generic [ref=e2860]: crafting · Assembling machine 1
+                  - option "Rocket Rocket crafting · Assembling machine 1" [ref=e2861] [cursor=pointer]:
+                    - img "Rocket" [ref=e2862]
+                    - generic [ref=e2863]:
+                      - generic [ref=e2864]: Rocket
+                      - generic [ref=e2865]: crafting · Assembling machine 1
+                  - option "Rocket fuel Rocket fuel organic-or-assembling · Assembling machine 2" [ref=e2866] [cursor=pointer]:
+                    - img "Rocket fuel" [ref=e2867]
+                    - generic [ref=e2868]:
+                      - generic [ref=e2869]: Rocket fuel
+                      - generic [ref=e2870]: organic-or-assembling · Assembling machine 2
+                  - option "Rocket launcher Rocket launcher crafting · Assembling machine 1" [ref=e2871] [cursor=pointer]:
+                    - img "Rocket launcher" [ref=e2872]
+                    - generic [ref=e2873]:
+                      - generic [ref=e2874]: Rocket launcher
+                      - generic [ref=e2875]: crafting · Assembling machine 1
+                  - option "Rocket part Rocket part rocket-building · Rocket silo" [ref=e2876] [cursor=pointer]:
+                    - img "Rocket part" [ref=e2877]
+                    - generic [ref=e2878]:
+                      - generic [ref=e2879]: Rocket part
+                      - generic [ref=e2880]: rocket-building · Rocket silo
+                  - option "Rocket silo Rocket silo crafting · Assembling machine 1" [ref=e2881] [cursor=pointer]:
+                    - img "Rocket silo" [ref=e2882]
+                    - generic [ref=e2883]:
+                      - generic [ref=e2884]: Rocket silo
+                      - generic [ref=e2885]: crafting · Assembling machine 1
+                  - option "Rocket turret Rocket turret crafting · Assembling machine 1" [ref=e2886] [cursor=pointer]:
+                    - img "Rocket turret" [ref=e2887]
+                    - generic [ref=e2888]:
+                      - generic [ref=e2889]: Rocket turret
+                      - generic [ref=e2890]: crafting · Assembling machine 1
+                  - option "Science Science recycling · Recycler" [ref=e2891] [cursor=pointer]:
+                    - img "Science" [ref=e2892]
+                    - generic [ref=e2893]:
+                      - generic [ref=e2894]: Science
+                      - generic [ref=e2895]: recycling · Recycler
+                  - option "selection-tool recycling · Recycler" [ref=e2896] [cursor=pointer]:
+                    - generic [ref=e2897]:
+                      - generic [ref=e2898]: selection-tool
+                      - generic [ref=e2899]: recycling · Recycler
+                  - option "Selector combinator Selector combinator crafting · Assembling machine 1" [ref=e2900] [cursor=pointer]:
+                    - img "Selector combinator" [ref=e2901]
+                    - generic [ref=e2902]:
+                      - generic [ref=e2903]: Selector combinator
+                      - generic [ref=e2904]: crafting · Assembling machine 1
+                  - option "Shotgun Shotgun crafting · Assembling machine 1" [ref=e2905] [cursor=pointer]:
+                    - img "Shotgun" [ref=e2906]
+                    - generic [ref=e2907]:
+                      - generic [ref=e2908]: Shotgun
+                      - generic [ref=e2909]: crafting · Assembling machine 1
+                  - option "Shotgun shells Shotgun shells crafting · Assembling machine 1" [ref=e2910] [cursor=pointer]:
+                    - img "Shotgun shells" [ref=e2911]
+                    - generic [ref=e2912]:
+                      - generic [ref=e2913]: Shotgun shells
+                      - generic [ref=e2914]: crafting · Assembling machine 1
+                  - option "Simple entity with force Simple entity with force recycling · Recycler" [ref=e2915] [cursor=pointer]:
+                    - img "Simple entity with force" [ref=e2916]
+                    - generic [ref=e2917]:
+                      - generic [ref=e2918]: Simple entity with force
+                      - generic [ref=e2919]: recycling · Recycler
+                  - option "Simple entity with owner Simple entity with owner recycling · Recycler" [ref=e2920] [cursor=pointer]:
+                    - img "Simple entity with owner" [ref=e2921]
+                    - generic [ref=e2922]:
+                      - generic [ref=e2923]: Simple entity with owner
+                      - generic [ref=e2924]: recycling · Recycler
+                  - option "Slowdown capsule Slowdown capsule crafting · Assembling machine 1" [ref=e2925] [cursor=pointer]:
+                    - img "Slowdown capsule" [ref=e2926]
+                    - generic [ref=e2927]:
+                      - generic [ref=e2928]: Slowdown capsule
+                      - generic [ref=e2929]: crafting · Assembling machine 1
+                  - option "Small electric pole Small electric pole electronics · Assembling machine 1" [ref=e2930] [cursor=pointer]:
+                    - img "Small electric pole" [ref=e2931]
+                    - generic [ref=e2932]:
+                      - generic [ref=e2933]: Small electric pole
+                      - generic [ref=e2934]: electronics · Assembling machine 1
+                  - option "Solar panel Solar panel electronics · Assembling machine 1" [ref=e2935] [cursor=pointer]:
+                    - img "Solar panel" [ref=e2936]
+                    - generic [ref=e2937]:
+                      - generic [ref=e2938]: Solar panel
+                      - generic [ref=e2939]: electronics · Assembling machine 1
+                  - option "Solid fuel Solid fuel recycling · Recycler" [ref=e2940] [cursor=pointer]:
+                    - img "Solid fuel" [ref=e2941]
+                    - generic [ref=e2942]:
+                      - generic [ref=e2943]: Solid fuel
+                      - generic [ref=e2944]: recycling · Recycler
+                  - option "Space platform foundation Space platform foundation crafting · Assembling machine 1" [ref=e2945] [cursor=pointer]:
+                    - img "Space platform foundation" [ref=e2946]
+                    - generic [ref=e2947]:
+                      - generic [ref=e2948]: Space platform foundation
+                      - generic [ref=e2949]: crafting · Assembling machine 1
+                  - option "Space science pack Space science pack crafting · Assembling machine 1" [ref=e2950] [cursor=pointer]:
+                    - img "Space science pack" [ref=e2951]
+                    - generic [ref=e2952]:
+                      - generic [ref=e2953]: Space science pack
+                      - generic [ref=e2954]: crafting · Assembling machine 1
+                  - option "space-platform-hub recycling · Recycler" [ref=e2955] [cursor=pointer]:
+                    - generic [ref=e2956]:
+                      - generic [ref=e2957]: space-platform-hub
+                      - generic [ref=e2958]: recycling · Recycler
+                  - option "Speed module Speed module electronics · Assembling machine 1" [ref=e2959] [cursor=pointer]:
+                    - img "Speed module" [ref=e2960]
+                    - generic [ref=e2961]:
+                      - generic [ref=e2962]: Speed module
+                      - generic [ref=e2963]: electronics · Assembling machine 1
+                  - option "Speed module 2 Speed module 2 electronics · Assembling machine 1" [ref=e2964] [cursor=pointer]:
+                    - img "Speed module 2" [ref=e2965]
+                    - generic [ref=e2966]:
+                      - generic [ref=e2967]: Speed module 2
+                      - generic [ref=e2968]: electronics · Assembling machine 1
+                  - option "Speed module 3 Speed module 3 electronics · Assembling machine 1" [ref=e2969] [cursor=pointer]:
+                    - img "Speed module 3" [ref=e2970]
+                    - generic [ref=e2971]:
+                      - generic [ref=e2972]: Speed module 3
+                      - generic [ref=e2973]: electronics · Assembling machine 1
+                  - option "Spidertron Spidertron crafting · Assembling machine 1" [ref=e2974] [cursor=pointer]:
+                    - img "Spidertron" [ref=e2975]
+                    - generic [ref=e2976]:
+                      - generic [ref=e2977]: Spidertron
+                      - generic [ref=e2978]: crafting · Assembling machine 1
+                  - option "Splitter Splitter pressing · Assembling machine 1" [ref=e2979] [cursor=pointer]:
+                    - img "Splitter" [ref=e2980]
+                    - generic [ref=e2981]:
+                      - generic [ref=e2982]: Splitter
+                      - generic [ref=e2983]: pressing · Assembling machine 1
+                  - option "Spoilage Spoilage recycling · Recycler" [ref=e2984] [cursor=pointer]:
+                    - img "Spoilage" [ref=e2985]
+                    - generic [ref=e2986]:
+                      - generic [ref=e2987]: Spoilage
+                      - generic [ref=e2988]: recycling · Recycler
+                  - option "Stack inserter Stack inserter crafting · Assembling machine 1" [ref=e2989] [cursor=pointer]:
+                    - img "Stack inserter" [ref=e2990]
+                    - generic [ref=e2991]:
+                      - generic [ref=e2992]: Stack inserter
+                      - generic [ref=e2993]: crafting · Assembling machine 1
+                  - option "Steam Steam chemistry-or-cryogenics · Chemical plant" [ref=e2994] [cursor=pointer]:
+                    - img "Steam" [ref=e2995]
+                    - generic [ref=e2996]:
+                      - generic [ref=e2997]: Steam
+                      - generic [ref=e2998]: chemistry-or-cryogenics · Chemical plant
+                  - option "Steam engine Steam engine crafting · Assembling machine 1" [ref=e2999] [cursor=pointer]:
+                    - img "Steam engine" [ref=e3000]
+                    - generic [ref=e3001]:
+                      - generic [ref=e3002]: Steam engine
+                      - generic [ref=e3003]: crafting · Assembling machine 1
+                  - option "Steam turbine Steam turbine crafting · Assembling machine 1" [ref=e3004] [cursor=pointer]:
+                    - img "Steam turbine" [ref=e3005]
+                    - generic [ref=e3006]:
+                      - generic [ref=e3007]: Steam turbine
+                      - generic [ref=e3008]: crafting · Assembling machine 1
+                  - option "Steel chest Steel chest crafting · Assembling machine 1" [ref=e3009] [cursor=pointer]:
+                    - img "Steel chest" [ref=e3010]
+                    - generic [ref=e3011]:
+                      - generic [ref=e3012]: Steel chest
+                      - generic [ref=e3013]: crafting · Assembling machine 1
+                  - option "Steel furnace Steel furnace crafting · Assembling machine 1" [ref=e3014] [cursor=pointer]:
+                    - img "Steel furnace" [ref=e3015]
+                    - generic [ref=e3016]:
+                      - generic [ref=e3017]: Steel furnace
+                      - generic [ref=e3018]: crafting · Assembling machine 1
+                  - option "Steel plate Steel plate smelting · Electric furnace" [ref=e3019] [cursor=pointer]:
+                    - img "Steel plate" [ref=e3020]
+                    - generic [ref=e3021]:
+                      - generic [ref=e3022]: Steel plate
+                      - generic [ref=e3023]: smelting · Electric furnace
+                  - option "Stone Stone recycling · Recycler" [ref=e3024] [cursor=pointer]:
+                    - img "Stone" [ref=e3025]
+                    - generic [ref=e3026]:
+                      - generic [ref=e3027]: Stone
+                      - generic [ref=e3028]: recycling · Recycler
+                  - option "Stone brick Stone brick smelting · Electric furnace" [ref=e3029] [cursor=pointer]:
+                    - img "Stone brick" [ref=e3030]
+                    - generic [ref=e3031]:
+                      - generic [ref=e3032]: Stone brick
+                      - generic [ref=e3033]: smelting · Electric furnace
+                  - option "Stone furnace Stone furnace crafting · Assembling machine 1" [ref=e3034] [cursor=pointer]:
+                    - img "Stone furnace" [ref=e3035]
+                    - generic [ref=e3036]:
+                      - generic [ref=e3037]: Stone furnace
+                      - generic [ref=e3038]: crafting · Assembling machine 1
+                  - option "Storage chest Storage chest crafting · Assembling machine 1" [ref=e3039] [cursor=pointer]:
+                    - img "Storage chest" [ref=e3040]
+                    - generic [ref=e3041]:
+                      - generic [ref=e3042]: Storage chest
+                      - generic [ref=e3043]: crafting · Assembling machine 1
+                  - option "Storage tank Storage tank crafting · Assembling machine 1" [ref=e3044] [cursor=pointer]:
+                    - img "Storage tank" [ref=e3045]
+                    - generic [ref=e3046]:
+                      - generic [ref=e3047]: Storage tank
+                      - generic [ref=e3048]: crafting · Assembling machine 1
+                  - option "Submachine gun Submachine gun crafting · Assembling machine 1" [ref=e3049] [cursor=pointer]:
+                    - img "Submachine gun" [ref=e3050]
+                    - generic [ref=e3051]:
+                      - generic [ref=e3052]: Submachine gun
+                      - generic [ref=e3053]: crafting · Assembling machine 1
+                  - option "Substation Substation electronics · Assembling machine 1" [ref=e3054] [cursor=pointer]:
+                    - img "Substation" [ref=e3055]
+                    - generic [ref=e3056]:
+                      - generic [ref=e3057]: Substation
+                      - generic [ref=e3058]: electronics · Assembling machine 1
+                  - option "Sulfur Sulfur chemistry-or-cryogenics · Chemical plant" [ref=e3059] [cursor=pointer]:
+                    - img "Sulfur" [ref=e3060]
+                    - generic [ref=e3061]:
+                      - generic [ref=e3062]: Sulfur
+                      - generic [ref=e3063]: chemistry-or-cryogenics · Chemical plant
+                  - option "Sulfuric acid Sulfuric acid chemistry-or-cryogenics · Chemical plant" [ref=e3064] [cursor=pointer]:
+                    - img "Sulfuric acid" [ref=e3065]
+                    - generic [ref=e3066]:
+                      - generic [ref=e3067]: Sulfuric acid
+                      - generic [ref=e3068]: chemistry-or-cryogenics · Chemical plant
+                  - option "Supercapacitor Supercapacitor electromagnetics · Electromagnetic plant" [ref=e3069] [cursor=pointer]:
+                    - img "Supercapacitor" [ref=e3070]
+                    - generic [ref=e3071]:
+                      - generic [ref=e3072]: Supercapacitor
+                      - generic [ref=e3073]: electromagnetics · Electromagnetic plant
+                  - option "Superconductor Superconductor electromagnetics · Electromagnetic plant" [ref=e3074] [cursor=pointer]:
+                    - img "Superconductor" [ref=e3075]
+                    - generic [ref=e3076]:
+                      - generic [ref=e3077]: Superconductor
+                      - generic [ref=e3078]: electromagnetics · Electromagnetic plant
+                  - option "Tank Tank crafting · Assembling machine 1" [ref=e3079] [cursor=pointer]:
+                    - img "Tank" [ref=e3080]
+                    - generic [ref=e3081]:
+                      - generic [ref=e3082]: Tank
+                      - generic [ref=e3083]: crafting · Assembling machine 1
+                  - option "Tesla ammo Tesla ammo electromagnetics · Electromagnetic plant" [ref=e3084] [cursor=pointer]:
+                    - img "Tesla ammo" [ref=e3085]
+                    - generic [ref=e3086]:
+                      - generic [ref=e3087]: Tesla ammo
+                      - generic [ref=e3088]: electromagnetics · Electromagnetic plant
+                  - option "Tesla gun Tesla gun electromagnetics · Electromagnetic plant" [ref=e3089] [cursor=pointer]:
+                    - img "Tesla gun" [ref=e3090]
+                    - generic [ref=e3091]:
+                      - generic [ref=e3092]: Tesla gun
+                      - generic [ref=e3093]: electromagnetics · Electromagnetic plant
+                  - option "Tesla turret Tesla turret electromagnetics · Electromagnetic plant" [ref=e3094] [cursor=pointer]:
+                    - img "Tesla turret" [ref=e3095]
+                    - generic [ref=e3096]:
+                      - generic [ref=e3097]: Tesla turret
+                      - generic [ref=e3098]: electromagnetics · Electromagnetic plant
+                  - option "Thruster Thruster crafting · Assembling machine 1" [ref=e3099] [cursor=pointer]:
+                    - img "Thruster" [ref=e3100]
+                    - generic [ref=e3101]:
+                      - generic [ref=e3102]: Thruster
+                      - generic [ref=e3103]: crafting · Assembling machine 1
+                  - option "Thruster fuel Thruster fuel chemistry · Chemical plant" [ref=e3104] [cursor=pointer]:
+                    - img "Thruster fuel" [ref=e3105]
+                    - generic [ref=e3106]:
+                      - generic [ref=e3107]: Thruster fuel
+                      - generic [ref=e3108]: chemistry · Chemical plant
+                  - option "Thruster oxidizer Thruster oxidizer chemistry · Chemical plant" [ref=e3109] [cursor=pointer]:
+                    - img "Thruster oxidizer" [ref=e3110]
+                    - generic [ref=e3111]:
+                      - generic [ref=e3112]: Thruster oxidizer
+                      - generic [ref=e3113]: chemistry · Chemical plant
+                  - option "Toolbelt equipment Toolbelt equipment crafting · Assembling machine 1" [ref=e3114] [cursor=pointer]:
+                    - img "Toolbelt equipment" [ref=e3115]
+                    - generic [ref=e3116]:
+                      - generic [ref=e3117]: Toolbelt equipment
+                      - generic [ref=e3118]: crafting · Assembling machine 1
+                  - option "Top-up valve Top-up valve recycling · Recycler" [ref=e3119] [cursor=pointer]:
+                    - img "Top-up valve" [ref=e3120]
+                    - generic [ref=e3121]:
+                      - generic [ref=e3122]: Top-up valve
+                      - generic [ref=e3123]: recycling · Recycler
+                  - option "Train stop Train stop crafting · Assembling machine 1" [ref=e3124] [cursor=pointer]:
+                    - img "Train stop" [ref=e3125]
+                    - generic [ref=e3126]:
+                      - generic [ref=e3127]: Train stop
+                      - generic [ref=e3128]: crafting · Assembling machine 1
+                  - option "Transport belt Transport belt pressing · Assembling machine 1" [ref=e3129] [cursor=pointer]:
+                    - img "Transport belt" [ref=e3130]
+                    - generic [ref=e3131]:
+                      - generic [ref=e3132]: Transport belt
+                      - generic [ref=e3133]: pressing · Assembling machine 1
+                  - option "Tree seed Tree seed recycling · Recycler" [ref=e3134] [cursor=pointer]:
+                    - img "Tree seed" [ref=e3135]
+                    - generic [ref=e3136]:
+                      - generic [ref=e3137]: Tree seed
+                      - generic [ref=e3138]: recycling · Recycler
+                  - option "Tungsten carbide Tungsten carbide crafting-with-fluid · Assembling machine 2" [ref=e3139] [cursor=pointer]:
+                    - img "Tungsten carbide" [ref=e3140]
+                    - generic [ref=e3141]:
+                      - generic [ref=e3142]: Tungsten carbide
+                      - generic [ref=e3143]: crafting-with-fluid · Assembling machine 2
+                  - option "Tungsten ore Tungsten ore recycling · Recycler" [ref=e3144] [cursor=pointer]:
+                    - img "Tungsten ore" [ref=e3145]
+                    - generic [ref=e3146]:
+                      - generic [ref=e3147]: Tungsten ore
+                      - generic [ref=e3148]: recycling · Recycler
+                  - option "Tungsten plate Tungsten plate metallurgy · Foundry" [ref=e3149] [cursor=pointer]:
+                    - img "Tungsten plate" [ref=e3150]
+                    - generic [ref=e3151]:
+                      - generic [ref=e3152]: Tungsten plate
+                      - generic [ref=e3153]: metallurgy · Foundry
+                  - option "Turbo loader Turbo loader crafting · Assembling machine 1" [ref=e3154] [cursor=pointer]:
+                    - img "Turbo loader" [ref=e3155]
+                    - generic [ref=e3156]:
+                      - generic [ref=e3157]: Turbo loader
+                      - generic [ref=e3158]: crafting · Assembling machine 1
+                  - option "Turbo splitter Turbo splitter metallurgy · Foundry" [ref=e3159] [cursor=pointer]:
+                    - img "Turbo splitter" [ref=e3160]
+                    - generic [ref=e3161]:
+                      - generic [ref=e3162]: Turbo splitter
+                      - generic [ref=e3163]: metallurgy · Foundry
+                  - option "Turbo transport belt Turbo transport belt metallurgy · Foundry" [ref=e3164] [cursor=pointer]:
+                    - img "Turbo transport belt" [ref=e3165]
+                    - generic [ref=e3166]:
+                      - generic [ref=e3167]: Turbo transport belt
+                      - generic [ref=e3168]: metallurgy · Foundry
+                  - option "Turbo underground belt Turbo underground belt metallurgy · Foundry" [ref=e3169] [cursor=pointer]:
+                    - img "Turbo underground belt" [ref=e3170]
+                    - generic [ref=e3171]:
+                      - generic [ref=e3172]: Turbo underground belt
+                      - generic [ref=e3173]: metallurgy · Foundry
+                  - option "Underground belt Underground belt pressing · Assembling machine 1" [ref=e3174] [cursor=pointer]:
+                    - img "Underground belt" [ref=e3175]
+                    - generic [ref=e3176]:
+                      - generic [ref=e3177]: Underground belt
+                      - generic [ref=e3178]: pressing · Assembling machine 1
+                  - option "upgrade-planner recycling · Recycler" [ref=e3179] [cursor=pointer]:
+                    - generic [ref=e3180]:
+                      - generic [ref=e3181]: upgrade-planner
+                      - generic [ref=e3182]: recycling · Recycler
+                  - option "Uranium cannon shell Uranium cannon shell crafting · Assembling machine 1" [ref=e3183] [cursor=pointer]:
+                    - img "Uranium cannon shell" [ref=e3184]
+                    - generic [ref=e3185]:
+                      - generic [ref=e3186]: Uranium cannon shell
+                      - generic [ref=e3187]: crafting · Assembling machine 1
+                  - option "Uranium fuel cell Uranium fuel cell crafting · Assembling machine 1" [ref=e3188] [cursor=pointer]:
+                    - img "Uranium fuel cell" [ref=e3189]
+                    - generic [ref=e3190]:
+                      - generic [ref=e3191]: Uranium fuel cell
+                      - generic [ref=e3192]: crafting · Assembling machine 1
+                  - option "Uranium ore Uranium ore recycling · Recycler" [ref=e3193] [cursor=pointer]:
+                    - img "Uranium ore" [ref=e3194]
+                    - generic [ref=e3195]:
+                      - generic [ref=e3196]: Uranium ore
+                      - generic [ref=e3197]: recycling · Recycler
+                  - option "Uranium rounds magazine Uranium rounds magazine crafting · Assembling machine 1" [ref=e3198] [cursor=pointer]:
+                    - img "Uranium rounds magazine" [ref=e3199]
+                    - generic [ref=e3200]:
+                      - generic [ref=e3201]: Uranium rounds magazine
+                      - generic [ref=e3202]: crafting · Assembling machine 1
+                  - option "Uranium-235 Uranium-235 recycling · Recycler" [ref=e3203] [cursor=pointer]:
+                    - img "Uranium-235" [ref=e3204]
+                    - generic [ref=e3205]:
+                      - generic [ref=e3206]: Uranium-235
+                      - generic [ref=e3207]: recycling · Recycler
+                  - option "Uranium-238 Uranium-238 recycling · Recycler" [ref=e3208] [cursor=pointer]:
+                    - img "Uranium-238" [ref=e3209]
+                    - generic [ref=e3210]:
+                      - generic [ref=e3211]: Uranium-238
+                      - generic [ref=e3212]: recycling · Recycler
+                  - option "Utility science pack Utility science pack crafting · Assembling machine 1" [ref=e3213] [cursor=pointer]:
+                    - img "Utility science pack" [ref=e3214]
+                    - generic [ref=e3215]:
+                      - generic [ref=e3216]: Utility science pack
+                      - generic [ref=e3217]: crafting · Assembling machine 1
+                  - option "Wall Wall crafting · Assembling machine 1" [ref=e3218] [cursor=pointer]:
+                    - img "Wall" [ref=e3219]
+                    - generic [ref=e3220]:
+                      - generic [ref=e3221]: Wall
+                      - generic [ref=e3222]: crafting · Assembling machine 1
+                  - option "Water Water chemistry · Chemical plant" [ref=e3223] [cursor=pointer]:
+                    - img "Water" [ref=e3224]
+                    - generic [ref=e3225]:
+                      - generic [ref=e3226]: Water
+                      - generic [ref=e3227]: chemistry · Chemical plant
+                  - option "Wood Wood recycling · Recycler" [ref=e3228] [cursor=pointer]:
+                    - img "Wood" [ref=e3229]
+                    - generic [ref=e3230]:
+                      - generic [ref=e3231]: Wood
+                      - generic [ref=e3232]: recycling · Recycler
+                  - option "Wooden chest Wooden chest crafting · Assembling machine 1" [ref=e3233] [cursor=pointer]:
+                    - img "Wooden chest" [ref=e3234]
+                    - generic [ref=e3235]:
+                      - generic [ref=e3236]: Wooden chest
+                      - generic [ref=e3237]: crafting · Assembling machine 1
+                  - option "Yumako Yumako recycling · Recycler" [ref=e3238] [cursor=pointer]:
+                    - img "Yumako" [ref=e3239]
+                    - generic [ref=e3240]:
+                      - generic [ref=e3241]: Yumako
+                      - generic [ref=e3242]: recycling · Recycler
+                  - option "Yumako mash Yumako mash recycling · Recycler" [ref=e3243] [cursor=pointer]:
+                    - img "Yumako mash" [ref=e3244]
+                    - generic [ref=e3245]:
+                      - generic [ref=e3246]: Yumako mash
+                      - generic [ref=e3247]: recycling · Recycler
+                  - option "Yumako seed Yumako seed recycling · Recycler" [ref=e3248] [cursor=pointer]:
+                    - img "Yumako seed" [ref=e3249]
+                    - generic [ref=e3250]:
+                      - generic [ref=e3251]: Yumako seed
+                      - generic [ref=e3252]: recycling · Recycler
+          - spinbutton "rate items/sec" [ref=e24]: "1"
+          - generic [ref=e25]: /s
+          - button "remove target" [disabled]: ×
+  - generic [ref=e26]:
+    - generic [ref=e27]:
+      - tablist [ref=e28]:
+        - tab "Sankey" [ref=e29]
+        - tab "BoxLine" [ref=e30]
+        - tab "Schematic" [selected] [ref=e31]
+        - tab "Catalog" [ref=e32]
+      - generic [ref=e33]: 7 nodes · 6 flows · 1.97 MW
+    - tabpanel "Schematic" [ref=e34]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: 4 cells · 1 group · 0 trunk belts · 6 inserters · 34×14 tiles
+          - generic [ref=e40]:
+            - generic [ref=e43]: trunk belt
+            - generic [ref=e44]:
+              - img [ref=e45]
+              - generic [ref=e48]: input
+            - generic [ref=e49]:
+              - img [ref=e50]
+              - generic [ref=e53]: output
+            - generic [ref=e56]: sub-bus group
+            - generic [ref=e59]: cell
+          - generic [ref=e60]:
+            - generic [ref=e61]: zoom
+            - button "−" [ref=e62] [cursor=pointer]
+            - generic [ref=e63]: 18px
+            - button "+" [ref=e64] [cursor=pointer]
+            - button "reset" [ref=e65] [cursor=pointer]
+        - generic [ref=e68]: hover any cell to see its inputs, outputs, and machine count

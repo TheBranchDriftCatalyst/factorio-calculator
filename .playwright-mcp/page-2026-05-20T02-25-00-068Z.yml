@@ -1,0 +1,50 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Factorio Blueprint Calculator" [level=1] [ref=e6]
+      - paragraph [ref=e7]:
+        - text: "Dataset:"
+        - code [ref=e8]: space-age-2.0.55.json
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - heading "Targets" [level=2] [ref=e11]
+        - button "+ Add target" [ref=e12] [cursor=pointer]
+      - list [ref=e13]:
+        - listitem [ref=e14]:
+          - button "Advanced circuit Advanced circuit electronics · Assembling machine 1" [ref=e61]:
+            - img "Advanced circuit" [ref=e62]
+            - generic [ref=e18]: Advanced circuit
+            - generic [ref=e19]: electronics · Assembling machine 1
+            - img [ref=e20]
+          - spinbutton "rate items/sec" [ref=e23]: "1"
+          - generic [ref=e24]: /s
+          - button "remove target" [disabled]: ×
+  - generic [ref=e25]:
+    - generic [ref=e26]:
+      - tablist [ref=e27]:
+        - tab "Sankey" [ref=e28]
+        - tab "BoxLine" [ref=e29]
+        - tab "Schematic" [selected] [ref=e30]
+        - tab "Catalog" [ref=e31]
+      - generic [ref=e32]: 13 nodes · 15 flows · 13.03 MW
+    - tabpanel "Schematic" [ref=e63]:
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]: 7 cells · 2 groups · 1 trunk belts · 13 inserters · 59×29 tiles
+          - generic [ref=e69]:
+            - generic [ref=e72]: trunk belt
+            - generic [ref=e73]:
+              - img [ref=e74]
+              - generic [ref=e77]: input
+            - generic [ref=e78]:
+              - img [ref=e79]
+              - generic [ref=e82]: output
+            - generic [ref=e85]: sub-bus group
+            - generic [ref=e88]: cell
+          - generic [ref=e89]:
+            - generic [ref=e90]: zoom
+            - button "−" [ref=e91] [cursor=pointer]
+            - generic [ref=e92]: 18px
+            - button "+" [ref=e93] [cursor=pointer]
+            - button "reset" [ref=e94] [cursor=pointer]
+        - generic [ref=e97]: hover any cell to see its inputs, outputs, and machine count

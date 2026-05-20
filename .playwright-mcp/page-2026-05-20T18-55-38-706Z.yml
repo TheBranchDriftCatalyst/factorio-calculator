@@ -1,0 +1,126 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "Factorio Blueprint Calculator" [level=1] [ref=e6]
+    - generic [ref=e7]:
+      - region "Inputs" [ref=e8]:
+        - heading "Inputs" [level=2] [ref=e9]
+        - generic [ref=e10]: Coming soon — bring-your-own raw inputs
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - heading "Outputs" [level=2] [ref=e14]
+          - generic [ref=e15]:
+            - group "rate display unit" [ref=e16]:
+              - button "/s" [ref=e17] [cursor=pointer]
+              - button "/min" [ref=e18] [cursor=pointer]
+              - button "/hr" [ref=e19] [cursor=pointer]
+            - button "+ Add target" [ref=e20] [cursor=pointer]
+        - list [ref=e21]:
+          - listitem [ref=e22]:
+            - button "Artillery shell Artillery shell crafting · Assembling machine 1" [ref=e1676]:
+              - img "Artillery shell" [ref=e1677]
+              - generic [ref=e26]: Artillery shell
+              - generic [ref=e27]: crafting · Assembling machine 1
+              - img [ref=e28]
+            - group "target mode" [ref=e1623]:
+              - button "rate" [pressed] [ref=e1624] [cursor=pointer]
+              - button "machines" [ref=e1625] [cursor=pointer]
+            - spinbutton "rate items per sec" [ref=e1626]: "60"
+            - generic [ref=e1627]: /s
+            - button "remove target" [disabled]: ×
+  - generic [ref=e1628]:
+    - generic [ref=e1629]: ► Artillery shell × 60.0/s
+    - generic [ref=e1630]: │
+    - generic [ref=e1631]:
+      - text: POWER
+      - generic [ref=e1632]: 3.80k MW
+    - generic [ref=e1633]: │
+    - generic [ref=e1634]:
+      - text: RAW
+      - generic [ref=e1678]: WATE 9.27k/s · CRUD 6.55k/s · IRON 1.74k/s · TUNG 960/s +3
+    - generic [ref=e1635]: │
+    - generic [ref=e1636]:
+      - text: CELLS 12│FLOWS 27
+      - generic [ref=e1637]: 20 nodes · 27 flows · 3804.05 MW
+    - generic [ref=e1638]: │
+    - generic [ref=e1639]: DS space-age-2.0.55.json
+  - generic [ref=e1641]:
+    - tablist [ref=e1643]:
+      - tab "Sankey" [ref=e1644]
+      - tab "BoxLine" [ref=e1645]
+      - tab "Schematic" [active] [selected] [ref=e1646]
+      - tab "Catalog" [ref=e1647]
+    - tabpanel "Schematic" [ref=e1679]:
+      - generic [ref=e1682]:
+        - generic [ref=e1683]:
+          - generic [ref=e1684]: 12 cells · 1 group · 1 trunk belts · 24 inserters · 32×83 tiles
+          - generic [ref=e1685]:
+            - generic [ref=e1688]: trunk belt
+            - generic [ref=e1689]:
+              - img [ref=e1690]
+              - generic [ref=e1693]: input
+            - generic [ref=e1694]:
+              - img [ref=e1695]
+              - generic [ref=e1698]: output
+            - generic [ref=e1701]: sub-bus group
+            - generic [ref=e1704]: cell
+        - generic [ref=e1705]:
+          - generic [ref=e1706]:
+            - generic: F fit · 0 reset · Space+drag pan · ⌘+wheel zoom · B bottleneck · ⌘K palette
+          - complementary [ref=e1709]:
+            - generic [ref=e1710]:
+              - button "⚙ Topology ▾" [expanded] [ref=e1711]:
+                - generic [ref=e1712]: ⚙ Topology
+                - generic [ref=e1713]: ▾
+              - generic [ref=e1714]:
+                - generic [ref=e1715]:
+                  - generic [ref=e1716]: Belt
+                  - generic [ref=e1717]:
+                    - generic [ref=e1718]:
+                      - generic [ref=e1720]: Belt tier
+                      - combobox "Belt tier" [ref=e1721]:
+                        - option "yellow" [selected]
+                        - option "red"
+                        - option "blue"
+                        - option "turbo"
+                    - generic [ref=e1722]:
+                      - generic [ref=e1724]: Belt spacing
+                      - generic [ref=e1725]:
+                        - slider "Belt spacing" [ref=e1726]: "1"
+                        - generic [ref=e1727]: "1"
+                    - generic [ref=e1728]:
+                      - generic [ref=e1730]: Belts per block
+                      - generic [ref=e1731]:
+                        - slider "Belts per block" [ref=e1732]: "4"
+                        - generic [ref=e1733]: "4"
+                - generic [ref=e1734]:
+                  - generic [ref=e1735]: Layout
+                  - generic [ref=e1736]:
+                    - generic [ref=e1737]:
+                      - generic [ref=e1739]: Cell gap
+                      - generic [ref=e1740]:
+                        - slider "Cell gap" [ref=e1741]: "2"
+                        - generic [ref=e1742]: "2"
+                    - generic [ref=e1743]:
+                      - generic [ref=e1745]: Group gap
+                      - generic [ref=e1746]:
+                        - slider "Group gap" [ref=e1747]: "3"
+                        - generic [ref=e1748]: "3"
+                    - generic [ref=e1749]:
+                      - generic [ref=e1751]: Mark crossings
+                      - switch "Mark crossings" [checked] [ref=e1752]: "On"
+                - generic [ref=e1753]:
+                  - generic [ref=e1754]: Display
+                  - generic [ref=e1755]:
+                    - generic [ref=e1756]:
+                      - generic [ref=e1758]: Zoom (px/tile)
+                      - generic [ref=e1759]:
+                        - slider "Zoom (px/tile)" [ref=e1760]: "18"
+                        - generic [ref=e1761]: "18"
+                    - generic [ref=e1762]:
+                      - generic [ref=e1763]:
+                        - generic [ref=e1764]: Bottleneck mode
+                        - generic [ref=e1765]: B
+                      - switch "Bottleneck mode B" [ref=e1766]: "Off"
+            - generic [ref=e1767]:
+              - generic [ref=e1768]: Inspector
+              - generic [ref=e1769]: Click any cell to pin its details. ⇧ click adds, ⌘ click toggles, ⎋ clears.

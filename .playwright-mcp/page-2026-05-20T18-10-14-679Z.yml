@@ -1,0 +1,68 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "Factorio Blueprint Calculator" [level=1] [ref=e6]
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - heading "Targets" [level=2] [ref=e9]
+        - button "+ Add target" [ref=e10] [cursor=pointer]
+      - list [ref=e11]:
+        - listitem [ref=e12]:
+          - button "Advanced circuit Advanced circuit electronics · Assembling machine 1" [ref=e72]:
+            - img "Advanced circuit" [ref=e73]
+            - generic [ref=e16]: Advanced circuit
+            - generic [ref=e17]: electronics · Assembling machine 1
+            - img [ref=e18]
+          - spinbutton "rate items/sec" [ref=e21]: "1"
+          - generic [ref=e22]: /s
+          - button "remove target" [disabled]: ×
+  - generic [ref=e23]:
+    - generic [ref=e24]:
+      - text: ► Advanced circuit ×
+      - generic [ref=e25]: 1/s
+    - generic [ref=e26]: │
+    - generic [ref=e27]:
+      - text: POWER
+      - generic [ref=e28]: 13.0 MW
+    - generic [ref=e29]: │
+    - generic [ref=e30]:
+      - text: RAW
+      - generic [ref=e74]: CRUD 36.4/s · WATE 18.2/s · COPP 5.00/s · IRON 2.00/s +1
+    - generic [ref=e31]: │
+    - generic [ref=e32]:
+      - text: CELLS 7│FLOWS 15
+      - generic [ref=e33]: 13 nodes · 15 flows · 13.03 MW
+    - generic [ref=e34]: │
+    - generic [ref=e35]: DS space-age-2.0.55.json
+  - generic [ref=e37]:
+    - tablist [ref=e39]:
+      - tab "Sankey" [ref=e40]
+      - tab "BoxLine" [ref=e41]
+      - tab "Schematic" [active] [selected] [ref=e42]
+      - tab "Catalog" [ref=e43]
+    - tabpanel "Schematic" [ref=e75]:
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e80]: 7 cells · 2 groups · 1 trunk belts · 13 inserters · 32×52 tiles
+          - generic [ref=e81]:
+            - generic [ref=e84]: trunk belt
+            - generic [ref=e85]:
+              - img [ref=e86]
+              - generic [ref=e89]: input
+            - generic [ref=e90]:
+              - img [ref=e91]
+              - generic [ref=e94]: output
+            - generic [ref=e97]: sub-bus group
+            - generic [ref=e100]: cell
+          - generic [ref=e101]:
+            - generic [ref=e102]: zoom
+            - button "−" [ref=e103] [cursor=pointer]
+            - generic [ref=e104]: 18px
+            - button "+" [ref=e105] [cursor=pointer]
+            - button "reset" [ref=e106] [cursor=pointer]
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - generic: F fit · 0 reset · Space+drag pan · ⌘+wheel zoom · B bottleneck · ⌘K palette
+          - complementary [ref=e111]:
+            - generic [ref=e112]:
+              - generic [ref=e113]: Inspector
+              - generic [ref=e114]: Click any cell to pin its details. ⇧ click adds, ⌘ click toggles, ⎋ clears.

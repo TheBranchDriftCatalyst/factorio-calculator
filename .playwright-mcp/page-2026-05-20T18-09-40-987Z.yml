@@ -1,0 +1,66 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "Factorio Blueprint Calculator" [level=1] [ref=e6]
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - heading "Targets" [level=2] [ref=e11]
+        - button "+ Add target" [ref=e12] [cursor=pointer]
+      - list [ref=e13]:
+        - listitem [ref=e14]:
+          - button "Electronic circuit Electronic circuit electronics · Assembling machine 1" [ref=e16]:
+            - img "Electronic circuit" [ref=e17]
+            - generic [ref=e18]: Electronic circuit
+            - generic [ref=e19]: electronics · Assembling machine 1
+            - img [ref=e20]
+          - spinbutton "rate items/sec" [ref=e23]: "1"
+          - generic [ref=e24]: /s
+          - button "remove target" [disabled]: ×
+  - generic [ref=e25]:
+    - generic [ref=e26]:
+      - text: ► Electronic circuit ×
+      - generic [ref=e27]: 1/s
+    - generic [ref=e28]: │
+    - generic [ref=e29]:
+      - text: POWER
+      - generic [ref=e30]: 1.97 MW
+    - generic [ref=e31]: │
+    - generic [ref=e32]: RAW COPP 1.50/s · IRON 1.00/s
+    - generic [ref=e33]: │
+    - generic [ref=e34]:
+      - text: CELLS 4│FLOWS 6
+      - generic [ref=e35]: 7 nodes · 6 flows · 1.97 MW
+    - generic [ref=e36]: │
+    - generic [ref=e37]: DS space-age-2.0.55.json
+  - generic [ref=e38]:
+    - tablist [ref=e40]:
+      - tab "Sankey" [ref=e41]
+      - tab "BoxLine" [ref=e42]
+      - tab "Schematic" [active] [selected] [ref=e43]
+      - tab "Catalog" [ref=e44]
+    - tabpanel "Schematic" [ref=e45]:
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e50]: 4 cells · 1 group · 0 trunk belts · 6 inserters · 32×27 tiles
+          - generic [ref=e51]:
+            - generic [ref=e54]: trunk belt
+            - generic [ref=e55]:
+              - img [ref=e56]
+              - generic [ref=e59]: input
+            - generic [ref=e60]:
+              - img [ref=e61]
+              - generic [ref=e64]: output
+            - generic [ref=e67]: sub-bus group
+            - generic [ref=e70]: cell
+          - generic [ref=e71]:
+            - generic [ref=e72]: zoom
+            - button "−" [ref=e73] [cursor=pointer]
+            - generic [ref=e74]: 18px
+            - button "+" [ref=e75] [cursor=pointer]
+            - button "reset" [ref=e76] [cursor=pointer]
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic: F fit · 0 reset · Space+drag pan · ⌘+wheel zoom · B bottleneck · ⌘K palette
+          - complementary [ref=e81]:
+            - generic [ref=e82]:
+              - generic [ref=e83]: Inspector
+              - generic [ref=e84]: Click any cell to pin its details. ⇧ click adds, ⌘ click toggles, ⎋ clears.

@@ -1,0 +1,4 @@
+[      56ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5181/app/node_modules/.vite/deps/react-dom_client.js?v=471963db:20102
+[   41778ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5181/app/node_modules/.vite/deps/react-dom_client.js?v=471963db:20102
+[  256890ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5181/app/src/views/OutputRow.tsx?t=1779302835921:0
+[  256890ms] [ERROR] [vite] Failed to reload /src/views/OutputRow.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5181/app/@vite/client:808

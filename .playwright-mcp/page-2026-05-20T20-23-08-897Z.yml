@@ -1,0 +1,144 @@
+- generic [ref=e3]:
+  - generic:
+    - generic "Profiles" [ref=e4] [cursor=pointer]:
+      - generic [ref=e5]: ≡ PROFILES
+    - generic:
+      - generic: Profiles
+      - button "+ Save current as profile"
+      - generic:
+        - generic:
+          - generic:
+            - generic: Profile 1
+            - generic: 1 target
+          - button "Delete Profile 1": ×
+  - banner [ref=e6]:
+    - heading "Factorio Blueprint Calculator" [level=1] [ref=e8]
+    - generic [ref=e9]:
+      - region "Inputs" [ref=e10]:
+        - heading "Inputs" [level=2] [ref=e11]
+        - generic [ref=e12]: Coming soon — bring-your-own raw inputs
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - heading "Outputs" [level=2] [ref=e16]
+          - button "+ Add target" [ref=e17] [cursor=pointer]
+        - list [ref=e18]:
+          - listitem [ref=e19]:
+            - button "Electronic circuit Electronic circuit electronics · Assembling machine 1" [ref=e21]:
+              - img "Electronic circuit" [ref=e22]
+              - generic [ref=e23]: Electronic circuit
+              - generic [ref=e24]: electronics · Assembling machine 1
+              - img [ref=e25]
+            - group "target mode" [ref=e28]:
+              - button "rate" [pressed] [ref=e29] [cursor=pointer]
+              - button "machines" [ref=e30] [cursor=pointer]
+            - spinbutton "rate items per sec" [ref=e31]: "4"
+            - group "rate unit" [ref=e32]:
+              - button "/s" [ref=e33] [cursor=pointer]
+              - button "/min" [ref=e34] [cursor=pointer]
+              - button "/hr" [ref=e35] [cursor=pointer]
+            - button "remove target" [disabled]: ×
+  - generic [ref=e37]:
+    - generic [ref=e38]: ► Electronic circuit × 4.00/s
+    - generic [ref=e39]: │
+    - generic [ref=e40]:
+      - text: POWER
+      - generic [ref=e41]: 7.88 MW
+    - generic [ref=e42]: │
+    - generic [ref=e43]: RAW COPP 6.00/s · IRON 4.00/s
+    - generic [ref=e44]: │
+    - generic [ref=e45]:
+      - text: CELLS 4│FLOWS 6
+      - generic [ref=e46]: 7 nodes · 6 flows · 7.88 MW
+    - generic [ref=e47]: │
+    - generic [ref=e48]: DS space-age-2.0.55.json
+  - generic [ref=e50]:
+    - tablist [ref=e52]:
+      - tab "Sankey" [ref=e53]
+      - tab "BoxLine" [ref=e54]
+      - tab "Schematic" [active] [selected] [ref=e55]
+      - tab "Catalog" [ref=e56]
+    - tabpanel "Schematic" [ref=e105]:
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - generic [ref=e110]: 4 cells · 1 group · 1 trunk belts · 8 inserters · 32×30 tiles
+          - generic [ref=e111]:
+            - generic [ref=e114]: trunk belt
+            - generic [ref=e115]:
+              - img [ref=e116]
+              - generic [ref=e119]: input
+            - generic [ref=e120]:
+              - img [ref=e121]
+              - generic [ref=e124]: output
+            - generic [ref=e127]: sub-bus group
+            - generic [ref=e130]: cell
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - generic: F fit · 0 reset · Space+drag pan · ⌘+wheel zoom · B bottleneck · ⌘K palette
+          - complementary [ref=e135]:
+            - generic [ref=e136]:
+              - button "⚙ Topology ▾" [expanded] [ref=e137]:
+                - generic [ref=e138]: ⚙ Topology
+                - generic [ref=e139]: ▾
+              - generic [ref=e140]:
+                - generic [ref=e141]:
+                  - generic [ref=e142]: Belt
+                  - generic [ref=e143]:
+                    - generic [ref=e144]:
+                      - generic [ref=e146]: Belt tier
+                      - combobox "Belt tier" [ref=e147]:
+                        - option "yellow" [selected]
+                        - option "red"
+                        - option "blue"
+                        - option "turbo"
+                    - generic [ref=e148]:
+                      - generic [ref=e150]: Belt spacing
+                      - generic [ref=e151]:
+                        - slider "Belt spacing" [ref=e152]: "1"
+                        - generic [ref=e153]: "1"
+                    - generic [ref=e154]:
+                      - generic [ref=e156]: Belt width
+                      - generic [ref=e157]:
+                        - slider "Belt width" [ref=e158]: "2"
+                        - generic [ref=e159]: "2"
+                    - generic [ref=e160]:
+                      - generic [ref=e162]: Belts per block
+                      - generic [ref=e163]:
+                        - slider "Belts per block" [ref=e164]: "7"
+                        - generic [ref=e165]: "7"
+                    - generic [ref=e166]:
+                      - generic [ref=e168]: Min trunk consumers
+                      - generic [ref=e169]:
+                        - slider "Min trunk consumers" [ref=e170]: "2"
+                        - generic [ref=e171]: "2"
+                - generic [ref=e172]:
+                  - generic [ref=e173]: Layout
+                  - generic [ref=e174]:
+                    - generic [ref=e175]:
+                      - generic [ref=e177]: Cell gap
+                      - generic [ref=e178]:
+                        - slider "Cell gap" [ref=e179]: "2"
+                        - generic [ref=e180]: "2"
+                    - generic [ref=e181]:
+                      - generic [ref=e183]: Group gap
+                      - generic [ref=e184]:
+                        - slider "Group gap" [ref=e185]: "3"
+                        - generic [ref=e186]: "3"
+                    - generic [ref=e187]:
+                      - generic [ref=e189]: Mark crossings
+                      - switch "Mark crossings" [checked] [ref=e190]: "On"
+                - generic [ref=e191]:
+                  - generic [ref=e192]: Display
+                  - generic [ref=e193]:
+                    - generic [ref=e194]:
+                      - generic [ref=e196]: Zoom (px/tile)
+                      - generic [ref=e197]:
+                        - slider "Zoom (px/tile)" [ref=e198]: "18"
+                        - generic [ref=e199]: "18"
+                    - generic [ref=e200]:
+                      - generic [ref=e201]:
+                        - generic [ref=e202]: Bottleneck mode
+                        - generic [ref=e203]: B
+                      - switch "Bottleneck mode B" [ref=e204]: "Off"
+            - generic [ref=e205]:
+              - generic [ref=e206]: Inspector
+              - generic [ref=e207]: Click any cell to pin its details. ⇧ click adds, ⌘ click toggles, ⎋ clears.

@@ -1,0 +1,6 @@
+[     975ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5179/app/node_modules/.vite/deps/react-dom_client.js?v=a21d98f4:20102
+[    1012ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5179/data/space-age-2.0.55.json:0
+[    1012ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5179/data/space-age-2.0.55.json:0
+[  213926ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5179/app/node_modules/.vite/deps/react-dom_client.js?v=a21d98f4:20102
+[  213935ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5179/data/space-age-2.0.55.json:0
+[  213936ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5179/data/space-age-2.0.55.json:0

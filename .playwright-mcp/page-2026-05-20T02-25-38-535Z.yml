@@ -1,0 +1,50 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Factorio Blueprint Calculator" [level=1] [ref=e6]
+      - paragraph [ref=e7]:
+        - text: "Dataset:"
+        - code [ref=e8]: space-age-2.0.55.json
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - heading "Targets" [level=2] [ref=e11]
+        - button "+ Add target" [ref=e12] [cursor=pointer]
+      - list [ref=e13]:
+        - listitem [ref=e14]:
+          - button "Arithmetic combinator Arithmetic combinator crafting · Assembling machine 1" [active] [ref=e1662]:
+            - img "Arithmetic combinator" [ref=e1663]
+            - generic [ref=e18]: Arithmetic combinator
+            - generic [ref=e19]: crafting · Assembling machine 1
+            - img [ref=e20]
+          - spinbutton "rate items/sec" [ref=e1615]: "1"
+          - generic [ref=e1616]: /s
+          - button "remove target" [disabled]: ×
+  - generic [ref=e1617]:
+    - generic [ref=e1618]:
+      - tablist [ref=e1619]:
+        - tab "Sankey" [ref=e1620]
+        - tab "BoxLine" [ref=e1621]
+        - tab "Schematic" [selected] [ref=e1622]
+        - tab "Catalog" [ref=e1623]
+      - generic [ref=e1624]: 8 nodes · 10 flows · 11.97 MW
+    - tabpanel "Schematic" [ref=e1625]:
+      - generic [ref=e1628]:
+        - generic [ref=e1629]:
+          - generic [ref=e1630]: 5 cells · 2 groups · 1 trunk belts · 9 inserters · 81×27 tiles
+          - generic [ref=e1631]:
+            - generic [ref=e1634]: trunk belt
+            - generic [ref=e1635]:
+              - img [ref=e1636]
+              - generic [ref=e1639]: input
+            - generic [ref=e1640]:
+              - img [ref=e1641]
+              - generic [ref=e1644]: output
+            - generic [ref=e1647]: sub-bus group
+            - generic [ref=e1650]: cell
+          - generic [ref=e1651]:
+            - generic [ref=e1652]: zoom
+            - button "−" [ref=e1653] [cursor=pointer]
+            - generic [ref=e1654]: 22px
+            - button "+" [ref=e1655] [cursor=pointer]
+            - button "reset" [ref=e1656] [cursor=pointer]
+        - generic [ref=e1659]: hover any cell to see its inputs, outputs, and machine count

@@ -1,0 +1,35 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Factorio Blueprint Calculator" [level=1] [ref=e6]
+      - paragraph [ref=e7]:
+        - text: "Dataset:"
+        - code [ref=e8]: space-age-2.0.55.json
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - heading "Targets" [level=2] [ref=e11]
+        - button "+ Add target" [ref=e12] [cursor=pointer]
+      - list [ref=e13]:
+        - listitem [ref=e14]:
+          - button "Processing unit Processing unit electronics-with-fluid · Assembling machine 2" [ref=e16]:
+            - img "Processing unit" [ref=e17]
+            - generic [ref=e18]: Processing unit
+            - generic [ref=e19]: electronics-with-fluid · Assembling machine 2
+            - img [ref=e20]
+          - spinbutton "rate items/sec" [ref=e23]: "1"
+          - generic [ref=e24]: /s
+          - button "remove target" [disabled]: ×
+  - generic [ref=e25]:
+    - generic [ref=e26]:
+      - tablist [ref=e27]:
+        - tab "Sankey" [ref=e28]
+        - tab "BoxLine" [ref=e29]
+        - tab "Schematic" [active] [selected] [ref=e30]
+        - tab "Catalog" [ref=e31]
+      - generic [ref=e32]: 16 nodes · 31 flows · 76.04 MW
+    - tabpanel "Schematic" [ref=e116]:
+      - generic [ref=e119]:
+        - generic [ref=e120]:
+          - generic [ref=e121]: 10 cells · 15 bus lanes · 615×24 tiles
+          - generic [ref=e122]: hover a cell to inspect
+        - generic [ref=e125]: —

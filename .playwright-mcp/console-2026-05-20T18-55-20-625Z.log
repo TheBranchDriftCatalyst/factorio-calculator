@@ -1,0 +1,6 @@
+[      51ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5181/app/node_modules/.vite/deps/react-dom_client.js?v=471963db:20102
+[    9596ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5181/app/node_modules/.vite/deps/react-dom_client.js?v=471963db:20102
+[ 1709274ms] [ERROR] The final argument passed to %s changed size between renders. The order and size of this array must remain constant.
+
+Previous: %s
+Incoming: %s useEffect [[object Object], , [object Set], 18, false, turbo, min] [[object Object], , [object Set], , 18, false, turbo, min] @ http://localhost:5181/app/node_modules/.vite/deps/react-dom_client.js?v=471963db:5627

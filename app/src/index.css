@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+/* Scan catalyst-ui's compiled JS for utility classes (per subagent audit). */
+@source "../node_modules/@thebranchdriftcatalyst/catalyst-ui/dist/lib";
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+/* Apply catalyst theme tokens to the document chrome.
+   Without this, body stays transparent and looks "light mode" against the
+   browser default. */
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* catalyst-ui declares `.theme-catalyst.dark { --font-mono: "Space Mono" }`
+   etc. with specificity (0,2,0). We must beat that. Selectors below use
+   `html.theme-catalyst.dark` = (0,2,1) and `html.theme-catalyst.light` to
+   cover both variants. Plain `:root` is the fallback for non-themed pages
+   (tests, storybook, etc.). */
+html.theme-catalyst.dark,
+html.theme-catalyst.light,
+:root {
+  --font-display: "Titillium Web", system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Fira Code", monospace;
+  --signature: #FFB000;   /* Bloomberg amber / Factorio orange */
+  --warning:   #FF2E63;   /* bottleneck red */
+}
+
+body { font-family: var(--font-body); }
+
+.font-display { font-family: var(--font-display); }
+.font-mono    { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tabular      { font-variant-numeric: tabular-nums; }

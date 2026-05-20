@@ -1,0 +1,111 @@
+- generic [ref=e3]:
+  - generic:
+    - generic "Profiles" [ref=e4] [cursor=pointer]:
+      - generic [ref=e5]: ≡ PROFILES
+    - generic [ref=e80]:
+      - generic [ref=e84]: Profiles
+      - button "+ Save current as profile" [ref=e81] [cursor=pointer]
+      - generic [ref=e82] [cursor=pointer]:
+        - generic [ref=e86]:
+          - generic [ref=e87]: Profile 1
+          - generic [ref=e88]: 1 target
+        - button "Delete Profile 1" [ref=e83]: ×
+  - banner [ref=e6]:
+    - heading "Factorio Blueprint Calculator" [level=1] [ref=e8]
+    - generic [ref=e11]:
+      - region "Inputs" [ref=e12]:
+        - heading "Inputs" [level=2] [ref=e13]
+        - generic [ref=e14]: Coming soon — bring-your-own raw inputs
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - heading "Outputs" [level=2] [ref=e18]
+          - generic [ref=e19]:
+            - group "rate display unit" [ref=e20]:
+              - button "/s" [ref=e21] [cursor=pointer]
+              - button "/min" [ref=e22] [cursor=pointer]
+              - button "/hr" [ref=e23] [cursor=pointer]
+            - button "+ Add target" [ref=e24] [cursor=pointer]
+        - list [ref=e25]:
+          - listitem [ref=e26]:
+            - button "Electronic circuit Electronic circuit electronics · Assembling machine 1" [ref=e89]:
+              - img "Electronic circuit" [ref=e90]
+              - generic [ref=e30]: Electronic circuit
+              - generic [ref=e31]: electronics · Assembling machine 1
+              - img [ref=e32]
+            - group "target mode" [ref=e35]:
+              - button "rate" [pressed] [ref=e36] [cursor=pointer]
+              - button "machines" [ref=e37] [cursor=pointer]
+            - spinbutton "rate items per sec" [ref=e38]: "7"
+            - generic [ref=e39]: /s
+            - button "remove target" [disabled]: ×
+  - generic [ref=e41]:
+    - generic [ref=e42]: ► Electronic circuit × 1.00/s
+    - generic [ref=e43]: │
+    - generic [ref=e44]:
+      - text: POWER
+      - generic [ref=e45]: 1.97 MW
+    - generic [ref=e46]: │
+    - generic [ref=e47]: RAW COPP 1.50/s · IRON 1.00/s
+    - generic [ref=e48]: │
+    - generic [ref=e49]:
+      - text: CELLS 4│FLOWS 6
+      - generic [ref=e50]: 7 nodes · 6 flows · 1.97 MW
+    - generic [ref=e51]: │
+    - generic [ref=e52]: DS space-age-2.0.55.json
+  - generic [ref=e53]:
+    - tablist [ref=e55]:
+      - tab "Sankey" [selected] [ref=e56]
+      - tab "BoxLine" [ref=e57]
+      - tab "Schematic" [ref=e58]
+      - tab "Catalog" [ref=e59]
+    - tabpanel "Sankey" [ref=e60]:
+      - img "Recipe sankey diagram" [ref=e63]:
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - 'generic "electronic-circuit: 1.00/s" [ref=e93]'
+            - generic: Electronic circuit 1.00/s
+          - generic [ref=e94]:
+            - 'generic "iron-plate: 1.00/s"'
+            - generic: Iron plate 1.00/s
+          - generic [ref=e95]:
+            - 'generic "copper-cable: 3.00/s"'
+            - generic: Copper cable 3.00/s
+          - generic [ref=e96]:
+            - 'generic "iron-ore: 1.00/s"'
+            - generic: Iron ore 1.00/s
+          - generic [ref=e97]:
+            - 'generic "copper-plate: 1.50/s" [ref=e98]'
+            - generic: Copper plate 1.50/s
+          - generic [ref=e99]:
+            - 'generic "copper-ore: 1.50/s"'
+            - generic: Copper ore 1.50/s
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - generic "Electronic circuit" [ref=e102]
+            - generic: Electronic circuit
+          - generic [ref=e104]:
+            - generic "Electronic circuit 0.25 × electromagnetic-plant 0.50 MW" [ref=e105]
+            - generic [ref=e108]: ":"
+            - generic [ref=e110]: × 0.25
+            - generic: Electronic circuit
+          - generic [ref=e111]:
+            - generic "Iron plate 1.60 × electric-furnace 0.29 MW" [ref=e112]
+            - generic [ref=e114]: ":"
+            - generic [ref=e116]: × 1.60
+            - generic: Iron plate
+          - generic [ref=e117]:
+            - generic "Copper cable 0.38 × electromagnetic-plant 0.75 MW" [ref=e118]
+            - generic [ref=e120]: ":"
+            - generic [ref=e122]: × 0.38
+            - generic: Copper cable
+          - generic [ref=e123]:
+            - generic "Iron ore" [ref=e124]
+            - generic: Iron ore
+          - generic [ref=e126]:
+            - generic "Copper plate 2.40 × electric-furnace 0.43 MW" [ref=e127]
+            - generic [ref=e129]: ":"
+            - generic [ref=e131]: × 2.40
+            - generic: Copper plate
+          - generic [ref=e132]:
+            - generic "Copper ore" [ref=e133]
+            - generic: Copper ore

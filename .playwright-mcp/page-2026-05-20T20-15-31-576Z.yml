@@ -1,0 +1,16 @@
+- generic [ref=e3]:
+  - generic:
+    - generic "Profiles" [ref=e4] [cursor=pointer]:
+      - generic [ref=e5]: ≡ PROFILES
+    - generic:
+      - generic: Profiles
+      - button "+ Save current as profile"
+      - generic:
+        - generic:
+          - generic:
+            - generic: Profile 1
+            - generic: 1 target
+          - button "Delete Profile 1": ×
+  - banner [ref=e6]:
+    - heading "Factorio Blueprint Calculator" [level=1] [ref=e8]
+  - paragraph [ref=e10]: Loading catalog…

@@ -1,0 +1,210 @@
+- generic [ref=e208]:
+  - generic:
+    - generic "Profiles" [ref=e209] [cursor=pointer]:
+      - generic [ref=e210]: ≡ PROFILES
+    - generic:
+      - generic: Profiles
+      - button "+ Save current as profile"
+      - generic:
+        - generic:
+          - generic:
+            - generic: Science 1,2,3,4
+            - generic: 4 targets
+          - button "Delete Science 1,2,3,4": ×
+  - banner [ref=e211]:
+    - heading "Factorio Blueprint Calculator" [level=1] [ref=e213]
+    - generic [ref=e214]:
+      - generic [ref=e216]:
+        - generic [ref=e217]:
+          - heading "Inputs" [level=2] [ref=e218]
+          - button "+ Add input" [active] [ref=e219] [cursor=pointer]
+        - list [ref=e430]:
+          - listitem [ref=e431]:
+            - button "Accumulator Accumulator electronics · Assembling machine 1" [ref=e433]:
+              - img "Accumulator" [ref=e434]
+              - generic [ref=e435]: Accumulator
+              - generic [ref=e436]: electronics · Assembling machine 1
+              - img [ref=e437]
+            - spinbutton "supplied rate items per sec" [ref=e440]: "1"
+            - group "rate unit" [ref=e441]:
+              - button "/s" [ref=e442] [cursor=pointer]
+              - button "/min" [ref=e443] [cursor=pointer]
+              - button "/hr" [ref=e444] [cursor=pointer]
+            - button "remove input" [ref=e445] [cursor=pointer]: ×
+      - generic [ref=e222]:
+        - generic [ref=e223]:
+          - heading "Outputs" [level=2] [ref=e224]
+          - button "+ Add target" [ref=e225] [cursor=pointer]
+        - list [ref=e226]:
+          - listitem [ref=e227]:
+            - button "Logistic science pack Logistic science pack crafting · Assembling machine 1" [ref=e229]:
+              - img "Logistic science pack" [ref=e230]
+              - generic [ref=e231]: Logistic science pack
+              - generic [ref=e232]: crafting · Assembling machine 1
+              - img [ref=e233]
+            - group "target mode" [ref=e236]:
+              - button "rate" [pressed] [ref=e237] [cursor=pointer]
+              - button "machines" [ref=e238] [cursor=pointer]
+            - spinbutton "rate items per sec" [ref=e239]: "1"
+            - group "rate unit" [ref=e240]:
+              - button "/s" [ref=e241] [cursor=pointer]
+              - button "/min" [ref=e242] [cursor=pointer]
+              - button "/hr" [ref=e243] [cursor=pointer]
+            - button "remove target" [ref=e244] [cursor=pointer]: ×
+          - listitem [ref=e245]:
+            - button "Automation science pack Automation science pack crafting · Assembling machine 1" [ref=e247]:
+              - img "Automation science pack" [ref=e248]
+              - generic [ref=e249]: Automation science pack
+              - generic [ref=e250]: crafting · Assembling machine 1
+              - img [ref=e251]
+            - group "target mode" [ref=e254]:
+              - button "rate" [pressed] [ref=e255] [cursor=pointer]
+              - button "machines" [ref=e256] [cursor=pointer]
+            - spinbutton "rate items per sec" [ref=e257]: "1"
+            - group "rate unit" [ref=e258]:
+              - button "/s" [ref=e259] [cursor=pointer]
+              - button "/min" [ref=e260] [cursor=pointer]
+              - button "/hr" [ref=e261] [cursor=pointer]
+            - button "remove target" [ref=e262] [cursor=pointer]: ×
+          - listitem [ref=e263]:
+            - button "Military science pack Military science pack crafting · Assembling machine 1" [ref=e265]:
+              - img "Military science pack" [ref=e266]
+              - generic [ref=e267]: Military science pack
+              - generic [ref=e268]: crafting · Assembling machine 1
+              - img [ref=e269]
+            - group "target mode" [ref=e272]:
+              - button "rate" [pressed] [ref=e273] [cursor=pointer]
+              - button "machines" [ref=e274] [cursor=pointer]
+            - spinbutton "rate items per sec" [ref=e275]: "1"
+            - group "rate unit" [ref=e276]:
+              - button "/s" [ref=e277] [cursor=pointer]
+              - button "/min" [ref=e278] [cursor=pointer]
+              - button "/hr" [ref=e279] [cursor=pointer]
+            - button "remove target" [ref=e280] [cursor=pointer]: ×
+          - listitem [ref=e281]:
+            - button "Chemical science pack Chemical science pack crafting · Assembling machine 1" [ref=e283]:
+              - img "Chemical science pack" [ref=e284]
+              - generic [ref=e285]: Chemical science pack
+              - generic [ref=e286]: crafting · Assembling machine 1
+              - img [ref=e287]
+            - group "target mode" [ref=e290]:
+              - button "rate" [pressed] [ref=e291] [cursor=pointer]
+              - button "machines" [ref=e292] [cursor=pointer]
+            - spinbutton "rate items per sec" [ref=e293]: "1"
+            - group "rate unit" [ref=e294]:
+              - button "/s" [ref=e295] [cursor=pointer]
+              - button "/min" [ref=e296] [cursor=pointer]
+              - button "/hr" [ref=e297] [cursor=pointer]
+            - button "remove target" [ref=e298] [cursor=pointer]: ×
+  - generic [ref=e300]:
+    - generic [ref=e301]: ► Logistic science pack × 1.00/s +3
+    - generic [ref=e302]: │
+    - generic [ref=e303]:
+      - text: POWER
+      - generic [ref=e304]: 46.3 MW
+    - generic [ref=e305]: │
+    - generic [ref=e306]:
+      - text: RAW
+      - generic [ref=e307]: CRUD 68.2/s · WATE 41.6/s · IRON 25.3/s · COPP 10.5/s +2
+    - generic [ref=e308]: │
+    - generic [ref=e309]:
+      - text: CELLS 23│FLOWS 73
+      - generic [ref=e310]: 33 nodes · 73 flows · 46.26 MW
+    - generic [ref=e311]: │
+    - generic [ref=e312]: DS space-age-2.0.55.json
+  - generic [ref=e314]:
+    - tablist [ref=e316]:
+      - tab "Sankey" [ref=e317]
+      - tab "BoxLine" [ref=e318]
+      - tab "Schematic" [selected] [ref=e319]
+      - tab "Catalog" [ref=e320]
+    - tabpanel "Schematic" [ref=e321]:
+      - generic [ref=e324]:
+        - generic [ref=e325]:
+          - generic [ref=e326]: 23 cells · 3 groups · 7 trunk belts · 62 inserters · 42×152 tiles
+          - generic [ref=e327]:
+            - generic [ref=e330]: trunk belt
+            - generic [ref=e331]:
+              - img [ref=e332]
+              - generic [ref=e335]: input
+            - generic [ref=e336]:
+              - img [ref=e337]
+              - generic [ref=e340]: output
+            - generic [ref=e343]: sub-bus group
+            - generic [ref=e346]: cell
+        - generic [ref=e347]:
+          - generic [ref=e348]:
+            - generic: F fit · 0 reset · Space+drag pan · ⌘+wheel zoom · B bottleneck · ⌘K palette
+          - complementary [ref=e351]:
+            - generic [ref=e352]:
+              - button "⚙ Topology ▾" [expanded] [ref=e353]:
+                - generic [ref=e354]: ⚙ Topology
+                - generic [ref=e355]: ▾
+              - generic [ref=e356]:
+                - generic [ref=e357]:
+                  - generic [ref=e358]: Belt
+                  - generic [ref=e359]:
+                    - generic [ref=e360]:
+                      - generic [ref=e362]: Belt tier
+                      - combobox "Belt tier" [ref=e363]:
+                        - option "yellow" [selected]
+                        - option "red"
+                        - option "blue"
+                        - option "turbo"
+                    - generic [ref=e364]:
+                      - generic [ref=e366]: Belt spacing
+                      - generic [ref=e367]:
+                        - slider "Belt spacing" [ref=e368]: "1"
+                        - generic [ref=e369]: "1"
+                    - generic [ref=e370]:
+                      - generic [ref=e372]: Belt width
+                      - generic [ref=e373]:
+                        - slider "Belt width" [ref=e374]: "2"
+                        - generic [ref=e375]: "2"
+                    - generic [ref=e376]:
+                      - generic [ref=e378]: Belts per block
+                      - generic [ref=e379]:
+                        - slider "Belts per block" [ref=e380]: "7"
+                        - generic [ref=e381]: "7"
+                    - generic [ref=e382]:
+                      - generic [ref=e384]: Min trunk consumers
+                      - generic [ref=e385]:
+                        - slider "Min trunk consumers" [ref=e386]: "2"
+                        - generic [ref=e387]: "2"
+                    - generic [ref=e388]:
+                      - generic [ref=e390]: Max sub-bus depth
+                      - generic [ref=e391]:
+                        - slider "Max sub-bus depth" [ref=e392]: "3"
+                        - generic [ref=e393]: "3"
+                - generic [ref=e394]:
+                  - generic [ref=e395]: Layout
+                  - generic [ref=e396]:
+                    - generic [ref=e397]:
+                      - generic [ref=e399]: Cell gap
+                      - generic [ref=e400]:
+                        - slider "Cell gap" [ref=e401]: "2"
+                        - generic [ref=e402]: "2"
+                    - generic [ref=e403]:
+                      - generic [ref=e405]: Group gap
+                      - generic [ref=e406]:
+                        - slider "Group gap" [ref=e407]: "3"
+                        - generic [ref=e408]: "3"
+                    - generic [ref=e409]:
+                      - generic [ref=e411]: Mark crossings
+                      - switch "Mark crossings" [checked] [ref=e412]: "On"
+                - generic [ref=e413]:
+                  - generic [ref=e414]: Display
+                  - generic [ref=e415]:
+                    - generic [ref=e416]:
+                      - generic [ref=e418]: Zoom (px/tile)
+                      - generic [ref=e419]:
+                        - slider "Zoom (px/tile)" [ref=e420]: "18"
+                        - generic [ref=e421]: "18"
+                    - generic [ref=e422]:
+                      - generic [ref=e423]:
+                        - generic [ref=e424]: Bottleneck mode
+                        - generic [ref=e425]: B
+                      - switch "Bottleneck mode B" [ref=e426]: "Off"
+            - generic [ref=e427]:
+              - generic [ref=e428]: Inspector
+              - generic [ref=e429]: Click any cell to pin its details. ⇧ click adds, ⌘ click toggles, ⎋ clears.
