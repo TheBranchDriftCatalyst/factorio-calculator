@@ -4,6 +4,38 @@ import { ChevronsUpDown, Check } from "lucide-react"
 import type { Catalog } from "../factorio"
 import { ItemIcon } from "./Icon"
 
+function IconList({
+  catalog,
+  list,
+}: {
+  catalog: Catalog
+  list: ReadonlyArray<{ item: string; amount: number }>
+}) {
+  if (list.length === 0) return <span style={{ opacity: 0.5 }}>—</span>
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+      {list.map((p, i) => (
+        <span
+          key={`${p.item}-${i}`}
+          style={{ display: "inline-flex", alignItems: "center", gap: 2 }}
+          title={`${p.amount} × ${catalog.items.get(p.item)?.name ?? p.item}`}
+        >
+          <ItemIcon catalog={catalog} itemKey={p.item} size={14} />
+          <span className="font-mono" style={{ fontSize: 9, opacity: 0.85 }}>
+            ×{p.amount}
+          </span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
+function formatRecipeTime(seconds: number): string {
+  if (seconds < 1) return `${(seconds * 1000).toFixed(0)}ms`
+  if (seconds < 10) return `${seconds.toFixed(1)}s`
+  return `${seconds.toFixed(0)}s`
+}
+
 interface Props {
   catalog: Catalog
   value: string
@@ -34,8 +66,20 @@ export function ItemCombobox({ catalog, value, onChange, testId }: Props) {
     }
   }, [open])
 
+  // Each row carries the chosen recipe's ingredient + product breakdown so
+  // the dropdown can paint full icon cards inline ("see what this item is
+  // made of without leaving the picker").
   const items = useMemo(() => {
-    const out: Array<{ key: string; name: string; subtitle: string; searchText: string }> = []
+    type Row = {
+      key: string
+      name: string
+      subtitle: string
+      searchText: string
+      ingredients: ReadonlyArray<{ item: string; amount: number }>
+      products: ReadonlyArray<{ item: string; amount: number }>
+      time: number
+    }
+    const out: Row[] = []
     for (const itemKey of catalog.recipesByProduct.keys()) {
       const item = catalog.items.get(itemKey)
       const name = item?.name ?? itemKey
@@ -46,7 +90,15 @@ export function ItemCombobox({ catalog, value, onChange, testId }: Props) {
       const subtitle = primary
         ? `${primary.category}${machine ? ` · ${machine.name}` : ""}`
         : itemKey
-      out.push({ key: itemKey, name, subtitle, searchText: `${itemKey} ${name} ${subtitle}` })
+      out.push({
+        key: itemKey,
+        name,
+        subtitle,
+        searchText: `${itemKey} ${name} ${subtitle}`,
+        ingredients: primary?.ingredients ?? [],
+        products: primary?.products?.map((p) => ({ item: p.item, amount: p.amount })) ?? [],
+        time: primary?.time ?? 0,
+      })
     }
     return out.sort((a, b) => a.name.localeCompare(b.name))
   }, [catalog])
@@ -105,14 +157,42 @@ export function ItemCombobox({ catalog, value, onChange, testId }: Props) {
                     onChange(it.key)
                     setOpen(false)
                   }}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm data-[selected=true]:bg-primary/15 data-[selected=true]:text-foreground"
+                  className="flex items-start gap-2 px-2 py-1.5 rounded cursor-pointer text-sm data-[selected=true]:bg-primary/15 data-[selected=true]:text-foreground"
                 >
                   <ItemIcon catalog={catalog} itemKey={it.key} size={20} />
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{it.name}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{it.name}</span>
+                      {it.key === value && <Check className="h-4 w-4 opacity-70 shrink-0" />}
+                    </div>
                     <div className="text-xs opacity-60 truncate">{it.subtitle}</div>
+                    {/* Ingredient → product mini-row, only when the primary recipe
+                        has ingredients (raw items have none). */}
+                    {it.ingredients.length > 0 && (
+                      <div
+                        className="flex items-center flex-wrap gap-1 mt-1"
+                        style={{ fontSize: 10, opacity: 0.85 }}
+                      >
+                        <IconList catalog={catalog} list={it.ingredients} />
+                        <span style={{ opacity: 0.5 }}>→</span>
+                        <IconList catalog={catalog} list={it.products} />
+                        {it.time > 0 && (
+                          <span
+                            className="font-mono"
+                            style={{
+                              marginLeft: 4,
+                              fontSize: 9,
+                              padding: "0 4px",
+                              background: "rgba(255,255,255,0.06)",
+                              borderRadius: 2,
+                            }}
+                          >
+                            {formatRecipeTime(it.time)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {it.key === value && <Check className="h-4 w-4 opacity-70" />}
                 </Command.Item>
               ))}
             </Command.List>

@@ -79,6 +79,12 @@ function toMachine(raw: KirkRawMachine): Machine {
     sourceType === "burner" || sourceType === "heat" || sourceType === "fluid" || sourceType === "void"
       ? sourceType
       : "electric"
+  // Burners may declare a single `fuel_category` (Kirk's vanilla shape) or
+  // an array `fuel_categories` (Space-Age & modded data). Accept both so
+  // multi-category burners (e.g. accepts "chemical" OR "nuclear") work.
+  const fuelCategories = new Set<string>()
+  if (raw.energy_source?.fuel_category) fuelCategories.add(raw.energy_source.fuel_category)
+  for (const c of raw.energy_source?.fuel_categories ?? []) fuelCategories.add(c)
   const sz = SIZES[raw.key]
   return {
     key: raw.key,
@@ -89,6 +95,7 @@ function toMachine(raw: KirkRawMachine): Machine {
     moduleSlots: raw.module_slots ?? 0,
     power: raw.energy_usage ?? 0,
     energySource,
+    fuelCategories,
     size: sz ? ([sz[0], sz[1]] as Size) : undefined,
   }
 }
@@ -188,6 +195,23 @@ export function loadCatalog(raw: KirkRawDataset): Catalog {
   for (const it of itemsList) {
     const prev = itemsMap.get(it.key)
     itemsMap.set(it.key, prev ? mergeItems(prev, it) : it)
+  }
+
+  // Stamp fuel value + category onto items from the top-level `fuel`
+  // registry. Kirk's dataset keeps fuel metadata OUT of items proper, so
+  // without this pass `item.fuelValue` would always be undefined.
+  for (const f of raw.fuel ?? []) {
+    const k = f.item_key ?? f.key
+    if (!k) continue
+    const existing = itemsMap.get(k)
+    if (!existing) continue
+    const fuelValue = f.value ?? f.fuel_value
+    const fuelCategory = f.category ?? f.fuel_category
+    itemsMap.set(k, {
+      ...existing,
+      fuelValue: fuelValue ?? existing.fuelValue,
+      fuelCategory: fuelCategory ?? existing.fuelCategory,
+    })
   }
 
   return {

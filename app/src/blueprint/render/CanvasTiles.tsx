@@ -38,6 +38,12 @@ interface Props {
   highlightCellKeys?: ReadonlySet<string>
   /** highlight a specific lane (drawn with a glow) */
   highlightLane?: { beltX: number; lane: "A" | "B" } | null
+  /**
+   * When set, EVERY lane (sub-lane on a belt, direct connection, etc.)
+   * carrying this item glows. Used by the Intermediates panel to let the
+   * user follow an item across the whole schematic at a glance.
+   */
+  highlightItem?: string | null
   /** px per tile. Default 18; usually driven by a zoom slider. */
   tilePx?: number
   /** when on, belts colored by utilization (green/amber/red) instead of by item */
@@ -77,6 +83,7 @@ export function CanvasTiles({
   highlightCellKey,
   highlightCellKeys,
   highlightLane,
+  highlightItem,
   tilePx,
   bottleneckMode,
   beltTier = "yellow",
@@ -113,6 +120,7 @@ export function CanvasTiles({
     highlightCellKey,
     highlightCellKeys,
     highlightLane,
+    highlightItem,
     TILE_PX,
     bottleneckMode,
     beltTier,
@@ -348,6 +356,53 @@ export function CanvasTiles({
         ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1)
         ctx.fillStyle = "rgba(0, 252, 214, 0.12)"
         ctx.fillRect(x, y, w, h)
+      }
+    }
+
+    // --- Item-wide highlight overlay — driven by Intermediates panel.
+    //     Glows every sub-lane (across all bus depths) AND every direct
+    //     connection that carries the named item. Drawn over the belt fill
+    //     so a single click can trace an item end-to-end. ---
+    if (highlightItem) {
+      const stroke = "rgba(0, 252, 214, 0.9)"
+      const fill = "rgba(0, 252, 214, 0.18)"
+      const walk = (n: import("../types").BusNode) => {
+        for (const b of n.belts) {
+          const beltTop = b.y0 ?? n.y
+          const beltBot = b.y1 ?? n.y + n.h
+          const y = px(beltTop)
+          const h = px(beltBot - beltTop)
+          if (b.laneA?.item === highlightItem) {
+            const x = px(b.x)
+            ctx.fillStyle = fill
+            ctx.fillRect(x, y, LANE_W_PX, h)
+            ctx.strokeStyle = stroke
+            ctx.lineWidth = 1.5
+            ctx.strokeRect(x + 0.5, y + 0.5, LANE_W_PX - 1, h - 1)
+          }
+          if (b.laneB?.item === highlightItem) {
+            const x = px(b.x) + LANE_W_PX
+            ctx.fillStyle = fill
+            ctx.fillRect(x, y, LANE_W_PX, h)
+            ctx.strokeStyle = stroke
+            ctx.lineWidth = 1.5
+            ctx.strokeRect(x + 0.5, y + 0.5, LANE_W_PX - 1, h - 1)
+          }
+        }
+        for (const c of n.children) walk(c)
+      }
+      if (blueprint.root) walk(blueprint.root)
+      // Direct connections carrying this item.
+      for (const dc of blueprint.directConnections ?? []) {
+        if (dc.item !== highlightItem) continue
+        const segX = dc.x * TILE_PX
+        const segYTop = dc.y0 * TILE_PX + TILE_PX / 2
+        const segYBot = (dc.y1 + 1) * TILE_PX - TILE_PX / 2
+        ctx.fillStyle = fill
+        ctx.fillRect(segX, segYTop, TILE_PX, segYBot - segYTop)
+        ctx.strokeStyle = stroke
+        ctx.lineWidth = 1.5
+        ctx.strokeRect(segX + 0.5, segYTop + 0.5, TILE_PX - 1, segYBot - segYTop - 1)
       }
     }
 

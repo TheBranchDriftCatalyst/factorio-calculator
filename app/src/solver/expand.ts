@@ -131,6 +131,23 @@ export function expand(
 ): FlowGraph {
   const nodes = new Map<string, FlowNode>()
   const edges: FlowEdge[] = []
+  // Each unique (source, target, item) triple maps to ONE edge in `edges`.
+  // Without dedup, a producer reached multiple times pushes a fresh edge per
+  // visit; balanceCeil then sums those as separate demands and over-builds
+  // upstream by 2-5×. Keying lets us accumulate rate onto a single edge.
+  const edgeKey = (src: string, tgt: string, item: string) => `${src}|${tgt}|${item}`
+  const edgeByKey = new Map<string, FlowEdge>()
+  const addEdge = (source: string, target: string, item: string, rate: number) => {
+    const key = edgeKey(source, target, item)
+    const ex = edgeByKey.get(key)
+    if (ex) {
+      ex.rate += rate
+    } else {
+      const e: FlowEdge = { source, target, item, rate }
+      edgeByKey.set(key, e)
+      edges.push(e)
+    }
+  }
   const outputs = new Map<string, number>()
   const rawInputs = new Map<string, number>()
   const suppliedInputs = new Map<string, number>()
@@ -186,7 +203,7 @@ export function expand(
       inNode.rate += used
       nodes.set(inId, inNode)
       suppliedInputs.set(d.item, (suppliedInputs.get(d.item) ?? 0) + used)
-      if (d.parent) edges.push({ source: inId, target: d.parent, item: d.item, rate: used })
+      if (d.parent) addEdge(inId, d.parent, d.item, used)
       if (remaining <= 1e-9) continue
     }
 
@@ -202,7 +219,7 @@ export function expand(
       node.rate += residualRate
       nodes.set(id, node)
       rawInputs.set(d.item, (rawInputs.get(d.item) ?? 0) + residualRate)
-      if (d.parent) edges.push({ source: id, target: d.parent, item: d.item, rate: residualRate })
+      if (d.parent) addEdge(id, d.parent, d.item, residualRate)
       continue
     }
 
@@ -219,13 +236,12 @@ export function expand(
         existing.count = (existing.rate * recipe.time) / existing.machine.craftingSpeed
         existing.powerW = existing.count * existing.machine.power
       }
-      if (d.parent) edges.push({ source: id, target: d.parent, item: d.item, rate: residualRate })
     } else {
       const count = machine ? (craftsPerSec * recipe.time) / machine.craftingSpeed : 0
       const powerW = machine ? count * machine.power : 0
       nodes.set(id, { id, recipe, machine, rate: craftsPerSec, count, powerW })
-      if (d.parent) edges.push({ source: id, target: d.parent, item: d.item, rate: residualRate })
     }
+    if (d.parent) addEdge(id, d.parent, d.item, residualRate)
 
     // Cycle detection: if this recipe already appears on the ancestor chain
     // (e.g. spoilage → bioflux → spoilage), record the node/edge but do not
@@ -238,8 +254,94 @@ export function expand(
     }
   }
 
-  let totalPowerW = 0
-  for (const n of nodes.values()) totalPowerW += n.powerW
+  // Ceil-balance pass: the solve above is mathematically exact in
+  // fractional crafts/sec, but the schematic builds REAL factories with
+  // whole machines (each producer rounded UP to the next integer). When a
+  // consumer rounds up, its actual demand exceeds the producer's
+  // fractional supply — creating a deficit in the built factory. We patch
+  // this by iterating: ceil every recipe's count, recompute its
+  // crafts/sec, propagate up the chain. Always round UP, never DOWN, so
+  // the result is "surplus allowed, deficits never".
+  const flowNodes = [...nodes.values()]
+  balanceCeil(flowNodes, edges)
 
-  return { nodes: [...nodes.values()], edges, rawInputs, suppliedInputs, outputs, totalPowerW }
+  let totalPowerW = 0
+  for (const n of flowNodes) totalPowerW += n.powerW
+
+  return { nodes: flowNodes, edges, rawInputs, suppliedInputs, outputs, totalPowerW }
+}
+
+/**
+ * Bump every recipe's machine count up to the next integer and propagate
+ * the resulting extra demand back through the chain until stable. Touches
+ * `node.rate`, `node.count`, `node.powerW`, and `edge.rate` in place.
+ *
+ * Converges quickly in practice (a few passes for most factories), but we
+ * cap at 25 iterations to defend against pathological loops.
+ */
+function balanceCeil(
+  nodes: ReadonlyArray<FlowNode>,
+  edges: FlowEdge[],
+): void {
+  const nodeById = new Map(nodes.map((n) => [n.id, n]))
+  for (let iter = 0; iter < 25; iter++) {
+    let changed = false
+
+    // Step 1 — ceil each recipe's machine count to the next whole machine,
+    // then sync the node's rate from the new count.
+    for (const node of nodes) {
+      if (!node.recipe || !node.machine) continue
+      const ceiled = Math.max(1, Math.ceil(node.count - 1e-9))
+      if (ceiled > node.count + 1e-9) {
+        node.count = ceiled
+        node.rate = (ceiled * node.machine.craftingSpeed) / node.recipe.time
+        node.powerW = ceiled * node.machine.power
+        changed = true
+      }
+    }
+
+    // Step 2 — recompute every edge's rate based on its CONSUMER's new
+    // (possibly higher) crafts/sec. The edge's `rate` is the consumer's
+    // demand for the edge's item.
+    for (const edge of edges) {
+      const consumer = nodeById.get(edge.target)
+      if (!consumer || !consumer.recipe) continue
+      const ing = consumer.recipe.ingredients.find((i) => i.item === edge.item)
+      if (!ing) continue
+      const newDemand = ing.amount * consumer.rate
+      if (newDemand > edge.rate + 1e-9) {
+        edge.rate = newDemand
+        changed = true
+      }
+    }
+
+    // Step 3 — for each item, total the edges' demands and bump the
+    // producer's rate UP if the demand now exceeds what its current
+    // (fractional) rate produces. This propagates extra demand upstream
+    // through the chain.
+    const demandByItem = new Map<string, number>()
+    for (const e of edges) {
+      demandByItem.set(e.item, (demandByItem.get(e.item) ?? 0) + e.rate)
+    }
+    for (const node of nodes) {
+      if (!node.recipe || !node.machine) continue
+      for (const product of node.recipe.products) {
+        if (product.amount <= 0) continue
+        const demand = demandByItem.get(product.item) ?? 0
+        if (demand <= 0) continue
+        const requiredCrafts = demand / product.amount
+        // Monotonic — never let an iteration lower the rate. Belt-and-suspenders
+        // with the > guard above, but explicit so future edits don't break it.
+        const newRate = Math.max(node.rate, requiredCrafts)
+        if (newRate > node.rate + 1e-9) {
+          node.rate = newRate
+          node.count = (newRate * node.recipe.time) / node.machine.craftingSpeed
+          node.powerW = node.count * node.machine.power
+          changed = true
+        }
+      }
+    }
+
+    if (!changed) break
+  }
 }

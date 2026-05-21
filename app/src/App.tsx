@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@thebranchdriftcatalyst/catalyst-ui/ui/tabs"
 import { Card, CardContent } from "@thebranchdriftcatalyst/catalyst-ui/ui/card"
 import { loadDataset } from "./data/loader"
@@ -16,6 +16,7 @@ import { ProfileSidebar } from "./views/profiles/ProfileSidebar"
 import type { RateUnit } from "./util/format"
 import {
   loadConfig as loadSchematicConfig,
+  saveConfig as saveSchematicConfig,
   SCHEMATIC_CONFIG_EVENT,
   STORAGE_KEY as SCHEMATIC_STORAGE_KEY,
 } from "./views/schematic/SchematicConfig"
@@ -78,6 +79,14 @@ function loadInputs(): Input[] {
   }
 }
 
+// Page-level right-sidebar geometry. Lives in App so the rail width
+// persists across tab switches and the rail itself stays mounted even on
+// non-schematic tabs (active view portals its content into the outlet).
+const SIDEBAR_WIDTH_KEY = "schematic.sidebarWidth.v1"
+const SIDEBAR_MIN_WIDTH = 240
+const SIDEBAR_MAX_WIDTH = 720
+const SIDEBAR_DEFAULT_WIDTH = 320
+
 export function App() {
   const [catalog, setCatalog] = useState<Catalog | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -86,6 +95,62 @@ export function App() {
   const [tab, setTab] = useState<Tab>(() => tabFromHash())
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [rateUnit, setRateUnit] = useState<RateUnit>("sec")
+  // Right-rail outlet — refs into the DOM node that views (schematic
+  // primarily) portal their per-view sidebar JSX into. Stored as state so
+  // SchematicView re-runs its portal effect once the element is attached.
+  const [rightRailEl, setRightRailEl] = useState<HTMLElement | null>(null)
+  // Sidebar width (persists across all tabs).
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return SIDEBAR_DEFAULT_WIDTH
+    try {
+      const raw = window.localStorage.getItem(SIDEBAR_WIDTH_KEY)
+      if (raw == null) return SIDEBAR_DEFAULT_WIDTH
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return SIDEBAR_DEFAULT_WIDTH
+      return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, n))
+    } catch {
+      return SIDEBAR_DEFAULT_WIDTH
+    }
+  })
+  const rowRef = useRef<HTMLDivElement | null>(null)
+  const onResizeMouseMove = useCallback((e: MouseEvent) => {
+    const row = rowRef.current
+    if (!row) return
+    const rect = row.getBoundingClientRect()
+    const next = rect.right - e.clientX
+    const clamped = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, next))
+    setSidebarWidth(clamped)
+  }, [])
+  const onResizeMouseUp = useCallback(() => {
+    window.removeEventListener("mousemove", onResizeMouseMove)
+    window.removeEventListener("mouseup", onResizeMouseUp)
+    document.body.style.cursor = ""
+    document.body.style.userSelect = ""
+    try {
+      setSidebarWidth((w) => {
+        window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(w))
+        return w
+      })
+    } catch {
+      /* private mode / quota */
+    }
+  }, [onResizeMouseMove])
+  const onResizeMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      window.addEventListener("mousemove", onResizeMouseMove)
+      window.addEventListener("mouseup", onResizeMouseUp)
+      document.body.style.cursor = "col-resize"
+      document.body.style.userSelect = "none"
+    },
+    [onResizeMouseMove, onResizeMouseUp],
+  )
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("mousemove", onResizeMouseMove)
+      window.removeEventListener("mouseup", onResizeMouseUp)
+    }
+  }, [onResizeMouseMove, onResizeMouseUp])
   // Per-recipe machine overrides + per-item recipe choices live in
   // SchematicConfig (localStorage). We mirror them here so the solver
   // re-runs whenever the user pins a different choice via the schematic.
@@ -251,6 +316,15 @@ export function App() {
                 catalog={catalog}
                 targets={targets}
                 onChange={setTargets}
+                recipeChoices={recipeChoices}
+                onRecipeChoiceChange={(item, recipeKey) => {
+                  const cfg = loadSchematicConfig()
+                  const next = { ...(cfg.recipeChoices ?? {}) }
+                  if (recipeKey === "") delete next[item]
+                  else next[item] = recipeKey
+                  saveSchematicConfig({ ...cfg, recipeChoices: next })
+                  setRecipeChoices(next)
+                }}
               />
             </section>
           </div>
@@ -270,7 +344,7 @@ export function App() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 flex flex-col px-6 pb-6 pt-4">
+      <div ref={rowRef} className="flex-1 min-h-0 flex flex-row px-6 pb-6 pt-4 gap-3">
         {error && <pre className="text-destructive text-sm">{error}</pre>}
         {!catalog && !error && <p>Loading catalog…</p>}
 
@@ -316,7 +390,12 @@ export function App() {
           <TabsContent value="schematic" className="flex-1 min-h-0 mt-0 data-[state=active]:flex">
             <Card interactive={false} className="flex-1 min-h-0 flex flex-col">
               <CardContent className="p-3 flex-1 min-h-0 flex flex-col">
-                <SchematicView catalog={catalog} flow={flow} rateUnit={rateUnit} />
+                <SchematicView
+                  catalog={catalog}
+                  flow={flow}
+                  rateUnit={rateUnit}
+                  rightRailEl={rightRailEl}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -328,6 +407,33 @@ export function App() {
             </Card>
           </TabsContent>
         </Tabs>
+        )}
+
+        {/* Right-rail: page-level container that views portal their
+            per-view sidebar into. Always mounted so its width persists. */}
+        {catalog && (
+          <>
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              data-testid="sidebar-resize-handle"
+              onMouseDown={onResizeMouseDown}
+              style={{
+                width: 6,
+                flexShrink: 0,
+                cursor: "col-resize",
+                background: "transparent",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 176, 0, 0.18)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            />
+            <aside
+              ref={setRightRailEl}
+              className="shrink-0 flex flex-col gap-2 overflow-auto"
+              data-testid="right-rail"
+              style={{ width: sidebarWidth }}
+            />
+          </>
         )}
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} commands={commands} />

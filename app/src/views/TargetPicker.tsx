@@ -9,6 +9,10 @@ interface Props {
   catalog: Catalog
   targets: Target[]
   onChange: (targets: Target[]) => void
+  /** Per-item recipe overrides (mirrors SchematicConfig.recipeChoices). */
+  recipeChoices?: Record<string, string>
+  /** Update per-item recipe choice. Pass empty string to clear. */
+  onRecipeChoiceChange?: (item: string, recipeKey: string) => void
 }
 
 // Per-row UI state — kept here (parallel to `targets`) because the canonical
@@ -38,6 +42,8 @@ export function TargetPicker({
   catalog,
   targets,
   onChange,
+  recipeChoices,
+  onRecipeChoiceChange,
 }: Props) {
   const allItems = useMemo(() => [...catalog.recipesByProduct.keys()].sort(), [catalog])
 
@@ -132,18 +138,7 @@ export function TargetPicker({
 
   return (
     <div className="flex flex-col gap-2" data-testid="target-picker">
-      <div className="flex items-center justify-between gap-3">
-        <h2 style={LABEL_STYLE}>Outputs</h2>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="target-add"
-          onClick={add}
-        >
-          + Add target
-        </Button>
-      </div>
+      <h2 style={LABEL_STYLE}>Outputs</h2>
       <ul className="flex flex-col gap-1">
         {targets.map((t, i) => {
           const ui = uiState[i] ?? defaultUiState(t.rate)
@@ -158,6 +153,12 @@ export function TargetPicker({
               draftValue={ui.draftValue}
               rateUnit={ui.unit}
               canRemove={targets.length > 1}
+              recipeChoice={recipeChoices?.[t.item]}
+              onRecipeChange={
+                onRecipeChoiceChange
+                  ? (recipeKey) => onRecipeChoiceChange(t.item, recipeKey)
+                  : undefined
+              }
               onItemChange={(item) => setItem(i, item)}
               onRateChange={(r) => updateTargetRate(i, r)}
               onModeChange={(m, d, r) => setMode(i, m, d, r)}
@@ -168,6 +169,17 @@ export function TargetPicker({
           )
         })}
       </ul>
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          data-testid="target-add"
+          onClick={add}
+        >
+          + Add target
+        </Button>
+      </div>
     </div>
   )
 }

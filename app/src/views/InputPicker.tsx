@@ -88,22 +88,11 @@ export function InputPicker({ catalog, inputs, onChange }: Props) {
 
   return (
     <div className="flex flex-col gap-2" data-testid="input-picker">
-      <div className="flex items-center justify-between gap-3">
-        <h2 style={LABEL_STYLE}>Inputs</h2>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          data-testid="input-add"
-          onClick={add}
-        >
-          + Add input
-        </Button>
-      </div>
+      <h2 style={LABEL_STYLE}>Inputs</h2>
       {inputs.length === 0 ? (
         <div
           data-testid="inputs-empty"
-          className="text-xs opacity-50 border border-dashed border-border rounded-md px-3 py-4 italic"
+          className="text-xs opacity-50 border border-dashed border-border rounded-md px-3 py-3 italic"
         >
           No supplied inputs — the solver will plan the full recipe chain.
         </div>
@@ -130,6 +119,17 @@ export function InputPicker({ catalog, inputs, onChange }: Props) {
           })}
         </ul>
       )}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          data-testid="input-add"
+          onClick={add}
+        >
+          + Add input
+        </Button>
+      </div>
     </div>
   )
 }

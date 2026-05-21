@@ -14,7 +14,8 @@ export interface Item {
   iconCol: number
   iconRow: number
   stackSize?: number
-  fuelValue?: number // joules
+  fuelValue?: number // joules per item (energy released when burned)
+  fuelCategory?: string // e.g. "chemical", "nuclear" — set only for fuel items
 }
 
 export interface Recipe {
@@ -35,6 +36,11 @@ export interface Machine {
   moduleSlots: number
   power: number // watts
   energySource: "electric" | "burner" | "heat" | "fluid" | "void"
+  /**
+   * When `energySource === "burner"`, which fuel categor(ies) the machine
+   * accepts (e.g. "chemical", "nuclear"). Empty when not a burner.
+   */
+  fuelCategories: ReadonlySet<string>
   size?: Size // tile footprint, may be undefined for entries not in sizes.json yet
 }
 
@@ -108,7 +114,18 @@ export interface KirkRawDataset {
   rocket_silo?: ReadonlyArray<KirkRawMachine>
   agricultural_tower?: ReadonlyArray<KirkRawMachine>
   fluids?: ReadonlyArray<KirkRawItem>
-  fuel?: ReadonlyArray<{ key: string; fuel_value: number }>
+  /**
+   * Top-level fuel registry. Each entry pairs a fuel item with its
+   * energy value (joules) and category (e.g. "chemical", "nuclear").
+   */
+  fuel?: ReadonlyArray<{
+    item_key?: string
+    key?: string
+    value?: number
+    fuel_value?: number
+    category?: string
+    fuel_category?: string
+  }>
   [k: string]: unknown
 }
 
@@ -149,7 +166,11 @@ export interface KirkRawMachine {
   prod_bonus?: number
   module_slots?: number
   energy_usage?: number // watts
-  energy_source?: { type?: string }
+  energy_source?: {
+    type?: string
+    fuel_category?: string
+    fuel_categories?: ReadonlyArray<string>
+  }
 }
 
 export interface KirkRawBelt {

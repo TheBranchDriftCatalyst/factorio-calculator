@@ -8,12 +8,24 @@ import { useMemo, useState } from "react"
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 import { fmtRateUnit, type RateUnit } from "../../util/format"
+import { ItemIcon } from "../../components/Icon"
 
 interface Props {
   catalog: Catalog
   flow: FlowGraph | null
   rateUnit: RateUnit
   defaultCollapsed?: boolean
+  /**
+   * Item currently highlighted (lanes carrying it glow on canvas). Used
+   * to mark the active row.
+   */
+  highlightedItem?: string | null
+  /**
+   * Called when the user clicks an intermediate row. Pass null to clear.
+   * The caller is responsible for wiring this to whatever consumes
+   * `highlightedItem` (typically the schematic canvas).
+   */
+  onItemClick?: (item: string | null) => void
 }
 
 interface Row {
@@ -29,6 +41,8 @@ export function IntermediatesPanel({
   flow,
   rateUnit,
   defaultCollapsed = true,
+  highlightedItem,
+  onItemClick,
 }: Props) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
 
@@ -38,20 +52,42 @@ export function IntermediatesPanel({
     const consumed = new Map<string, number>()
     for (const n of flow.nodes) {
       if (!n.recipe) continue
+      // The solver works in fractional crafts/sec so demand=supply
+      // mathematically — but the schematic rounds machine counts UP to
+      // whole integers, so REAL production from `ceil(count)` machines
+      // outpaces solver demand. Use the rounded-up count to reveal the
+      // real surplus a player would experience on a built factory.
+      const ceilMachines = Math.max(1, Math.ceil(n.count))
+      const speed = n.machine?.craftingSpeed ?? 1
+      const time = n.recipe.time ?? 1
+      // Crafts/sec at the integer machine count (vs n.rate which is the
+      // fractional ideal demand).
+      const actualCraftsPerSec = (ceilMachines * speed) / time
       for (const p of n.recipe.products) {
-        produced.set(p.item, (produced.get(p.item) ?? 0) + p.amount * n.rate)
+        produced.set(p.item, (produced.get(p.item) ?? 0) + p.amount * actualCraftsPerSec)
       }
       for (const ing of n.recipe.ingredients) {
-        consumed.set(ing.item, (consumed.get(ing.item) ?? 0) + ing.amount * n.rate)
+        consumed.set(ing.item, (consumed.get(ing.item) ?? 0) + ing.amount * actualCraftsPerSec)
       }
     }
     const out: Row[] = []
     const items = new Set([...produced.keys(), ...consumed.keys()])
     for (const item of items) {
       const p = produced.get(item) ?? 0
-      const c = consumed.get(item) ?? 0
-      // Intermediate = produced AND consumed within the factory.
-      if (p <= 0 || c <= 0) continue
+      const internalCons = consumed.get(item) ?? 0
+      // Items that ALSO leave the factory as a target product are
+      // effectively consumed by the output sink — they aren't surplus
+      // sitting on a belt. Without this, anything that's both a target
+      // AND consumed internally (e.g. copper-plate target that also
+      // feeds copper-cable) shows inflated surplus equal to the target
+      // rate. After ceil-balance the real surplus should be ≤ 1
+      // machine's output per producer (a few items/sec at most).
+      const outputCons = flow.outputs.get(item) ?? 0
+      const c = internalCons + outputCons
+      // Intermediate = produced AND consumed within the factory
+      // (internal consumption — outputs alone don't count, those are
+      // pure outputs and belong on the Output rail, not here).
+      if (p <= 0 || internalCons <= 0) continue
       out.push({
         item,
         itemName: catalog.items.get(item)?.name ?? item,
@@ -98,18 +134,30 @@ export function IntermediatesPanel({
         </span>
       </button>
       {!collapsed && (
-        <div className="px-3 py-2 border-t border-border max-h-80 overflow-auto">
+        <div className="px-3 py-2 border-t border-border">
           <div
             className="flex items-center gap-2 px-1 pb-1 mb-1 border-b border-border/60"
             style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase" }}
           >
+            <span style={{ width: 18 }} />
             <span className="flex-1 opacity-60">Item</span>
-            <span className="w-16 text-right opacity-60">Prod</span>
-            <span className="w-16 text-right opacity-60">Cons</span>
-            <span className="w-16 text-right opacity-60">Net</span>
+            <span className="w-14 text-right opacity-60">Prod</span>
+            <span className="w-14 text-right opacity-60">Cons</span>
+            <span className="w-24 text-right opacity-60">Status</span>
           </div>
           {rows.map((r) => (
-            <IntermediateRow key={r.item} row={r} rateUnit={rateUnit} />
+            <IntermediateRow
+              key={r.item}
+              row={r}
+              rateUnit={rateUnit}
+              catalog={catalog}
+              active={highlightedItem === r.item}
+              onClick={
+                onItemClick
+                  ? () => onItemClick(highlightedItem === r.item ? null : r.item)
+                  : undefined
+              }
+            />
           ))}
         </div>
       )}
@@ -117,33 +165,90 @@ export function IntermediatesPanel({
   )
 }
 
-function IntermediateRow({ row, rateUnit }: { row: Row; rateUnit: RateUnit }) {
-  // Leftover swatch: green ≈ 0, amber if surplus, red if deficit. Small
-  // tolerance for floating-point fuzz.
+function IntermediateRow({
+  row,
+  rateUnit,
+  catalog,
+  active,
+  onClick,
+}: {
+  row: Row
+  rateUnit: RateUnit
+  catalog: Catalog
+  active: boolean
+  onClick?: () => void
+}) {
+  // Status classification — green ≈ balanced, amber = surplus, red = deficit.
+  // Small tolerance for floating-point fuzz.
   const eps = 1e-6
-  let netColor = "rgba(16, 185, 129, 0.9)" // green = balanced
-  if (row.leftover > eps) netColor = "rgba(245, 158, 11, 0.9)" // amber = surplus
-  if (row.leftover < -eps) netColor = "rgba(255, 46, 99, 0.95)" // red = deficit
+  let state: "ok" | "surplus" | "deficit" = "ok"
+  if (row.leftover > eps) state = "surplus"
+  else if (row.leftover < -eps) state = "deficit"
+  const stateColor =
+    state === "ok"
+      ? "rgba(16, 185, 129, 0.95)"
+      : state === "surplus"
+      ? "rgba(245, 158, 11, 0.95)"
+      : "rgba(255, 46, 99, 0.95)"
+  const isClickable = onClick != null
   return (
     <div
       data-testid={`intermediate-${row.item}`}
-      className="flex items-center gap-2 px-1 py-0.5"
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (!onClick) return
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      className={
+        "flex items-center gap-2 px-1 py-0.5 rounded " +
+        (isClickable ? "cursor-pointer hover:bg-muted/40 " : "") +
+        (active ? "bg-muted/60" : "")
+      }
+      style={{
+        outline: active ? "1px solid rgba(255,201,64,0.7)" : undefined,
+        outlineOffset: active ? "-1px" : undefined,
+      }}
     >
+      <ItemIcon catalog={catalog} itemKey={row.item} size={16} />
       <span className="flex-1 truncate" title={row.item}>
         {row.itemName}
       </span>
-      <span className="w-16 text-right font-mono opacity-80" style={{ fontSize: 10 }}>
+      <span className="w-14 text-right font-mono opacity-80" style={{ fontSize: 10 }}>
         {fmtRateUnit(row.produced, rateUnit)}
       </span>
-      <span className="w-16 text-right font-mono opacity-80" style={{ fontSize: 10 }}>
+      <span className="w-14 text-right font-mono opacity-80" style={{ fontSize: 10 }}>
         {fmtRateUnit(row.consumed, rateUnit)}
       </span>
       <span
-        className="w-16 text-right font-mono"
-        style={{ fontSize: 10, color: netColor }}
+        className="w-24 text-right font-mono inline-flex items-center justify-end gap-1"
+        style={{ fontSize: 10, color: stateColor }}
+        title={`${state}: ${row.leftover >= 0 ? "+" : ""}${fmtRateUnit(
+          row.leftover,
+          rateUnit,
+        )}`}
       >
-        {row.leftover >= 0 ? "+" : ""}
-        {fmtRateUnit(row.leftover, rateUnit)}
+        <span style={{ opacity: 0.85 }}>
+          {row.leftover >= 0 ? "+" : ""}
+          {fmtRateUnit(row.leftover, rateUnit)}
+        </span>
+        <span
+          style={{
+            background: stateColor,
+            color: "rgba(0,0,0,0.92)",
+            padding: "0 4px",
+            fontSize: 8,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+        >
+          {state}
+        </span>
       </span>
     </div>
   )

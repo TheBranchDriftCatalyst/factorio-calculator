@@ -3,6 +3,7 @@ import { Button } from "@thebranchdriftcatalyst/catalyst-ui/ui/button"
 import { Input } from "@thebranchdriftcatalyst/catalyst-ui/ui/input"
 import type { Catalog, Machine, Recipe } from "../factorio"
 import { ItemCombobox } from "../components/ItemCombobox"
+import { RecipePicker } from "../components/RecipePicker"
 import { RATE_UNIT_MULT, type RateUnit } from "../util/format"
 
 export type OutputMode = "rate" | "machines"
@@ -49,6 +50,13 @@ interface Props {
   draftValue: number
   rateUnit: RateUnit
   canRemove: boolean
+  /** Per-item recipe overrides. Empty string / undefined = "use default". */
+  recipeChoice?: string
+  /**
+   * Called when the user picks an alternate recipe for THIS target item.
+   * Pass empty string to clear the override (go back to solver default).
+   */
+  onRecipeChange?: (recipeKey: string) => void
   onItemChange: (item: string) => void
   onRateChange: (rate: number) => void
   onModeChange: (mode: OutputMode, nextDraft: number, nextRate: number) => void
@@ -67,6 +75,8 @@ export function OutputRow({
   draftValue,
   rateUnit,
   canRemove,
+  recipeChoice,
+  onRecipeChange,
   onItemChange,
   onModeChange,
   onDraftChange,
@@ -74,6 +84,16 @@ export function OutputRow({
   onRemove,
 }: Props) {
   const unitSuffix = rateUnit === "sec" ? "/s" : rateUnit === "min" ? "/min" : "/hr"
+
+  // Available recipe choices for THIS target's item. Recycling recipes are
+  // excluded (they're the inverse of a normal recipe and would create a
+  // loop in the solver if picked).
+  const recipeOptions = useMemo(() => {
+    const candidates = (catalog.recipesByProduct.get(item) ?? []).filter(
+      (r) => r.category !== "recycling" && !r.key.endsWith("-recycling"),
+    )
+    return candidates
+  }, [catalog, item])
 
   // Reconcile the canonical rate when the item changes in machines mode.
   // (Item swap from outside doesn't go through onDraftChange so we don't need to here.)
@@ -231,6 +251,20 @@ export function OutputRow({
             ? `≈ ${(machinesPreview * RATE_UNIT_MULT[rateUnit]).toFixed(2)}${unitSuffix}`
             : "machines"}
         </span>
+      )}
+
+      {/* Per-target recipe picker — visible whenever there's a known
+          recipe so the user can always SEE ingredients → products as
+          icon cards. With 2+ recipes it acts as a chooser; with 1 recipe
+          it's informational (still clickable to confirm the default). */}
+      {recipeOptions.length > 0 && onRecipeChange && (
+        <RecipePicker
+          catalog={catalog}
+          options={recipeOptions}
+          value={recipeChoice ?? ""}
+          onChange={onRecipeChange}
+          testId={`target-recipe-${index}`}
+        />
       )}
 
       <Button

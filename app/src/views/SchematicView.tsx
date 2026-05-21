@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import type { Catalog } from "../factorio"
 import type { FlowGraph } from "../solver/expand"
 import { busLayout } from "../blueprint/layout/busLayout"
@@ -14,9 +15,10 @@ import {
   type BeltTier,
 } from "../blueprint/util/utilization"
 import { TopologyPanel } from "./schematic/TopologyPanel"
-import { RecipePicker } from "./schematic/RecipePicker"
 import { MachineCategoryPicker } from "./schematic/MachineCategoryPicker"
 import { IntermediatesPanel } from "./schematic/IntermediatesPanel"
+import { FuelsPanel } from "./schematic/FuelsPanel"
+import { BomPanel } from "./schematic/BomPanel"
 import {
   DEFAULT_CONFIG,
   loadConfig,
@@ -28,9 +30,16 @@ interface Props {
   catalog: Catalog
   flow: FlowGraph
   rateUnit?: RateUnit
+  /**
+   * DOM node to portal the per-view right-sidebar JSX into. Lives at App
+   * level so the rail width persists across tab switches. When null,
+   * SchematicView simply doesn't render its rail content (e.g. during
+   * first render before the ref attaches).
+   */
+  rightRailEl?: HTMLElement | null
 }
 
-export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
+export function SchematicView({ catalog, flow, rateUnit = "sec", rightRailEl }: Props) {
   const [config, setConfig] = useState<SchematicConfig>(() => {
     // SSR-safe lazy init from localStorage.
     if (typeof window === "undefined") return DEFAULT_CONFIG
@@ -83,6 +92,9 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
     item: string
     rate: number
   } | null>(null)
+  // Item-wide highlight (every lane carrying this item glows). Driven by
+  // the Intermediates panel; nullable so clicking the same row toggles off.
+  const [highlightedItem, setHighlightedItem] = useState<string | null>(null)
 
   const {
     camera,
@@ -101,6 +113,7 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
     clearSelection()
     setHoveredCell(null)
     setSelectedLane(null)
+    setHighlightedItem(null)
   }, [clearSelection])
 
   // Map from recipeKey → Cell for fast lookup in the inspector.
@@ -172,69 +185,7 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
     b: () => updateConfig("bottleneckMode", !config.bottleneckMode),
   })
 
-  // Sidebar resize: width persisted in localStorage; mouse-drag updates width
-  // relative to the parent flex row's right edge. Clamp to [240, 720] px.
-  const SIDEBAR_WIDTH_KEY = "schematic.sidebarWidth.v1"
-  const SIDEBAR_MIN_WIDTH = 240
-  const SIDEBAR_MAX_WIDTH = 720
-  const SIDEBAR_DEFAULT_WIDTH = 320
-  const rowRef = useRef<HTMLDivElement | null>(null)
-  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
-    if (typeof window === "undefined") return SIDEBAR_DEFAULT_WIDTH
-    try {
-      const raw = window.localStorage.getItem(SIDEBAR_WIDTH_KEY)
-      if (raw == null) return SIDEBAR_DEFAULT_WIDTH
-      const n = Number(raw)
-      if (!Number.isFinite(n)) return SIDEBAR_DEFAULT_WIDTH
-      return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, n))
-    } catch {
-      return SIDEBAR_DEFAULT_WIDTH
-    }
-  })
-
-  const onResizeMouseMove = useCallback((e: MouseEvent) => {
-    const row = rowRef.current
-    if (!row) return
-    const rect = row.getBoundingClientRect()
-    const next = rect.right - e.clientX
-    const clamped = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, next))
-    setSidebarWidth(clamped)
-  }, [])
-
-  const onResizeMouseUp = useCallback(() => {
-    window.removeEventListener("mousemove", onResizeMouseMove)
-    window.removeEventListener("mouseup", onResizeMouseUp)
-    document.body.style.cursor = ""
-    document.body.style.userSelect = ""
-    try {
-      // Read the freshest width directly off the state via a setter callback.
-      setSidebarWidth((w) => {
-        window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(w))
-        return w
-      })
-    } catch {
-      // localStorage may be unavailable (private mode); silent no-op.
-    }
-  }, [onResizeMouseMove])
-
-  const onResizeMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      window.addEventListener("mousemove", onResizeMouseMove)
-      window.addEventListener("mouseup", onResizeMouseUp)
-      document.body.style.cursor = "col-resize"
-      document.body.style.userSelect = "none"
-    },
-    [onResizeMouseMove, onResizeMouseUp],
-  )
-
-  // Defensive: cleanup window listeners if the component unmounts mid-drag.
-  useEffect(() => {
-    return () => {
-      window.removeEventListener("mousemove", onResizeMouseMove)
-      window.removeEventListener("mouseup", onResizeMouseUp)
-    }
-  }, [onResizeMouseMove, onResizeMouseUp])
+  // Sidebar resize handle + width state live in App now (rail is page-level).
 
   return (
     <div className="flex flex-col gap-2 flex-1 min-h-0" data-testid="schematic-view">
@@ -251,7 +202,7 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
         )}
         <Legend />
       </div>
-      <div ref={rowRef} className="flex gap-3 flex-1 min-h-0">
+      <div className="flex gap-3 flex-1 min-h-0">
         <div
           ref={viewportRef}
           className="flex-1 overflow-hidden bg-card rounded border border-border relative"
@@ -292,6 +243,7 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
               highlightCellKey={hoveredCell?.recipeKey ?? null}
               highlightCellKeys={selected}
               highlightLane={selectedLane}
+              highlightItem={highlightedItem}
               tilePx={zoom}
               bottleneckMode={bottleneckMode}
               beltTier={beltTier}
@@ -304,93 +256,58 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
           {bottleneckMode && <BottleneckBadge />}
           {bottleneckMode && <BottleneckLegend />}
         </div>
-        <SidebarResizeHandle onMouseDown={onResizeMouseDown} />
-        <aside
-          className="shrink-0 flex flex-col gap-2 overflow-auto"
-          data-testid="inspector"
-          style={{ height: "100%", width: sidebarWidth }}
-        >
-          <TopologyPanel config={config} update={updateConfig} />
-          <RecipePicker
-            catalog={catalog}
-            flow={flow}
-            choices={config.recipeChoices ?? {}}
-            onChange={(next: Record<string, string>) =>
-              updateConfig("recipeChoices", next)
-            }
-          />
-          <MachineCategoryPicker
-            catalog={catalog}
-            flow={flow}
-            defaults={config.machineCategoryDefaults ?? {}}
-            onChange={(next: Record<string, string>) =>
-              updateConfig("machineCategoryDefaults", next)
-            }
-          />
-          <IntermediatesPanel catalog={catalog} flow={flow} rateUnit={rateUnit} />
-          <InspectorPanel
-            catalog={catalog}
-            blueprint={blueprint}
-            hovered={hoveredCell}
-            selectedKeys={selected}
-            selectedLane={selectedLane}
-            cellByKey={cellByKey}
-            onClear={clear}
-            beltTier={beltTier}
-            rateUnit={rateUnit}
-            config={config}
-            updateConfig={updateConfig}
-          />
-        </aside>
       </div>
+      {/* Right-rail content portaled into App's page-level outlet. The
+          Recipes panel was removed — recipe variations are now picked
+          per-target inline (intermediates aren't user-editable here). */}
+      {rightRailEl &&
+        createPortal(
+          <div
+            className="flex flex-col gap-2"
+            data-testid="inspector"
+          >
+            {/* Clicked / hovered details go FIRST so the user sees the
+                cell or lane they just interacted with without scrolling
+                past Topology + Default Machines + Intermediates. */}
+            <InspectorPanel
+              catalog={catalog}
+              blueprint={blueprint}
+              hovered={hoveredCell}
+              selectedKeys={selected}
+              selectedLane={selectedLane}
+              cellByKey={cellByKey}
+              onClear={clear}
+              beltTier={beltTier}
+              rateUnit={rateUnit}
+              config={config}
+              updateConfig={updateConfig}
+            />
+            <TopologyPanel config={config} update={updateConfig} />
+            <MachineCategoryPicker
+              catalog={catalog}
+              flow={flow}
+              defaults={config.machineCategoryDefaults ?? {}}
+              onChange={(next: Record<string, string>) =>
+                updateConfig("machineCategoryDefaults", next)
+              }
+            />
+            <BomPanel catalog={catalog} flow={flow} blueprint={blueprint} />
+            <FuelsPanel catalog={catalog} flow={flow} rateUnit={rateUnit} />
+            <IntermediatesPanel
+              catalog={catalog}
+              flow={flow}
+              rateUnit={rateUnit}
+              highlightedItem={highlightedItem}
+              onItemClick={setHighlightedItem}
+            />
+          </div>,
+          rightRailEl,
+        )}
     </div>
   )
 }
 
-// Drag handle that lives between the schematic viewport and the inspector
-// aside. Width is controlled by the parent's state — this is a pure visual
-// affordance with a `col-resize` cursor and an amber hover tint. The center
-// "grip" is a short vertical line drawn via a pseudo-element-less pure DIV
-// so we don't need extra CSS files.
-function SidebarResizeHandle({
-  onMouseDown,
-}: {
-  onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void
-}) {
-  const [hover, setHover] = useState(false)
-  return (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      data-testid="sidebar-resize-handle"
-      onMouseDown={onMouseDown}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        width: 6,
-        flexShrink: 0,
-        cursor: "col-resize",
-        background: hover ? "rgba(255, 176, 0, 0.18)" : "transparent",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "background-color 120ms ease-out",
-        userSelect: "none",
-      }}
-    >
-      {/* Short center line as the discoverable grip */}
-      <div
-        style={{
-          width: 2,
-          height: 28,
-          borderRadius: 1,
-          background: hover ? "rgba(255, 176, 0, 0.75)" : "rgba(255, 255, 255, 0.22)",
-          transition: "background-color 120ms ease-out",
-        }}
-      />
-    </div>
-  )
-}
+// SidebarResizeHandle moved to App.tsx (page-level rail).
 
 // Bottom-left affordance: the camera shortcuts aren't discoverable otherwise.
 function CameraHint() {

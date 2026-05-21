@@ -103,7 +103,7 @@ export function MachineCategoryPicker({
         </span>
       </button>
       {!collapsed && (
-        <div className="px-3 py-2 space-y-1.5 border-t border-border max-h-80 overflow-auto">
+        <div className="px-3 py-2 space-y-1.5 border-t border-border">
           {entries.map((e) => (
             <CategoryRow
               key={e.category}

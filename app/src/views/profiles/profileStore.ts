@@ -59,16 +59,26 @@ export function listProfiles(): Profile[] {
 }
 
 export function saveProfile(name: string, targets: Target[], inputs: Input[] = []): Profile {
+  const resolvedName = name.trim() || `Profile ${listProfiles().length + 1}`
+  // Case-insensitive lookup so "My Setup" and "my setup" treat as the same
+  // profile — saving overwrites in-place rather than creating a duplicate.
+  const existing = safeRead()
+  const matchIdx = existing.findIndex(
+    (p) => p.name.toLowerCase() === resolvedName.toLowerCase(),
+  )
   const profile: Profile = {
-    id: makeId(),
-    name: name.trim() || `Profile ${listProfiles().length + 1}`,
+    id: matchIdx >= 0 ? existing[matchIdx].id : makeId(),
+    name: resolvedName,
     // Deep-copy so later edits to live state don't mutate the saved snapshot.
     targets: targets.map((t) => ({ item: t.item, rate: t.rate })),
     inputs: inputs.map((i) => ({ item: i.item, rate: i.rate })),
-    createdAt: Date.now(),
+    // Preserve original creation timestamp on overwrite so sort-by-age stays stable.
+    createdAt: matchIdx >= 0 ? existing[matchIdx].createdAt : Date.now(),
   }
-  const profiles = [...safeRead(), profile]
-  safeWrite(profiles)
+  const next = matchIdx >= 0
+    ? existing.map((p, i) => (i === matchIdx ? profile : p))
+    : [...existing, profile]
+  safeWrite(next)
   return profile
 }
 
