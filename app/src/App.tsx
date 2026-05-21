@@ -3,7 +3,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@thebranchdriftcatalys
 import { Card, CardContent } from "@thebranchdriftcatalyst/catalyst-ui/ui/card"
 import { loadDataset } from "./data/loader"
 import { loadCatalog, type Catalog } from "./factorio"
-import { expand, type FlowGraph, type Input, type Target } from "./solver/expand"
+import { type FlowGraph, type Input, type Target } from "./solver/expand"
+import { solveExpand } from "./solver/expandClient"
 import { TargetPicker } from "./views/TargetPicker"
 import { InputPicker } from "./views/InputPicker"
 // Tab views are code-split — only the active view's bundle loads, so the
@@ -337,16 +338,38 @@ export function App() {
       .catch((e) => setError(String(e)))
   }, [])
 
-  const flow: FlowGraph | null = useMemo(() => {
-    if (!catalog) return null
-    return expand(
+  // The solver now runs in a Web Worker so big factories don't block
+  // input / paint. We keep the LAST computed flow around so consumers
+  // (Sankey, Schematic) never see `null` after the first solve — a stale
+  // render is far less disruptive than flicker-to-empty-then-flicker-back.
+  // Request IDs prevent a stale response (e.g. user typed quickly and the
+  // older solve finished after the newer one) from clobbering the result.
+  const [flow, setFlow] = useState<FlowGraph | null>(null)
+  const latestRequestRef = useRef(0)
+  useEffect(() => {
+    if (!catalog) {
+      setFlow(null)
+      return
+    }
+    const requestId = ++latestRequestRef.current
+    let cancelled = false
+    void solveExpand({
       catalog,
       targets,
       inputs,
       machineOverrides,
       recipeChoices,
       machineCategoryDefaults,
-    )
+    }).then((next) => {
+      // Bail if a newer solve has already been requested OR the effect
+      // was torn down (catalog swap, unmount).
+      if (cancelled) return
+      if (latestRequestRef.current !== requestId) return
+      setFlow(next)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [catalog, targets, inputs, machineOverrides, recipeChoices, machineCategoryDefaults])
 
   return (
