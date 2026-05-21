@@ -291,7 +291,13 @@ export function SchematicView({ catalog, flow, rateUnit = "sec", rightRailEl }: 
                 updateConfig("machineCategoryDefaults", next)
               }
             />
-            <BomPanel catalog={catalog} flow={flow} blueprint={blueprint} />
+            <BomPanel
+              catalog={catalog}
+              flow={flow}
+              blueprint={blueprint}
+              beltTier={config.beltTier}
+              beltOverrides={config.beltOverrides}
+            />
             <FuelsPanel catalog={catalog} flow={flow} rateUnit={rateUnit} />
             <IntermediatesPanel
               catalog={catalog}
