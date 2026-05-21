@@ -34,6 +34,14 @@ interface Row {
   produced: number
   consumed: number
   leftover: number
+  /**
+   * True when at least one producer is a multi-product recipe and this
+   * item isn't the demand-driving one for that recipe. In that case the
+   * surplus is structurally forced (you can't crack oil to petroleum
+   * without also making heavy + light) and the player has to PLAN A SINK
+   * for the byproduct, not just shave off a producer machine.
+   */
+  isByproduct: boolean
 }
 
 export function IntermediatesPanel({
@@ -50,6 +58,11 @@ export function IntermediatesPanel({
     if (!flow) return []
     const produced = new Map<string, number>()
     const consumed = new Map<string, number>()
+    // Items that come out of a multi-product recipe (oil refinery, etc.)
+    // are flagged as candidate byproducts. The recipe was sized for
+    // SOMEONE'S demand on it; any product whose demand is less than its
+    // production rate is structurally a byproduct.
+    const isMultiProductProducer = new Set<string>()
     for (const n of flow.nodes) {
       if (!n.recipe) continue
       // The solver works in fractional crafts/sec so demand=supply
@@ -67,8 +80,10 @@ export function IntermediatesPanel({
       // Productivity boosts PRODUCTS only — ingredients are still
       // consumed at the base per-craft rate.
       const prodMult = 1 + (n.machine?.prodBonus ?? 0)
+      const multi = n.recipe.products.length > 1
       for (const p of n.recipe.products) {
         produced.set(p.item, (produced.get(p.item) ?? 0) + p.amount * prodMult * actualCraftsPerSec)
+        if (multi) isMultiProductProducer.add(p.item)
       }
       for (const ing of n.recipe.ingredients) {
         consumed.set(ing.item, (consumed.get(ing.item) ?? 0) + ing.amount * actualCraftsPerSec)
@@ -91,16 +106,37 @@ export function IntermediatesPanel({
       // Intermediate = produced AND consumed within the factory
       // (internal consumption — outputs alone don't count, those are
       // pure outputs and belong on the Output rail, not here).
-      if (p <= 0 || internalCons <= 0) continue
+      if (p <= 0) continue
+      // A "byproduct" is one whose surplus is structurally forced by a
+      // multi-product recipe — the player must SINK it (chest, flare,
+      // void) rather than just removing a producer machine. Single-
+      // product recipes' surpluses are pure ceil-overshoot.
+      // Target outputs are excluded: the player asked for that product
+      // explicitly, so calling petroleum-gas a byproduct of itself would
+      // be misleading — that overflow is just ceil-overshoot on the
+      // refinery's primary product.
+      const isTargetOutput = outputCons > 0
+      const isByproduct =
+        isMultiProductProducer.has(item) && !isTargetOutput && p - c > 1e-6
+      // Show items that are either internally consumed (real
+      // intermediates) OR forced byproducts of a multi-product recipe
+      // (need a sink — actionable for the player even with 0 consumers).
+      if (internalCons <= 0 && !isByproduct) continue
       out.push({
         item,
         itemName: catalog.items.get(item)?.name ?? item,
         produced: p,
         consumed: c,
         leftover: p - c,
+        isByproduct,
       })
     }
-    return out.sort((a, b) => b.produced - a.produced)
+    // Byproducts surface first — they're actionable (need a sink) vs
+    // pure overshoot which is just bookkeeping noise.
+    return out.sort((a, b) => {
+      if (a.isByproduct !== b.isByproduct) return a.isByproduct ? -1 : 1
+      return b.produced - a.produced
+    })
   }, [flow, catalog])
 
   // Don't render when there's nothing to show — keeps the panel tight on
@@ -187,18 +223,34 @@ function IntermediateRow({
   active: boolean
   onClick?: () => void
 }) {
-  // Status classification — green ≈ balanced, amber = surplus, red = deficit.
-  // Small tolerance for floating-point fuzz.
+  // Status classification:
+  //   ok        — produced ≈ consumed (green)
+  //   surplus   — produced > consumed, single-product recipe → just ceil
+  //               overshoot, shave a machine if it bothers you (amber)
+  //   byproduct — produced > consumed, multi-product recipe → forced by
+  //               recipe shape, needs a SINK (cyan; actionable!)
+  //   deficit   — produced < consumed, never happens after balanceCeil
+  //               but the renderer is defensive (red)
   const eps = 1e-6
-  let state: "ok" | "surplus" | "deficit" = "ok"
-  if (row.leftover > eps) state = "surplus"
+  let state: "ok" | "surplus" | "byproduct" | "deficit" = "ok"
+  if (row.leftover > eps) state = row.isByproduct ? "byproduct" : "surplus"
   else if (row.leftover < -eps) state = "deficit"
   const stateColor =
     state === "ok"
       ? "rgba(16, 185, 129, 0.95)"
+      : state === "byproduct"
+      ? "rgba(34, 211, 238, 0.95)" // cyan — distinct from amber surplus
       : state === "surplus"
       ? "rgba(245, 158, 11, 0.95)"
       : "rgba(255, 46, 99, 0.95)"
+  const stateTitle =
+    state === "byproduct"
+      ? "Byproduct (multi-product recipe forces this overflow — needs a sink)"
+      : state === "surplus"
+      ? "Surplus (ceil-overshoot from rounding producer up to whole machines)"
+      : state === "deficit"
+      ? "Deficit (real demand exceeds production — bug if you see this)"
+      : "Balanced"
   const isClickable = onClick != null
   return (
     <div
@@ -234,9 +286,11 @@ function IntermediateRow({
         {fmtRateUnit(row.consumed, rateUnit)}
       </span>
       <span
+        data-testid={`intermediate-${row.item}-status`}
+        data-state={state}
         className="w-24 text-right font-mono inline-flex items-center justify-end gap-1"
         style={{ fontSize: 10, color: stateColor }}
-        title={`${state}: ${row.leftover >= 0 ? "+" : ""}${fmtRateUnit(
+        title={`${stateTitle}: ${row.leftover >= 0 ? "+" : ""}${fmtRateUnit(
           row.leftover,
           rateUnit,
         )}`}
