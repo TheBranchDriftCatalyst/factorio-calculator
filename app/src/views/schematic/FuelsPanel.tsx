@@ -9,7 +9,7 @@
 // grouped by fuel category, mirroring how Factorio's burner inserter
 // would actually consume.
 
-import { useMemo, useState } from "react"
+import { useId, useMemo, useState } from "react"
 import type { Catalog, Item } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 import { fmt, fmtRateUnit, type RateUnit } from "../../util/format"
@@ -95,6 +95,7 @@ export function FuelsPanel({ catalog, flow, rateUnit, defaultCollapsed = true }:
   // Mirror IntermediatesPanel: hide the panel entirely when there's
   // nothing relevant to show (e.g. a flow that contains zero burners AND
   // a catalog with no fuel items defined — e.g. mini test datasets).
+  const panelId = useId()
   if (rows.length === 0) return null
 
   const usedCount = rows.reduce((n, r) => n + (r.used ? 1 : 0), 0)
@@ -106,6 +107,7 @@ export function FuelsPanel({ catalog, flow, rateUnit, defaultCollapsed = true }:
         onClick={() => setCollapsed((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
         aria-expanded={!collapsed}
+        aria-controls={panelId}
       >
         <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
           ⚙ Fuels
@@ -124,11 +126,13 @@ export function FuelsPanel({ catalog, flow, rateUnit, defaultCollapsed = true }:
           >
             {usedCount}/{rows.length}
           </span>
-          <span className="opacity-60">{collapsed ? "▸" : "▾"}</span>
+          <span className="opacity-60" aria-hidden="true">
+            {collapsed ? "▸" : "▾"}
+          </span>
         </span>
       </button>
       {!collapsed && (
-        <div className="px-3 py-2 border-t border-border">
+        <div id={panelId} className="px-3 py-2 border-t border-border">
           <div
             className="flex items-center gap-2 px-1 pb-1 mb-1 border-b border-border/60"
             style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase" }}

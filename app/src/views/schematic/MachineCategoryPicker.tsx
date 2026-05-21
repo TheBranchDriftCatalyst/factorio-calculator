@@ -3,7 +3,7 @@
 // haven't unlocked Assembler 2 yet) without having to pin each recipe
 // individually. Per-recipe `machineOverrides` still wins over these.
 
-import { useMemo, useState } from "react"
+import { useId, useMemo, useState } from "react"
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 
@@ -69,6 +69,7 @@ export function MachineCategoryPicker({
   }
 
   const activeCount = entries.filter((e) => defaults[e.category]).length
+  const panelId = useId()
 
   return (
     <div
@@ -80,6 +81,7 @@ export function MachineCategoryPicker({
         onClick={() => setCollapsed((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
         aria-expanded={!collapsed}
+        aria-controls={panelId}
       >
         <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
           ⚙ Default Machines
@@ -99,11 +101,13 @@ export function MachineCategoryPicker({
               {activeCount} PINNED
             </span>
           )}
-          <span className="opacity-60">{collapsed ? "▸" : "▾"}</span>
+          <span className="opacity-60" aria-hidden="true">
+            {collapsed ? "▸" : "▾"}
+          </span>
         </span>
       </button>
       {!collapsed && (
-        <div className="px-3 py-2 space-y-1.5 border-t border-border">
+        <div id={panelId} className="px-3 py-2 space-y-1.5 border-t border-border">
           {entries.map((e) => (
             <CategoryRow
               key={e.category}

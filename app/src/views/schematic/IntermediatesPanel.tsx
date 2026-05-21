@@ -4,7 +4,7 @@
 // leftover is zero; non-zero indicates excess that must be sunk somewhere
 // (chest, waste, or another consumer the user hasn't added).
 
-import { useMemo, useState } from "react"
+import { useId, useMemo, useState } from "react"
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 import { fmtRateUnit, type RateUnit } from "../../util/format"
@@ -105,6 +105,8 @@ export function IntermediatesPanel({
 
   // Don't render when there's nothing to show — keeps the panel tight on
   // simple factories (e.g. just an iron-plate target with no intermediates).
+  // Stable id pairs the toggle button with its panel for assistive tech.
+  const panelId = useId()
   if (rows.length === 0) return null
 
   return (
@@ -117,6 +119,7 @@ export function IntermediatesPanel({
         onClick={() => setCollapsed((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
         aria-expanded={!collapsed}
+        aria-controls={panelId}
       >
         <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
           ⚙ Intermediates
@@ -134,11 +137,13 @@ export function IntermediatesPanel({
           >
             {rows.length}
           </span>
-          <span className="opacity-60">{collapsed ? "▸" : "▾"}</span>
+          <span className="opacity-60" aria-hidden="true">
+            {collapsed ? "▸" : "▾"}
+          </span>
         </span>
       </button>
       {!collapsed && (
-        <div className="px-3 py-2 border-t border-border">
+        <div id={panelId} className="px-3 py-2 border-t border-border">
           <div
             className="flex items-center gap-2 px-1 pb-1 mb-1 border-b border-border/60"
             style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase" }}

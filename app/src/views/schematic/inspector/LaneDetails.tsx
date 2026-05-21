@@ -4,6 +4,7 @@
 // that lane, and inline controls to override the belt tier or move the
 // item to a different bus.
 
+import { useId } from "react"
 import type { Catalog } from "../../../factorio"
 import type { Blueprint } from "../../../blueprint/types"
 import { fmtPct, fmtRateUnit, type RateUnit } from "../../../util/format"
@@ -35,6 +36,10 @@ export function LaneDetails({
   config,
   updateConfig,
 }: Props) {
+  // useId so multiple LaneDetails (e.g. if we ever side-by-side them) don't
+  // produce duplicate label-for ids in the DOM.
+  const tierId = useId()
+  const busId = useId()
   const itemName = catalog.items.get(lane.item)?.name ?? lane.item
   // Per-lane belt-tier override falls back to the global tier. Utilization
   // math + the "@ <tier>" caption both honor the override.
@@ -106,12 +111,12 @@ export function LaneDetails({
         <div className="flex items-center justify-between gap-2 pt-1">
           <label
             className="opacity-80 text-[10px] uppercase tracking-wide"
-            htmlFor="lane-belt-tier-override"
+            htmlFor={tierId}
           >
             Belt tier
           </label>
           <select
-            id="lane-belt-tier-override"
+            id={tierId}
             data-testid="lane-belt-tier-override"
             value={overrideTier ?? "__default"}
             onChange={(e) => onBeltTierChange(e.target.value)}
@@ -129,11 +134,11 @@ export function LaneDetails({
 
         {/* Bus assignment — move this item to a different bus column. */}
         <div className="flex items-center justify-between gap-2 mt-2">
-          <label className="opacity-80 text-[11px]" htmlFor="lane-bus-assignment">
+          <label className="opacity-80 text-[11px]" htmlFor={busId}>
             Bus
           </label>
           <select
-            id="lane-bus-assignment"
+            id={busId}
             data-testid="lane-bus-assignment"
             value={config.beltAssignments?.[lane.item] ?? "__default"}
             onChange={(e) => {

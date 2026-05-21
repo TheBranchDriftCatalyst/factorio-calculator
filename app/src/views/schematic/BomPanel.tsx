@@ -3,7 +3,7 @@
 // belt tiles, how many inserters. Sums ceil-rounded machine counts from
 // the flow + walks the blueprint's bus tree for belt tile totals.
 
-import { useMemo, useState } from "react"
+import { useId, useMemo, useState } from "react"
 import type { Catalog } from "../../factorio"
 import type { Blueprint, BusBelt, BusNode } from "../../blueprint/types"
 import type { FlowGraph } from "../../solver/expand"
@@ -122,6 +122,7 @@ export function BomPanel({
   }, [blueprint, beltTier, beltOverrides])
 
   const totalBelts = [...transport.beltTilesByTier.values()].reduce((s, n) => s + n, 0)
+  const panelId = useId()
   if (!flow || (machines.length === 0 && totalBelts === 0)) return null
 
   const totalMachines = machines.reduce((s, r) => s + r.count, 0)
@@ -138,6 +139,7 @@ export function BomPanel({
         onClick={() => setCollapsed((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
         aria-expanded={!collapsed}
+        aria-controls={panelId}
       >
         <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
           ⚒ Bill of materials
@@ -156,11 +158,13 @@ export function BomPanel({
           >
             {totalMachines}M · {totalBelts}B · {transport.inserters}I
           </span>
-          <span className="opacity-60">{collapsed ? "▸" : "▾"}</span>
+          <span className="opacity-60" aria-hidden="true">
+            {collapsed ? "▸" : "▾"}
+          </span>
         </span>
       </button>
       {!collapsed && (
-        <div className="px-3 py-2 border-t border-border space-y-3">
+        <div id={panelId} className="px-3 py-2 border-t border-border space-y-3">
           {/* Machines */}
           <div>
             <div

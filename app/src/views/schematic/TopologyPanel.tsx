@@ -3,7 +3,7 @@
 // All edits flow through a single `update` callback so consumers don't
 // have to wire one handler per field.
 
-import { useMemo, useState } from "react"
+import { useId, useMemo, useState } from "react"
 import type { SchematicConfig } from "./SchematicConfig"
 import { TOPOLOGY_FIELDS, type TopologyField } from "./topologyFields"
 
@@ -16,6 +16,7 @@ interface Props {
 
 export function TopologyPanel({ config, update, defaultCollapsed = false }: Props) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
+  const panelId = useId()
 
   const fieldsByGroup = useMemo(() => {
     const m = new Map<string, TopologyField[]>()
@@ -36,14 +37,17 @@ export function TopologyPanel({ config, update, defaultCollapsed = false }: Prop
         onClick={() => setCollapsed((v) => !v)}
         className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
         aria-expanded={!collapsed}
+        aria-controls={panelId}
       >
         <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
           ⚙ Topology
         </span>
-        <span className="opacity-60">{collapsed ? "▸" : "▾"}</span>
+        <span className="opacity-60" aria-hidden="true">
+          {collapsed ? "▸" : "▾"}
+        </span>
       </button>
       {!collapsed && (
-        <div className="px-3 py-2 space-y-3 border-t border-border">
+        <div id={panelId} className="px-3 py-2 space-y-3 border-t border-border">
           {[...fieldsByGroup.entries()].map(([group, fields]) => (
             <section key={group}>
               <div className="uppercase tracking-wide text-[10px] opacity-50 mb-1.5">

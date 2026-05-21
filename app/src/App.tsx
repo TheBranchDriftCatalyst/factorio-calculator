@@ -428,14 +428,42 @@ export function App() {
             <div
               role="separator"
               aria-orientation="vertical"
+              aria-valuemin={SIDEBAR_MIN_WIDTH}
+              aria-valuemax={SIDEBAR_MAX_WIDTH}
+              aria-valuenow={Math.round(sidebarWidth)}
+              aria-label="Resize right sidebar"
+              tabIndex={0}
               data-testid="sidebar-resize-handle"
               onMouseDown={onResizeMouseDown}
+              // Keyboard-operable per WAI-ARIA separator pattern.
+              // Arrow keys nudge by 16px; Shift+arrow by 64px; Home/End
+              // jump to the configured min/max widths.
+              onKeyDown={(e) => {
+                const step = e.shiftKey ? 64 : 16
+                let next: number | null = null
+                if (e.key === "ArrowLeft") next = sidebarWidth + step
+                else if (e.key === "ArrowRight") next = sidebarWidth - step
+                else if (e.key === "Home") next = SIDEBAR_MAX_WIDTH
+                else if (e.key === "End") next = SIDEBAR_MIN_WIDTH
+                if (next === null) return
+                e.preventDefault()
+                const clamped = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, next))
+                setSidebarWidth(clamped)
+                try {
+                  window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(clamped))
+                } catch {
+                  /* ignore quota */
+                }
+              }}
               style={{
                 width: 6,
                 flexShrink: 0,
                 cursor: "col-resize",
                 background: "transparent",
+                outline: "none",
               }}
+              onFocus={(e) => (e.currentTarget.style.background = "rgba(255, 176, 0, 0.45)")}
+              onBlur={(e) => (e.currentTarget.style.background = "transparent")}
               onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255, 176, 0, 0.18)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             />

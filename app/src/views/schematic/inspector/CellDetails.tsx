@@ -4,7 +4,7 @@
 // a utilization chip vs the configured belt tier. Used by InspectorPanel
 // for both "hover preview" and "pinned" states (toggled via `expanded`).
 
-import { useMemo } from "react"
+import { useId, useMemo } from "react"
 import type { Catalog } from "../../../factorio"
 import type { Cell, CellPort } from "../../../blueprint/types"
 import { fmtPct, fmtRateUnit, type RateUnit } from "../../../util/format"
@@ -38,6 +38,9 @@ export function CellDetails({
     return [...list].sort((a, b) => b.craftingSpeed - a.craftingSpeed)
   }, [catalog, recipe])
   const overrideKey = config.machineOverrides?.[cell.recipeKey]
+  // useId so multiple CellDetails (e.g. multi-select rendered side-by-side)
+  // don't produce duplicate label-for ids.
+  const machineSelectId = useId()
 
   // Effective machine for this cell — override or the solver's default
   // (fastest in the recipe's category).
@@ -85,12 +88,12 @@ export function CellDetails({
         <div className="flex items-center justify-between gap-2">
           <label
             className="opacity-80 text-[10px] uppercase tracking-wide"
-            htmlFor="cell-machine-override"
+            htmlFor={machineSelectId}
           >
             Machine
           </label>
           <select
-            id="cell-machine-override"
+            id={machineSelectId}
             data-testid="cell-machine-override"
             value={overrideKey ?? "__default"}
             onChange={(e) => onMachineChange(e.target.value)}
