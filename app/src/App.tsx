@@ -20,18 +20,25 @@ import { CommandPalette, type Command } from "./components/CommandPalette"
 import { useKeymap } from "./hooks/useKeymap"
 import { ProfileSidebar } from "./views/profiles/ProfileSidebar"
 import type { RateUnit } from "./util/format"
-import {
-  loadConfig as loadSchematicConfig,
-  saveConfig as saveSchematicConfig,
-  SCHEMATIC_CONFIG_EVENT,
-  STORAGE_KEY as SCHEMATIC_STORAGE_KEY,
-} from "./views/schematic/SchematicConfig"
+// Legacy SchematicConfig loader is read ONCE during state init to migrate
+// any previously-persisted machineOverrides / recipeChoices /
+// machineCategoryDefaults into their dedicated keys. After that, App owns
+// these maps directly and no longer needs to subscribe to schematic
+// config events — view-only knobs (zoom, beltSpacing) are encapsulated in
+// SchematicView and don't bleed up.
+import { loadConfig as loadSchematicConfig } from "./views/schematic/SchematicConfig"
 
 const DEFAULT_DATASET = "space-age-2.0.55.json"
 const DEFAULT_TARGETS: Target[] = [{ item: "electronic-circuit", rate: 1 }]
 const DEFAULT_INPUTS: Input[] = []
 const TARGETS_STORAGE_KEY = "fbp.targets.v1"
 const INPUTS_STORAGE_KEY = "fbp.inputs.v1"
+// Solver-relevant choices live at the App level — they directly feed
+// `expand()` and shouldn't churn whenever the user tweaks a view-only
+// knob in the schematic config (zoom, bottleneck, belt spacing, etc.).
+const MACHINE_OVERRIDES_KEY = "fbp.machineOverrides.v1"
+const RECIPE_CHOICES_KEY = "fbp.recipeChoices.v1"
+const MACHINE_CATEGORY_DEFAULTS_KEY = "fbp.machineCategoryDefaults.v1"
 
 type Tab = "sankey" | "boxline" | "schematic" | "catalog"
 
@@ -83,6 +90,30 @@ function loadInputs(): Input[] {
   } catch {
     return DEFAULT_INPUTS
   }
+}
+
+/**
+ * Read a string-map from localStorage. Returns the empty object on miss
+ * or malformed payload. Used for the per-item / per-recipe override maps.
+ * One-time migration: if the dedicated key is empty, fall back to the
+ * matching field on the legacy SchematicConfig blob so prior persisted
+ * overrides survive this refactor.
+ */
+function loadStringMap(
+  key: string,
+  legacyFallback?: Record<string, string>,
+): Record<string, string> {
+  if (typeof window === "undefined") return {}
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed
+    }
+  } catch {
+    /* fall through to legacy */
+  }
+  return legacyFallback ?? {}
 }
 
 // Page-level right-sidebar geometry. Lives in App so the rail width
@@ -157,41 +188,74 @@ export function App() {
       window.removeEventListener("mouseup", onResizeMouseUp)
     }
   }, [onResizeMouseMove, onResizeMouseUp])
-  // Per-recipe machine overrides + per-item recipe choices live in
-  // SchematicConfig (localStorage). We mirror them here so the solver
-  // re-runs whenever the user pins a different choice via the schematic.
-  const [machineOverrides, setMachineOverrides] = useState<Record<string, string>>(
-    () => (typeof window === "undefined" ? {} : loadSchematicConfig().machineOverrides ?? {}),
+  // Solver-relevant per-recipe / per-item override maps live at App level
+  // so changes to them re-run `expand()` exactly once, and changes to
+  // view-only schematic knobs (zoom, beltSpacing, etc.) do NOT re-run the
+  // solver. One-time migration falls back to the legacy SchematicConfig
+  // blob so prior persisted choices survive this hoist.
+  const [machineOverrides, setMachineOverrides] = useState<Record<string, string>>(() =>
+    loadStringMap(
+      MACHINE_OVERRIDES_KEY,
+      typeof window === "undefined" ? undefined : loadSchematicConfig().machineOverrides,
+    ),
   )
-  const [recipeChoices, setRecipeChoices] = useState<Record<string, string>>(
-    () => (typeof window === "undefined" ? {} : loadSchematicConfig().recipeChoices ?? {}),
+  const [recipeChoices, setRecipeChoices] = useState<Record<string, string>>(() =>
+    loadStringMap(
+      RECIPE_CHOICES_KEY,
+      typeof window === "undefined" ? undefined : loadSchematicConfig().recipeChoices,
+    ),
   )
-  const [machineCategoryDefaults, setMachineCategoryDefaults] = useState<
-    Record<string, string>
-  >(() =>
-    typeof window === "undefined"
-      ? {}
-      : loadSchematicConfig().machineCategoryDefaults ?? {},
+  const [machineCategoryDefaults, setMachineCategoryDefaults] = useState<Record<string, string>>(
+    () =>
+      loadStringMap(
+        MACHINE_CATEGORY_DEFAULTS_KEY,
+        typeof window === "undefined" ? undefined : loadSchematicConfig().machineCategoryDefaults,
+      ),
   )
 
+  // Cross-tab sync only — same-tab updates already flow through setState.
+  // We listen for `storage` events from OTHER tabs writing to the keys
+  // and mirror the new value here.
   useEffect(() => {
     if (typeof window === "undefined") return
-    const sync = () => {
-      const cfg = loadSchematicConfig()
-      setMachineOverrides(cfg.machineOverrides ?? {})
-      setRecipeChoices(cfg.recipeChoices ?? {})
-      setMachineCategoryDefaults(cfg.machineCategoryDefaults ?? {})
-    }
-    window.addEventListener(SCHEMATIC_CONFIG_EVENT, sync)
     const onStorage = (e: StorageEvent) => {
-      if (e.key === SCHEMATIC_STORAGE_KEY) sync()
+      if (e.key === MACHINE_OVERRIDES_KEY)
+        setMachineOverrides(loadStringMap(MACHINE_OVERRIDES_KEY))
+      else if (e.key === RECIPE_CHOICES_KEY)
+        setRecipeChoices(loadStringMap(RECIPE_CHOICES_KEY))
+      else if (e.key === MACHINE_CATEGORY_DEFAULTS_KEY)
+        setMachineCategoryDefaults(loadStringMap(MACHINE_CATEGORY_DEFAULTS_KEY))
     }
     window.addEventListener("storage", onStorage)
-    return () => {
-      window.removeEventListener(SCHEMATIC_CONFIG_EVENT, sync)
-      window.removeEventListener("storage", onStorage)
-    }
+    return () => window.removeEventListener("storage", onStorage)
   }, [])
+
+  // Persist each map whenever it changes. Tiny payloads — write on every
+  // change is fine.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MACHINE_OVERRIDES_KEY, JSON.stringify(machineOverrides))
+    } catch {
+      /* quota / private mode */
+    }
+  }, [machineOverrides])
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(RECIPE_CHOICES_KEY, JSON.stringify(recipeChoices))
+    } catch {
+      /* quota / private mode */
+    }
+  }, [recipeChoices])
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        MACHINE_CATEGORY_DEFAULTS_KEY,
+        JSON.stringify(machineCategoryDefaults),
+      )
+    } catch {
+      /* quota / private mode */
+    }
+  }, [machineCategoryDefaults])
 
   // Persist targets on every change. Cheap enough to do unconditionally; the
   // payload is tiny.
@@ -324,12 +388,12 @@ export function App() {
                 onChange={setTargets}
                 recipeChoices={recipeChoices}
                 onRecipeChoiceChange={(item, recipeKey) => {
-                  const cfg = loadSchematicConfig()
-                  const next = { ...(cfg.recipeChoices ?? {}) }
-                  if (recipeKey === "") delete next[item]
-                  else next[item] = recipeKey
-                  saveSchematicConfig({ ...cfg, recipeChoices: next })
-                  setRecipeChoices(next)
+                  setRecipeChoices((prev) => {
+                    const next = { ...prev }
+                    if (recipeKey === "") delete next[item]
+                    else next[item] = recipeKey
+                    return next
+                  })
                 }}
               />
             </section>
@@ -406,6 +470,10 @@ export function App() {
                     flow={flow}
                     rateUnit={rateUnit}
                     rightRailEl={rightRailEl}
+                    machineOverrides={machineOverrides}
+                    setMachineOverrides={setMachineOverrides}
+                    machineCategoryDefaults={machineCategoryDefaults}
+                    setMachineCategoryDefaults={setMachineCategoryDefaults}
                   />
                 </Suspense>
               </CardContent>

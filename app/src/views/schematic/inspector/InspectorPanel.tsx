@@ -22,6 +22,9 @@ interface Props {
   rateUnit: RateUnit
   config: SchematicConfig
   updateConfig: <K extends keyof SchematicConfig>(key: K, value: SchematicConfig[K]) => void
+  // App-owned solver-relevant override; CellDetails dispatches edits via the setter.
+  machineOverrides: Record<string, string>
+  setMachineOverrides: React.Dispatch<React.SetStateAction<Record<string, string>>>
 }
 
 export function InspectorPanel({
@@ -36,6 +39,8 @@ export function InspectorPanel({
   rateUnit,
   config,
   updateConfig,
+  machineOverrides,
+  setMachineOverrides,
 }: Props) {
   // Lane selected — show its details + consumers/producers list.
   if (selectedLane) {
@@ -84,8 +89,9 @@ export function InspectorPanel({
           beltTier={beltTier}
           rateUnit={rateUnit}
           catalog={catalog}
-          config={config}
-          updateConfig={updateConfig}
+          beltOverrides={config.beltOverrides ?? {}}
+          machineOverrides={machineOverrides}
+          setMachineOverrides={setMachineOverrides}
         />
       </div>
     )
@@ -125,8 +131,9 @@ export function InspectorPanel({
           beltTier={beltTier}
           rateUnit={rateUnit}
           catalog={catalog}
-          config={config}
-          updateConfig={updateConfig}
+          beltOverrides={config.beltOverrides ?? {}}
+          machineOverrides={machineOverrides}
+          setMachineOverrides={setMachineOverrides}
         />
       </div>
     )

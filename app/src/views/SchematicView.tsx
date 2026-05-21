@@ -33,9 +33,27 @@ interface Props {
    * first render before the ref attaches).
    */
   rightRailEl?: HTMLElement | null
+  // Solver-relevant overrides live in App so view-only schematic config
+  // changes don't churn the solver. SchematicView consumes them read-only
+  // and dispatches edits via the setters.
+  machineOverrides: Record<string, string>
+  setMachineOverrides: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  machineCategoryDefaults: Record<string, string>
+  setMachineCategoryDefaults: React.Dispatch<
+    React.SetStateAction<Record<string, string>>
+  >
 }
 
-export function SchematicView({ catalog, flow, rateUnit = "sec", rightRailEl }: Props) {
+export function SchematicView({
+  catalog,
+  flow,
+  rateUnit = "sec",
+  rightRailEl,
+  machineOverrides,
+  setMachineOverrides,
+  machineCategoryDefaults,
+  setMachineCategoryDefaults,
+}: Props) {
   const [config, setConfig] = useState<SchematicConfig>(() => {
     // SSR-safe lazy init from localStorage.
     if (typeof window === "undefined") return DEFAULT_CONFIG
@@ -277,15 +295,15 @@ export function SchematicView({ catalog, flow, rateUnit = "sec", rightRailEl }: 
               rateUnit={rateUnit}
               config={config}
               updateConfig={updateConfig}
+              machineOverrides={machineOverrides}
+              setMachineOverrides={setMachineOverrides}
             />
             <TopologyPanel config={config} update={updateConfig} />
             <MachineCategoryPicker
               catalog={catalog}
               flow={flow}
-              defaults={config.machineCategoryDefaults ?? {}}
-              onChange={(next: Record<string, string>) =>
-                updateConfig("machineCategoryDefaults", next)
-              }
+              defaults={machineCategoryDefaults}
+              onChange={setMachineCategoryDefaults}
             />
             <BomPanel
               catalog={catalog}

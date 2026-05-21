@@ -102,13 +102,6 @@ export const DEFAULT_CONFIG: SchematicConfig = {
 
 export const STORAGE_KEY = "schematic.config.v1"
 
-/**
- * Fired by `saveConfig` so same-tab consumers (e.g. App.tsx reading
- * `machineOverrides`) can react to changes from SchematicView without
- * waiting on the cross-tab `storage` event (which doesn't fire same-tab).
- */
-export const SCHEMATIC_CONFIG_EVENT = "schematic-config-change"
-
 export function loadConfig(): SchematicConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -133,10 +126,6 @@ export function loadConfig(): SchematicConfig {
 export function saveConfig(c: SchematicConfig): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(c))
-    // Notify same-tab listeners (App.tsx reads machineOverrides here).
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent(SCHEMATIC_CONFIG_EVENT))
-    }
   } catch {
     // localStorage unavailable (private mode, etc.) — silently skip.
   }

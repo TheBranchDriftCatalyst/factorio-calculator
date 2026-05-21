@@ -9,27 +9,31 @@ import type { Catalog } from "../../../factorio"
 import type { Cell, CellPort } from "../../../blueprint/types"
 import { fmtPct, fmtRateUnit, type RateUnit } from "../../../util/format"
 import { laneUtilization, type BeltTier } from "../../../blueprint/util/utilization"
-import type { SchematicConfig } from "../SchematicConfig"
 import { ItemIcon } from "../../../components/Icon"
 
 interface Props {
   cell: Cell
   expanded?: boolean
   beltTier: BeltTier
+  /** Per-item belt-tier overrides (view-only — affects utilization math only). */
+  beltOverrides: Record<string, BeltTier>
   rateUnit: RateUnit
   catalog: Catalog
-  config: SchematicConfig
-  updateConfig: <K extends keyof SchematicConfig>(key: K, value: SchematicConfig[K]) => void
+  // App-owned: changing this re-runs the solver. View-only props (zoom,
+  // beltTier, beltOverrides) flow in separately and don't touch it.
+  machineOverrides: Record<string, string>
+  setMachineOverrides: React.Dispatch<React.SetStateAction<Record<string, string>>>
 }
 
 export function CellDetails({
   cell,
   expanded,
   beltTier,
+  beltOverrides,
   rateUnit,
   catalog,
-  config,
-  updateConfig,
+  machineOverrides,
+  setMachineOverrides,
 }: Props) {
   const recipe = catalog.recipes.get(cell.recipeKey)
   const compatibleMachines = useMemo(() => {
@@ -37,7 +41,7 @@ export function CellDetails({
     const list = catalog.machinesByCategory.get(recipe.category) ?? []
     return [...list].sort((a, b) => b.craftingSpeed - a.craftingSpeed)
   }, [catalog, recipe])
-  const overrideKey = config.machineOverrides?.[cell.recipeKey]
+  const overrideKey = machineOverrides[cell.recipeKey]
   // useId so multiple CellDetails (e.g. multi-select rendered side-by-side)
   // don't produce duplicate label-for ids.
   const machineSelectId = useId()
@@ -50,13 +54,15 @@ export function CellDetails({
   }, [overrideKey, catalog, compatibleMachines])
 
   const onMachineChange = (v: string) => {
-    const next = { ...(config.machineOverrides ?? {}) }
-    if (v === "__default") {
-      delete next[cell.recipeKey]
-    } else {
-      next[cell.recipeKey] = v
-    }
-    updateConfig("machineOverrides", next)
+    setMachineOverrides((prev) => {
+      const next = { ...prev }
+      if (v === "__default") {
+        delete next[cell.recipeKey]
+      } else {
+        next[cell.recipeKey] = v
+      }
+      return next
+    })
   }
 
   return (
@@ -120,7 +126,7 @@ export function CellDetails({
         catalog={catalog}
         beltTier={beltTier}
         rateUnit={rateUnit}
-        config={config}
+        beltOverrides={beltOverrides}
       />
 
       {/* PRODUCES block — amber accent matches bus-output arrows */}
@@ -133,7 +139,7 @@ export function CellDetails({
         catalog={catalog}
         beltTier={beltTier}
         rateUnit={rateUnit}
-        config={config}
+        beltOverrides={beltOverrides}
       />
     </div>
   )
@@ -148,7 +154,7 @@ function PortBlock({
   catalog,
   beltTier,
   rateUnit,
-  config,
+  beltOverrides,
 }: {
   title: string
   sub: string
@@ -158,7 +164,7 @@ function PortBlock({
   catalog: Catalog
   beltTier: BeltTier
   rateUnit: RateUnit
-  config: SchematicConfig
+  beltOverrides: Record<string, BeltTier>
 }) {
   return (
     <div
@@ -187,7 +193,7 @@ function PortBlock({
               port={p}
               catalog={catalog}
               // Per-item override beats global tier.
-              effectiveTier={config.beltOverrides?.[p.item] ?? beltTier}
+              effectiveTier={beltOverrides[p.item] ?? beltTier}
               rateUnit={rateUnit}
             />
           ))}
