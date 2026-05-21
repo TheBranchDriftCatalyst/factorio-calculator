@@ -1,8 +1,0 @@
-- generic [ref=e3]:
-  - banner [ref=e4]:
-    - generic [ref=e5]:
-      - heading "Factorio Blueprint Calculator" [level=1] [ref=e6]
-      - paragraph [ref=e7]:
-        - text: "Dataset:"
-        - code [ref=e8]: space-age-2.0.55.json
-  - paragraph [ref=e9]: Loading catalog…

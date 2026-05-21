@@ -7,3 +7,13 @@
 
 # Playwright MCP debug artifacts
 .playwright-mcp/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Local Claude Code settings
+.claude/settings.json
+
+# Ad-hoc debug screenshots dumped at repo root (keep favicon.png)
+/*.png
+!/favicon.png
