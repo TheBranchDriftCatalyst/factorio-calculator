@@ -192,7 +192,7 @@ interface LayoutContext {
    */
   directEndpoints: Map<string, { producerY?: number; consumerY?: number; x?: number }>
   /** beltX for each direct item — populated by partition() before recursion. */
-  directBeltXByItem?: Map<string, number>
+  directBeltXByItem: Map<string, number>
 }
 
 interface PartitionResult {
@@ -245,6 +245,7 @@ export function busLayout(catalog: Catalog, flow: FlowGraph, opts: Opts = {}): B
     directLinks: new Map(),
     directConnections: [],
     directEndpoints: new Map(),
+    directBeltXByItem: new Map(),
   }
 
   if (allRecipeIds.length === 0) {
@@ -282,7 +283,7 @@ export function busLayout(catalog: Catalog, flow: FlowGraph, opts: Opts = {}): B
     }
     for (const dp of ctx.deferredOutputPorts) {
       const bid = itemBusFor(dp.item)
-      if (!rightBuckets.has(bid)) rightBuckets.set(bid, [] as typeof ctx.deferredOutputPorts)
+      if (!rightBuckets.has(bid)) rightBuckets.set(bid, [])
       rightBuckets.get(bid)!.push(dp)
     }
     // Sort right buses: "right" first (closest to cells), then ascending suffix.
@@ -647,7 +648,6 @@ function partition(
     }
   }
   const hasDirect = scopeDirectItems.size > 0
-  ctx.directBeltXByItem = ctx.directBeltXByItem ?? new Map<string, number>()
   for (const [x, items] of directBeltItemsByX) {
     for (const item of items) ctx.directBeltXByItem.set(item, x)
   }
@@ -821,7 +821,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
   //     column for this scope (not a shared bus column).
   // For ingredients/products without a belt in scope (raw-only items not
   // yet on a bus), we skip the port — they're served implicitly.
-  const directBeltXByItem = ctx.directBeltXByItem ?? new Map<string, number>()
+  const directBeltXByItem = ctx.directBeltXByItem
   const isDirectIn = (item: string) => {
     const dl = ctx.directLinks.get(item)
     return dl != null && dl.to === recipeId && directBeltXByItem.has(item)

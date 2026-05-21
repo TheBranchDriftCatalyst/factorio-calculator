@@ -242,45 +242,75 @@ export function CanvasTiles({
       ctx.strokeRect(x + 0.5, y0Px + 0.5, BELT_W_PX - 1, hgt - 1)
     }
 
-    // --- Belts: beltWidth tiles wide vertical columns.
-    //     drawBeltColumn() handles solid (2-lane) vs pipe (single-fluid)
-    //     styling. Flow arrows are added here for solid belts only —
-    //     pipes don't have lane-level flow indicators.
-    for (const belt of blueprint.belts) {
-      // Honor per-belt truncation if the layout set y0/y1 (lane terminates
-      // at its last consumer instead of running the full canvas height).
-      const yStart = belt.y0 != null ? px(belt.y0) : 0
-      const yEnd = belt.y1 != null ? px(belt.y1) : H
-      drawBeltColumn(belt, yStart, yEnd)
-      if (belt.laneA?.isFluid) continue
+    // Draw downward-pointing flow arrows along each solid belt's two lanes.
+    // Pipes (fluid belts) skip arrows — joints already convey direction.
+    const drawFlowArrows = (
+      belt: import("../types").BusBelt,
+      yStartTile: number,
+      yEndTile: number,
+      arrowStartOffset = 3,
+    ) => {
+      if (belt.laneA?.isFluid) return
       const x = px(belt.x)
-      // Flow arrows (solid belts only).
       ctx.fillStyle = "rgba(0,0,0,0.55)"
       const arrowEvery = 6
       const tipSize = LANE_W_PX * 0.4
-      const arrowStart = belt.y0 ?? 0
-      const arrowEnd = belt.y1 ?? blueprint.height
-      for (let y = arrowStart + 3; y < arrowEnd; y += arrowEvery) {
+      const drawTriangle = (cx: number, cy: number) => {
+        ctx.beginPath()
+        ctx.moveTo(cx, cy + tipSize)
+        ctx.lineTo(cx - tipSize * 0.7, cy - tipSize * 0.6)
+        ctx.lineTo(cx + tipSize * 0.7, cy - tipSize * 0.6)
+        ctx.closePath()
+        ctx.fill()
+      }
+      for (let y = yStartTile + arrowStartOffset; y < yEndTile; y += arrowEvery) {
         const cy = px(y) + TILE_PX / 2
-        if (belt.laneA) {
-          const cx = x + LANE_W_PX / 2
-          ctx.beginPath()
-          ctx.moveTo(cx, cy + tipSize)
-          ctx.lineTo(cx - tipSize * 0.7, cy - tipSize * 0.6)
-          ctx.lineTo(cx + tipSize * 0.7, cy - tipSize * 0.6)
-          ctx.closePath()
-          ctx.fill()
-        }
-        if (belt.laneB) {
-          const cx = x + LANE_W_PX + LANE_W_PX / 2
-          ctx.beginPath()
-          ctx.moveTo(cx, cy + tipSize)
-          ctx.lineTo(cx - tipSize * 0.7, cy - tipSize * 0.6)
-          ctx.lineTo(cx + tipSize * 0.7, cy - tipSize * 0.6)
-          ctx.closePath()
-          ctx.fill()
+        if (belt.laneA) drawTriangle(x + LANE_W_PX / 2, cy)
+        if (belt.laneB) drawTriangle(x + LANE_W_PX + LANE_W_PX / 2, cy)
+      }
+    }
+
+    // Vertical text label for each sub-lane, centered horizontally inside
+    // the lane and repeated down the belt's y-range.
+    const drawBeltLaneLabels = (
+      belt: import("../types").BusBelt,
+      yTopTile: number,
+      yBotTile: number,
+    ) => {
+      ctx.font = '600 10px "JetBrains Mono", ui-monospace, monospace'
+      ctx.textBaseline = "middle"
+      ctx.textAlign = "left"
+      const repeat = Math.max(20, Math.ceil(blueprint.height / 4))
+      const x = px(belt.x)
+      const drawLabel = (lane: { item: string; rate: number }, side: "A" | "B") => {
+        const name = catalog.items.get(lane.item)?.name ?? lane.item
+        const text = `${name} ${fmtRateUnit(lane.rate, rateUnit)}`
+        const cx = x + (side === "A" ? LANE_W_PX / 2 : LANE_W_PX + LANE_W_PX / 2)
+        ctx.strokeStyle = "rgba(0,0,0,0.85)"
+        ctx.lineWidth = 3
+        ctx.fillStyle = "rgba(255,255,255,0.92)"
+        for (let tileY = yTopTile; tileY < yBotTile; tileY += repeat) {
+          ctx.save()
+          ctx.translate(cx, px(tileY) + 4)
+          ctx.rotate(Math.PI / 2)
+          ctx.strokeText(text, 0, 0)
+          ctx.fillText(text, 0, 0)
+          ctx.restore()
         }
       }
+      if (belt.laneA) drawLabel(belt.laneA, "A")
+      if (belt.laneB) drawLabel(belt.laneB, "B")
+      ctx.textBaseline = "alphabetic"
+    }
+
+    // --- Belts: beltWidth tiles wide vertical columns.
+    //     drawBeltColumn() handles solid (2-lane) vs pipe (single-fluid)
+    //     styling.
+    for (const belt of blueprint.belts) {
+      const yStart = belt.y0 != null ? px(belt.y0) : 0
+      const yEnd = belt.y1 != null ? px(belt.y1) : H
+      drawBeltColumn(belt, yStart, yEnd)
+      drawFlowArrows(belt, belt.y0 ?? 0, belt.y1 ?? blueprint.height)
     }
 
     // (Lane icons drawn LATER, after group frames + sub-bus belts are
@@ -333,40 +363,10 @@ export function CanvasTiles({
       }
     }
 
-    // --- Belt labels — vertical text running down each sub-lane,
-    //     centered horizontally inside its lane. Drawn for BOTH lane A
-    //     and lane B. textBaseline="middle" + translate to lane center
-    //     means the post-rotation x-axis (which becomes the original
-    //     belt's horizontal axis) is centered on the lane.
-    ctx.font = '600 10px "JetBrains Mono", ui-monospace, monospace'
-    ctx.textBaseline = "middle"
-    ctx.textAlign = "left"
-    const labelRepeat = Math.max(20, Math.ceil(blueprint.height / 4))
+    // --- Belt labels (per-lane, vertical, repeated down the belt). ---
     for (const belt of blueprint.belts) {
-      // Clamp the label strip to the belt's actual y-range so labels don't
-      // float past the truncated end of a belt.
-      const labelTop = belt.y0 ?? 0
-      const labelBot = belt.y1 ?? blueprint.height
-      const drawLabel = (lane: { item: string; rate: number }, side: "A" | "B") => {
-        const name = catalog.items.get(lane.item)?.name ?? lane.item
-        const text = `${name} ${fmtRateUnit(lane.rate, rateUnit)}`
-        const cx = px(belt.x) + (side === "A" ? LANE_W_PX / 2 : LANE_W_PX + LANE_W_PX / 2)
-        ctx.strokeStyle = "rgba(0,0,0,0.85)"
-        ctx.lineWidth = 3
-        ctx.fillStyle = "rgba(255,255,255,0.92)"
-        for (let tileY = labelTop; tileY < labelBot; tileY += labelRepeat) {
-          ctx.save()
-          ctx.translate(cx, px(tileY) + 4)
-          ctx.rotate(Math.PI / 2)
-          ctx.strokeText(text, 0, 0)
-          ctx.fillText(text, 0, 0)
-          ctx.restore()
-        }
-      }
-      if (belt.laneA) drawLabel(belt.laneA, "A")
-      if (belt.laneB) drawLabel(belt.laneB, "B")
+      drawBeltLaneLabels(belt, belt.y0 ?? 0, belt.y1 ?? blueprint.height)
     }
-    ctx.textBaseline = "alphabetic"
 
     // --- Side-belts: belt ↔ inserter ↔ cell ---
     // Each cell port is drawn as a real 1-tile-tall belt track running
@@ -507,7 +507,6 @@ export function CanvasTiles({
     //     ctx.inserters by busLayout, so the existing inserter pass renders
     //     them. We just need the belt segment + horizontal stubs here.
     const directConnections = blueprint.directConnections ?? []
-    const directSprite = spriteRef.current
     for (const dc of directConnections) {
       const fromCell = blueprint.cells.find((c) => c.recipeKey === dc.fromCellKey)
       const toCell = blueprint.cells.find((c) => c.recipeKey === dc.toCellKey)
@@ -571,13 +570,13 @@ export function CanvasTiles({
         ctx.lineWidth = 1
         ctx.stroke()
         // Item icon (left of text)
-        if (directSprite) {
+        if (sprite) {
           const it = catalog.items.get(dc.item)
           if (it) {
             const c = catalog.sprites.cell
             ctx.imageSmoothingEnabled = true
             ctx.drawImage(
-              directSprite,
+              sprite,
               it.iconCol * c,
               it.iconRow * c,
               c,
@@ -676,60 +675,11 @@ export function CanvasTiles({
         // Local belts INSIDE this group — vertical columns spanning the
         // group's full height (or the truncated y0..y1 span if set).
         for (const belt of g.localBelts) {
-          const x = px(belt.x)
           const beltTop = belt.y0 != null ? px(belt.y0) : gy
           const beltBot = belt.y1 != null ? px(belt.y1) : gy + gh
           drawBeltColumn(belt, beltTop, beltBot)
-          // Flow arrows (skipped for pipes)
-          if (!belt.laneA?.isFluid) {
-            ctx.fillStyle = "rgba(0,0,0,0.55)"
-            const arrowEvery = 6
-            const tipSize = LANE_W_PX * 0.4
-            const arrowStart = belt.y0 ?? g.y
-            const arrowEnd = belt.y1 ?? g.y + g.h
-            for (let yt = arrowStart + 2; yt < arrowEnd; yt += arrowEvery) {
-              const cy = px(yt) + TILE_PX / 2
-              if (belt.laneA) {
-                const cx = x + LANE_W_PX / 2
-                ctx.beginPath()
-                ctx.moveTo(cx, cy + tipSize)
-                ctx.lineTo(cx - tipSize * 0.7, cy - tipSize * 0.6)
-                ctx.lineTo(cx + tipSize * 0.7, cy - tipSize * 0.6)
-                ctx.closePath()
-                ctx.fill()
-              }
-              if (belt.laneB) {
-                const cx = x + LANE_W_PX + LANE_W_PX / 2
-                ctx.beginPath()
-                ctx.moveTo(cx, cy + tipSize)
-                ctx.lineTo(cx - tipSize * 0.7, cy - tipSize * 0.6)
-                ctx.lineTo(cx + tipSize * 0.7, cy - tipSize * 0.6)
-                ctx.closePath()
-                ctx.fill()
-              }
-            }
-          }
-          // Local belt label — same per-lane centered treatment as trunk.
-          ctx.font = '600 10px "JetBrains Mono", ui-monospace, monospace'
-          ctx.textBaseline = "middle"
-          ctx.textAlign = "left"
-          const drawL = (lane: { item: string; rate: number }, side: "A" | "B") => {
-            const name = catalog.items.get(lane.item)?.name ?? lane.item
-            const text = `${name} ${fmtRateUnit(lane.rate, rateUnit)}`
-            const cx = x + (side === "A" ? LANE_W_PX / 2 : LANE_W_PX + LANE_W_PX / 2)
-            ctx.strokeStyle = "rgba(0,0,0,0.85)"
-            ctx.lineWidth = 3
-            ctx.fillStyle = "rgba(255,255,255,0.92)"
-            ctx.save()
-            ctx.translate(cx, gy + 4)
-            ctx.rotate(Math.PI / 2)
-            ctx.strokeText(text, 0, 0)
-            ctx.fillText(text, 0, 0)
-            ctx.restore()
-          }
-          if (belt.laneA) drawL(belt.laneA, "A")
-          if (belt.laneB) drawL(belt.laneB, "B")
-          ctx.textBaseline = "alphabetic"
+          drawFlowArrows(belt, belt.y0 ?? g.y, belt.y1 ?? g.y + g.h, 2)
+          drawBeltLaneLabels(belt, g.y, g.y + 1)
         }
 
         // Local gutter — dark column inside the group

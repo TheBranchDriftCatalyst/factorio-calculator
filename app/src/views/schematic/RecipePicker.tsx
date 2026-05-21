@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from "react"
 import type { Catalog } from "../../factorio"
-import type { FlowGraph } from "../../solver/expand"
+import { isRecyclingRecipe, type FlowGraph } from "../../solver/expand"
 
 interface Props {
   catalog: Catalog
@@ -51,15 +51,12 @@ export function RecipePicker({
   }, [flow])
 
   // Multi-recipe items intersected with items in the current flow.
-  // We exclude recycling recipes from the option list — they destroy
-  // items for component recovery and aren't a meaningful "way to produce"
-  // an item.
+  // Recycling recipes are excluded — they destroy items for component
+  // recovery and aren't a meaningful "way to produce" an item.
   const items: MultiRecipeItem[] = useMemo(() => {
     const out: MultiRecipeItem[] = []
     for (const [itemKey, allRecipes] of catalog.recipesByProduct.entries()) {
-      const recipes = allRecipes.filter(
-        (r) => r.category !== "recycling" && !r.key.endsWith("-recycling"),
-      )
+      const recipes = allRecipes.filter((r) => !isRecyclingRecipe(r))
       if (recipes.length < 2) continue
       if (!itemsInFlow.has(itemKey)) continue
       const item = catalog.items.get(itemKey)

@@ -74,7 +74,7 @@ const RAW_ITEMS = new Set([
  * recovery. They shouldn't be picked as a producer for normal item
  * demand. Filter them by category or key suffix.
  */
-function isRecyclingRecipe(r: Recipe): boolean {
+export function isRecyclingRecipe(r: Recipe): boolean {
   return r.category === "recycling" || r.key.endsWith("-recycling")
 }
 
