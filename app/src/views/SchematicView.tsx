@@ -137,6 +137,90 @@ export function SchematicView({
     return m
   }, [blueprint])
 
+  // Test hook (dev + test builds only). Lets E2E specs ask
+  // window.__schematic.cellAt("electronic-circuit") for the page-space
+  // center of a known cell, eliminating canvas-fuzz from selection tests.
+  // Removed in production builds via import.meta.env.PROD gate.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    if (import.meta.env.PROD) return
+    // Read viewportRef.current LAZILY each call — at mount it may still be
+    // null. The effect re-runs whenever blueprint/camera changes, but
+    // computeCenter must reflect the live ref value.
+    const computeCenter = (tileX: number, tileY: number, tileW: number, tileH: number) => {
+      const vp = viewportRef.current
+      if (!vp) return null
+      const vRect = vp.getBoundingClientRect()
+      // Tile pixel size on screen = zoom * camera.scale.
+      const px = zoom * camera.scale
+      const cx = vRect.left + camera.x + (tileX + tileW / 2) * px
+      const cy = vRect.top + camera.y + (tileY + tileH / 2) * px
+      return { x: cx, y: cy }
+    }
+    ;(window as unknown as { __schematic?: unknown }).__schematic = {
+      cellAt(recipeKey: string) {
+        const c = cellByKey.get(recipeKey)
+        if (!c) return null
+        return computeCenter(c.x, c.y, c.w, c.h)
+      },
+      beltAt(item: string) {
+        // Walk EVERY belt across the whole bus tree (trunk + sub-buses)
+        // — items used by only one consumer end up in a sub-bus, not on
+        // the top-level `blueprint.belts`. Without this, tests for those
+        // items always returned null.
+        const candidates: Array<{
+          x: number
+          y0: number
+          y1: number
+          laneA?: { item: string }
+          laneB?: { item: string }
+        }> = []
+        const visit = (
+          belts:
+            | Array<{
+                x: number
+                y0?: number
+                y1?: number
+                laneA?: { item: string }
+                laneB?: { item: string }
+              }>
+            | undefined,
+          fallbackY0: number,
+          fallbackY1: number,
+        ) => {
+          if (!belts) return
+          for (const b of belts) {
+            candidates.push({
+              x: b.x,
+              y0: b.y0 ?? fallbackY0,
+              y1: b.y1 ?? fallbackY1,
+              laneA: b.laneA,
+              laneB: b.laneB,
+            })
+          }
+        }
+        const walkNode = (n: { y: number; h: number; belts?: typeof blueprint.belts; children?: unknown[] } | null) => {
+          if (!n) return
+          visit(n.belts, n.y, n.y + n.h)
+          for (const child of (n.children ?? []) as Array<typeof n>) walkNode(child)
+        }
+        // Top-level flat list (legacy) + recursive tree.
+        visit(blueprint.belts, 0, blueprint.height)
+        walkNode(blueprint.root as never)
+        for (const b of candidates) {
+          if (b.laneA?.item === item || b.laneB?.item === item) {
+            return computeCenter(b.x, b.y0, blueprint.beltWidth, b.y1 - b.y0)
+          }
+        }
+        return null
+      },
+      blueprint,
+    }
+    return () => {
+      delete (window as unknown as { __schematic?: unknown }).__schematic
+    }
+  }, [blueprint, cellByKey, viewportRef, zoom, camera.x, camera.y, camera.scale])
+
   const handleClickCell = useCallback(
     (key: string, e: React.MouseEvent<HTMLCanvasElement>) => {
       // Pinning a cell clears any lane selection (one selection at a time).

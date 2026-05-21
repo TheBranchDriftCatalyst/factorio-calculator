@@ -1,52 +1,13 @@
-import { test, expect, type Page } from "@playwright/test"
-import path from "node:path"
-import { fileURLToPath } from "node:url"
+import { test, expect, shot, openSchematic } from "./fixtures"
 
 // Schematic deliverable-quality coverage. Each test ends with a deterministic
-// screenshot saved to test/e2e/__screenshots__/, intentionally not using
+// screenshot saved to test/e2e/_artifacts/, intentionally not using
 // toHaveScreenshot — we want human-reviewable artifacts, not pixel diffs.
 
-const SHOT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "__screenshots__")
-const shot = (name: string) => path.join(SHOT_DIR, name)
-
-// Wait until the canvas is mounted AND has been sized (drawing has happened
-// at least once). Avoids racing with the dataset/solver pipeline. Uses
-// Playwright's polling via a function locator instead of arbitrary sleeps.
-async function waitForSchematicReady(page: Page) {
-  const canvas = page.getByTestId("schematic-canvas")
-  await expect(canvas).toBeVisible()
-  await expect
-    .poll(async () =>
-      canvas.evaluate((c) => {
-        const el = c as HTMLCanvasElement
-        return el.width > 64 && el.height > 64
-      }),
-    )
-    .toBe(true)
-}
-
-async function openSchematic(page: Page) {
-  await page.goto("/")
-  // Clear any leftover schematic config so each test gets a deterministic
-  // starting point (default split layout, no overrides).
-  await page.evaluate(() => {
-    localStorage.removeItem("schematic.config.v1")
-  })
-  // Theme pinning copied from app.spec — keeps first paint deterministic.
-  await page.addInitScript(() => {
-    localStorage.setItem("theme:name", JSON.stringify("catalyst"))
-    localStorage.setItem("theme:variant", JSON.stringify("dark"))
-  })
-  await page.reload()
-  await page.getByTestId("tab-schematic").click()
-  await waitForSchematicReady(page)
-}
-
 test.describe("Schematic — delivery quality", () => {
-  test("default schematic renders all key elements", async ({ page }) => {
+  test("default schematic renders all key elements", async ({ page, schematic }) => {
     await openSchematic(page)
-
-    // Press `f` to fit-to-content. useKeymap skips inputs, so press on body.
+    await schematic.waitForCanvas()
     await page.locator("body").press("f")
 
     await expect(page.getByTestId("schematic-canvas")).toBeVisible()
@@ -57,61 +18,50 @@ test.describe("Schematic — delivery quality", () => {
     await page.screenshot({ path: shot("schematic-default.png"), fullPage: true })
   })
 
-  test("split layout puts output bus on the right", async ({ page }) => {
+  test("split layout places at least one output to the right of cells", async ({
+    page,
+    schematic,
+  }) => {
     await openSchematic(page)
+    await schematic.waitForCanvas()
 
-    // The segmented control's child buttons are `tf-outputBusSide-<opt>`.
-    // The active one carries the amber-on-black active styling — check its
-    // aria-less state via the rgba background. Easier: assert the "split"
-    // button exists and has the active background color.
-    const splitBtn = page.getByTestId("tf-outputBusSide-split")
-    await expect(splitBtn).toBeVisible()
-    const splitBg = await splitBtn.evaluate((el) => getComputedStyle(el).backgroundColor)
-    // active background is rgba(255,201,64,0.85) per topologyFields.ts
-    expect(splitBg).toBe("rgba(255, 201, 64, 0.85)")
+    // Assert SEMANTIC layout, not button color. Walk the blueprint via the
+    // test hook and confirm there's at least one belt whose x is to the
+    // RIGHT of the rightmost cell — that's the "split" signature.
+    const layout = await page.evaluate(() => {
+      const hook = (
+        window as unknown as {
+          __schematic?: { blueprint?: { belts?: Array<{ x: number }>; cells?: Array<{ x: number; w: number }> } }
+        }
+      ).__schematic
+      const bp = hook?.blueprint
+      if (!bp?.belts || !bp.cells || bp.cells.length === 0) return null
+      const maxCellRight = Math.max(...bp.cells.map((c) => c.x + c.w))
+      const beltsRightOfCells = bp.belts.filter((b) => b.x >= maxCellRight).length
+      return { maxCellRight, beltsRightOfCells }
+    })
+    expect(layout).not.toBeNull()
+    expect(layout!.beltsRightOfCells).toBeGreaterThan(0)
 
-    // Reset zoom — useKeymap maps "0" → reset.
     await page.locator("body").press("0")
-
-    const canvas = page.getByTestId("schematic-canvas")
-    // CSS width is set via canvas.style.width = `${blueprint.width * tilePx}px`.
-    // Default tilePx is 18; we want at least 30 tiles wide.
-    const cssWidth = await canvas.evaluate(
-      (c) => (c as HTMLCanvasElement).getBoundingClientRect().width,
-    )
-    expect(cssWidth).toBeGreaterThanOrEqual(30 * 18)
-
     await page.screenshot({ path: shot("split-layout.png"), fullPage: true })
   })
 
-  test("belt vs pipe visual distinction", async ({ page }) => {
+  test("belt vs pipe visual distinction (fluid-routed target)", async ({ page, schematic }) => {
     await openSchematic(page)
 
-    // Try to swap the first target's item to a fluid (petroleum-gas if it
-    // exists in the dataset). If the combobox can't find it, fall back to
-    // the default circuit pipeline — we still get a visual baseline.
+    // Swap target 0 to petroleum-gas (a fluid). If the dataset doesn't
+    // surface it, FAIL THE TEST — we no longer silently pass a noop.
     await page.getByTestId("target-item-0").locator("button").first().click()
     const dropdown = page.getByTestId("target-item-0-dropdown")
     await expect(dropdown).toBeVisible()
     await dropdown.locator("input").fill("petroleum")
     const items = dropdown.locator("[cmdk-item]")
-    const itemCount = await items.count()
-    if (itemCount > 0) {
-      await items.first().click()
-    } else {
-      // Close the dropdown without changing the item.
-      await page.keyboard.press("Escape")
-    }
+    await expect(items.first()).toBeVisible()
+    expect(await items.count()).toBeGreaterThan(0)
+    await items.first().click()
 
-    await waitForSchematicReady(page)
-    // Allow a re-render after item change.
-    await expect.poll(async () =>
-      page.getByTestId("schematic-canvas").evaluate(
-        (c) => (c as HTMLCanvasElement).width,
-      ),
-    ).toBeGreaterThan(64)
-
-    const canvas = page.getByTestId("schematic-canvas")
+    const canvas = await schematic.waitForCanvas()
     const box = await canvas.boundingBox()
     expect(box).not.toBeNull()
     if (box) {
@@ -122,50 +72,27 @@ test.describe("Schematic — delivery quality", () => {
     }
   })
 
-  test("clicking a cell pins its details", async ({ page }) => {
+  test("clicking a known cell pins its details", async ({ page, schematic }) => {
     await openSchematic(page)
+    await schematic.waitForCanvas()
+    // Fit-to-content so the cell lands inside the viewport before we
+    // resolve its screen coordinates.
+    await page.locator("body").press("f")
+    // Tiny settle for camera state to flow into the test hook's effect.
+    await expect.poll(async () =>
+      page.evaluate(() => {
+        const h = (window as unknown as { __schematic?: { cellAt?: (k: string) => unknown } })
+          .__schematic
+        return h?.cellAt?.("electronic-circuit") ? "ready" : "pending"
+      }),
+    ).toBe("ready")
 
-    const canvas = page.getByTestId("schematic-canvas")
-    const box = await canvas.boundingBox()
-    expect(box).not.toBeNull()
-    if (!box) return
+    const point = await schematic.cellAt("electronic-circuit")
+    await page.mouse.click(point.x, point.y)
 
-    // Find a cell by reading the canvas size and clicking the middle — the
-    // default electronic-circuit blueprint always lays out cells across the
-    // canvas. We try a grid of candidate points until the inspector flips
-    // from empty to populated, so we're robust to small layout differences.
-    const candidates = [
-      [0.5, 0.5],
-      [0.6, 0.5],
-      [0.4, 0.6],
-      [0.5, 0.7],
-      [0.3, 0.4],
-      [0.7, 0.4],
-      [0.4, 0.5],
-      [0.6, 0.6],
-      [0.5, 0.4],
-      [0.55, 0.55],
-    ] as const
-
-    let pinned = false
-    for (const [fx, fy] of candidates) {
-      const x = box.x + box.width * fx
-      const y = box.y + box.height * fy
-      await page.mouse.click(x, y)
-      // Inspector body switches to data-testid="cell-inspector" when a cell
-      // is selected (vs `cell-inspector-empty` initially).
-      const inspector = page.getByTestId("cell-inspector")
-      if (await inspector.isVisible().catch(() => false)) {
-        const text = (await inspector.textContent()) ?? ""
-        if (text.trim().length > 0 && /pinned/i.test(text)) {
-          pinned = true
-          break
-        }
-      }
-    }
-
-    expect(pinned).toBe(true)
-    const inspector = page.getByTestId("cell-inspector")
+    // Use the state attribute, not text matching.
+    const inspector = page.locator('[data-testid="cell-inspector"][data-state="pinned"]')
+    await expect(inspector).toBeVisible()
     const text = (await inspector.textContent()) ?? ""
     // Recipe name + machine count (`×N`) should appear in CellDetails.
     expect(text).toMatch(/×\s*\d/)
@@ -173,66 +100,35 @@ test.describe("Schematic — delivery quality", () => {
     await page.screenshot({ path: shot("cell-pinned.png"), fullPage: true })
   })
 
-  test("clicking a lane shows belt details", async ({ page }) => {
+  test("clicking a known lane shows belt details", async ({ page, schematic }) => {
     await openSchematic(page)
+    await schematic.waitForCanvas()
+    await page.locator("body").press("f")
 
-    const canvas = page.getByTestId("schematic-canvas")
-    const box = await canvas.boundingBox()
-    expect(box).not.toBeNull()
-    if (!box) return
+    // iron-ore is always on the leftmost trunk belt for the default
+    // electronic-circuit factory (shared between iron-plate and copper-plate
+    // smelting chains in the sub-bus parent). Falls back to copper-ore which
+    // sits on the same trunk belt's other sub-lane.
+    const point = (await schematic.beltAt("iron-ore")) ?? (await schematic.beltAt("copper-ore"))
+    expect(point).not.toBeNull()
+    if (!point) return
+    await page.mouse.click(point.x, point.y)
 
-    // Belt columns live near the left/right edges (split layout) and between
-    // groups. Sweep along a vertical strip near the left edge first, then
-    // walk a few horizontal columns. The lane hit-test only fires when the
-    // click misses every cell, so we deliberately try thin strips.
-    const probes: Array<readonly [number, number]> = []
-    for (const fx of [0.02, 0.05, 0.08, 0.95, 0.92, 0.5, 0.4, 0.6, 0.3]) {
-      for (const fy of [0.3, 0.5, 0.7]) {
-        probes.push([fx, fy] as const)
-      }
-    }
-
-    let laneShown = false
-    for (const [fx, fy] of probes) {
-      const x = box.x + box.width * fx
-      const y = box.y + box.height * fy
-      await page.mouse.click(x, y)
-      const laneInspector = page.getByTestId("lane-inspector")
-      if (await laneInspector.isVisible().catch(() => false)) {
-        laneShown = true
-        break
-      }
-    }
-
-    expect(laneShown).toBe(true)
     const inspector = page.getByTestId("lane-inspector")
+    await expect(inspector).toBeVisible()
     const text = (await inspector.textContent()) ?? ""
-    // Rate string ends in /s, /min, or /hr per fmtRateUnit.
     expect(text).toMatch(/\/(s|min|hr)\b/)
-    // The first item is the item name — non-empty.
     expect(text.trim().length).toBeGreaterThan(0)
 
     await page.screenshot({ path: shot("lane-pinned.png"), fullPage: true })
   })
 
-  test("profile save and load roundtrip", async ({ page }) => {
+  test("profile save and load roundtrip", async ({ page, schematic }) => {
     await openSchematic(page)
+    await schematic.waitForCanvas()
 
-    // Clear any leftover profiles so the assertion isn't polluted across runs.
-    await page.evaluate(() => {
-      // The store uses its own key; clear permissively.
-      for (const k of Object.keys(localStorage)) {
-        if (/profile/i.test(k)) localStorage.removeItem(k)
-      }
-    })
-    await page.reload()
-    await page.getByTestId("tab-schematic").click()
-    await waitForSchematicReady(page)
-
-    // Hover the always-visible trigger strip to open the drawer.
     await page.getByTestId("profile-sidebar-trigger").hover()
     const drawer = page.getByTestId("profile-sidebar-drawer")
-    // The drawer is always in DOM; opacity transitions to 1 when open.
     await expect.poll(async () =>
       drawer.evaluate((el) => Number(getComputedStyle(el).opacity)),
     ).toBeGreaterThan(0.9)
@@ -243,15 +139,10 @@ test.describe("Schematic — delivery quality", () => {
     await input.fill("TestProfile")
     await input.press("Enter")
 
-    // Re-hover to keep drawer open after the input commits.
     await page.getByTestId("profile-sidebar-trigger").hover()
-
-    const newRow = page.locator("[data-testid^='profile-row-']", {
-      hasText: "TestProfile",
-    })
+    const newRow = page.locator("[data-testid^='profile-row-']", { hasText: "TestProfile" })
     await expect(newRow).toBeVisible()
 
-    // Reload and verify the profile persists.
     await page.reload()
     await page.getByTestId("profile-sidebar-trigger").hover()
     const persistedRow = page.locator("[data-testid^='profile-row-']", {
@@ -261,14 +152,16 @@ test.describe("Schematic — delivery quality", () => {
 
     await page.screenshot({ path: shot("profile-saved.png"), fullPage: true })
 
-    // Cleanup: click the delete button on this row.
+    // Cleanup so the row doesn't leak through `ready`'s storage clear (the
+    // fixture clears before each test, but extra hygiene is cheap).
     const deleteBtn = persistedRow.locator("[data-testid^='profile-delete-']")
     await deleteBtn.click()
     await expect(persistedRow).toHaveCount(0)
   })
 
-  test("rate unit per-row toggle", async ({ page }) => {
+  test("rate unit per-row toggle", async ({ page, schematic }) => {
     await openSchematic(page)
+    await schematic.waitForCanvas()
 
     const rateInput = page.getByTestId("target-rate-0")
     await expect(rateInput).toBeVisible()
@@ -277,29 +170,24 @@ test.describe("Schematic — delivery quality", () => {
     expect(Number.isFinite(before)).toBe(true)
 
     await page.getByTestId("target-rate-unit-0-min").click()
-
-    // The displayed draft should be ~before * 60 (floating-point tolerant).
     await expect
       .poll(async () => Number(await rateInput.inputValue()))
       .toBeCloseTo(before * 60, 5)
 
     await page.screenshot({ path: shot("rate-unit-per-min.png"), fullPage: true })
 
-    // Restore /s so we don't pollute subsequent tests' state (localStorage
-    // doesn't persist the rate unit per row, but be tidy).
     await page.getByTestId("target-rate-unit-0-sec").click()
   })
 
-  test("bottleneck mode color shift", async ({ page }) => {
+  test("bottleneck mode color shift", async ({ page, schematic }) => {
     await openSchematic(page)
+    await schematic.waitForCanvas()
 
-    // Press B on body to flip bottleneck mode on.
     await page.locator("body").press("b")
     await expect(page.getByTestId("bottleneck-badge")).toBeVisible()
 
     await page.screenshot({ path: shot("bottleneck-mode.png"), fullPage: true })
 
-    // Toggle off so the next test starts clean.
     await page.locator("body").press("b")
     await expect(page.getByTestId("bottleneck-badge")).toHaveCount(0)
   })

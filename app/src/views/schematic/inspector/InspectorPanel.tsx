@@ -118,6 +118,7 @@ export function InspectorPanel({
       <div
         className="text-xs bg-card border border-border rounded p-3 h-full"
         data-testid="cell-inspector"
+        data-state="pinned"
       >
         <div className="flex items-center justify-between mb-2">
           <div className="opacity-50 uppercase tracking-wide text-[10px]">pinned</div>

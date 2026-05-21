@@ -9,6 +9,11 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:5179/app/",
     trace: "retain-on-failure",
+    // CSS animations / transitions are noise in E2E — pin the UI so
+    // visual + state assertions don't race a tween.
+    launchOptions: {
+      args: ["--force-prefers-reduced-motion=reduce"],
+    },
   },
   webServer: {
     command: "npm run dev",
