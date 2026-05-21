@@ -47,7 +47,7 @@ describe("busLayout (Phase 1.A)", () => {
     }
   })
 
-  it("represents every recipe-to-recipe flow item on either trunk or some group's local bus", () => {
+  it("represents every recipe-to-recipe flow item on trunk, local bus, OR a direct connection", () => {
     const interiorEdges = flow.edges.filter(
       (e) => !e.target.startsWith("output:") && !e.source.startsWith("source:"),
     )
@@ -64,22 +64,26 @@ describe("busLayout (Phase 1.A)", () => {
         if (b.laneB) localItems.add(b.laneB.item)
       }
     }
+    const directItems = new Set(blueprint.directConnections.map((d) => d.item))
     for (const item of flowItems) {
-      expect(trunkItems.has(item) || localItems.has(item)).toBe(true)
+      expect(trunkItems.has(item) || localItems.has(item) || directItems.has(item)).toBe(true)
     }
   })
 
-  it("ports reference real belt columns (trunk or local)", () => {
+  it("ports reference real belt columns (trunk, local, or direct-connection)", () => {
     const trunkX = new Set(blueprint.belts.map((b) => b.x))
     const localX = new Set<number>()
     for (const g of blueprint.groups) for (const b of g.localBelts) localX.add(b.x)
+    const directX = new Set(blueprint.directConnections.map((dc) => dc.x))
     for (const c of blueprint.cells) {
       for (const p of c.inputs) {
         if (p.scope === "trunk") expect(trunkX.has(p.beltX)).toBe(true)
+        else if (p.scope === "direct") expect(directX.has(p.beltX)).toBe(true)
         else expect(localX.has(p.beltX)).toBe(true)
       }
       for (const p of c.outputs) {
         if (p.scope === "trunk") expect(trunkX.has(p.beltX)).toBe(true)
+        else if (p.scope === "direct") expect(directX.has(p.beltX)).toBe(true)
         else expect(localX.has(p.beltX)).toBe(true)
       }
     }
@@ -93,9 +97,18 @@ describe("busLayout (Phase 1.A)", () => {
     expect(blueprint.inserters.length).toBe(totalPorts)
   })
 
-  it("inserters sit in their belt's own extraction lane just past the belt", () => {
+  it("inserters sit on their cell's perimeter", () => {
+    // Perimeter placement: a W-edge port has its inserter at cell.x - 1,
+    // an E-edge port at cell.x + cell.w. We don't have a direct port-edge
+    // → inserter map, but for any inserter we can find its owning cell
+    // and verify the x sits at one of the two perimeter columns.
+    const cellByKey = new Map(blueprint.cells.map((c) => [c.recipeKey, c]))
     for (const ins of blueprint.inserters) {
-      expect(ins.x).toBe(ins.beltX + blueprint.beltWidth)
+      const cell = cellByKey.get(ins.cellKey)
+      if (!cell) continue
+      const wPerimeter = cell.x - 1
+      const ePerimeter = cell.x + cell.w
+      expect(ins.x === wPerimeter || ins.x === ePerimeter).toBe(true)
     }
   })
 
@@ -152,13 +165,9 @@ describe("busLayout — empty input", () => {
 })
 
 describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
-  it("classifies single-consumer items as local belts inside the group's frame, not on the trunk", () => {
+  it("classifies single-consumer items as direct connections (1 producer + 1 consumer), not on the trunk", () => {
     const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
     const blueprint = busLayout(catalog, flow)
-    // Root trunk now carries raw-input belts (iron-ore, copper-ore) since
-    // those flow in from `source:*` nodes and need a visible entry lane.
-    // Intermediate (single-consumer recipe-to-recipe) items still live on
-    // the group's local bus, not the root trunk.
     const trunkItems = new Set<string>()
     for (const b of blueprint.belts) {
       if (b.laneA) trunkItems.add(b.laneA.item)
@@ -167,9 +176,10 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
     // Intermediates produced + consumed inside the factory don't appear on root.
     expect(trunkItems.has("iron-plate")).toBe(false)
     expect(trunkItems.has("copper-cable")).toBe(false)
-    // But the group should have local belts for those intermediates.
+    // 1-producer + 1-consumer intermediates now become DIRECT connections,
+    // not full local-bus belt columns. We expect at least one direct link.
     expect(blueprint.groups.length).toBe(1)
-    expect(blueprint.groups[0].localBelts.length).toBeGreaterThan(0)
+    expect(blueprint.directConnections.length).toBeGreaterThan(0)
   })
 
   it("clusters chained recipes into a single group", () => {
@@ -211,16 +221,14 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
     }
   })
 
-  it("local inserters extract from a belt inside their owning group", () => {
+  it("direct inserters tap a direct-connection column inside their owning group", () => {
     const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
     const blueprint = busLayout(catalog, flow)
-    const localInserters = blueprint.inserters.filter((i) => i.scope === "local")
-    expect(localInserters.length).toBeGreaterThan(0)
-    for (const ins of localInserters) {
-      const owningGroup = blueprint.groups.find((g) => g.cellKeys.includes(ins.cellKey))
-      expect(owningGroup).toBeDefined()
-      const localXs = new Set(owningGroup!.localBelts.map((b) => b.x))
-      expect(localXs.has(ins.beltX)).toBe(true)
+    const directInserters = blueprint.inserters.filter((i) => i.scope === "direct")
+    expect(directInserters.length).toBeGreaterThan(0)
+    const directXs = new Set(blueprint.directConnections.map((d) => d.x))
+    for (const ins of directInserters) {
+      expect(directXs.has(ins.beltX)).toBe(true)
     }
   })
 

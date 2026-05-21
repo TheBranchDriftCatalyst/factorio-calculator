@@ -113,14 +113,20 @@ test.describe("Factorio Blueprint Calculator — happy path", () => {
     await expect(page.getByTestId("cell-inspector-empty")).toBeVisible()
   })
 
-  test("schematic zoom controls resize the canvas", async ({ page }) => {
+  test("schematic zoom slider resizes the canvas", async ({ page }) => {
+    // The zoom widget moved from standalone toolbar buttons into the
+    // Topology Panel as a range slider (`tf-zoom`). Drag it up and back
+    // down and assert the canvas's intrinsic px width tracks the change.
     await page.getByTestId("tab-schematic").click()
     const canvas = page.getByTestId("schematic-canvas")
     const before = await canvas.evaluate((c) => (c as HTMLCanvasElement).width)
-    await page.getByTestId("zoom-in").click()
+    const slider = page.getByTestId("tf-zoom")
+    await slider.fill("28")
+    await slider.dispatchEvent("change")
     const after = await canvas.evaluate((c) => (c as HTMLCanvasElement).width)
     expect(after).toBeGreaterThan(before)
-    await page.getByTestId("zoom-reset").click()
+    await slider.fill("18")
+    await slider.dispatchEvent("change")
     const reset = await canvas.evaluate((c) => (c as HTMLCanvasElement).width)
     expect(reset).toBe(before)
   })

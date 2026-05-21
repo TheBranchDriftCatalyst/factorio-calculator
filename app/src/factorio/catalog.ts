@@ -25,14 +25,31 @@ function localized(name: string, loc?: Record<string, string>): string {
 }
 
 function toItem(raw: KirkRawDataset["items"][number]): Item {
+  // Kirk's fluid records use `item_key` instead of `key`; tolerate either.
+  const key = raw.key ?? (raw as unknown as { item_key?: string }).item_key ?? ""
   return {
-    key: raw.key,
-    name: localized(raw.key, raw.localized_name),
+    key,
+    name: localized(key, raw.localized_name),
     iconCol: raw.icon_col ?? 0,
     iconRow: raw.icon_row ?? 0,
     stackSize: raw.stack_size,
     fuelValue: raw.fuel_value,
   }
+}
+
+/**
+ * When merging items + fluids, an entry from `raw.fluids` may shadow a
+ * proper entry from `raw.items` (the items array carries the real
+ * `icon_col` / `icon_row` for fluids; fluids-records only carry
+ * temperature metadata). Keep the entry with non-zero icon coords,
+ * falling back to the later one if neither has icons.
+ */
+function mergeItems(a: Item, b: Item): Item {
+  const aHasIcon = a.iconCol > 0 || a.iconRow > 0
+  const bHasIcon = b.iconCol > 0 || b.iconRow > 0
+  if (aHasIcon && !bHasIcon) return a
+  if (bHasIcon && !aHasIcon) return b
+  return b
 }
 
 function toRecipe(raw: KirkRawRecipe): Recipe {
@@ -136,11 +153,27 @@ export function loadCatalog(raw: KirkRawDataset): Catalog {
     Object.entries(FLUID_CONNECTIONS),
   )
 
-  // Set of fluid item keys, derived from Kirk's `fluids` category. Used by
-  // the schematic to render fluid lanes as pipes rather than belts.
-  const fluidItems: ReadonlySet<string> = new Set(
-    ((raw.fluids ?? []) as ReadonlyArray<{ key: string }>).map((f) => f.key),
-  )
+  // Set of fluid item keys. Kirk's dataset uses `item_key` on fluid
+  // records. We also scan recipe ingredients/products for `type: "fluid"`
+  // as a belt-and-suspenders catch for custom datasets that might leave
+  // the top-level fluids list incomplete.
+  const fluidSet = new Set<string>()
+  for (const f of (raw.fluids ?? []) as ReadonlyArray<{
+    item_key?: string
+    key?: string
+  }>) {
+    const k = f.item_key ?? f.key
+    if (k) fluidSet.add(k)
+  }
+  for (const r of raw.recipes ?? []) {
+    for (const ing of r.ingredients ?? []) {
+      if (ing.type === "fluid") fluidSet.add(ing.name)
+    }
+    for (const p of r.results ?? []) {
+      if (p.type === "fluid") fluidSet.add(p.name)
+    }
+  }
+  const fluidItems: ReadonlySet<string> = fluidSet
 
   const sprites = {
     hash: raw.sprites?.hash ?? "",
@@ -149,8 +182,16 @@ export function loadCatalog(raw: KirkRawDataset): Catalog {
     cell: 32,
   }
 
+  // Items merged with icon-aware fallback so a fluid record (no icon
+  // coords) doesn't shadow a real items record (proper icon_col/row).
+  const itemsMap = new Map<string, Item>()
+  for (const it of itemsList) {
+    const prev = itemsMap.get(it.key)
+    itemsMap.set(it.key, prev ? mergeItems(prev, it) : it)
+  }
+
   return {
-    items: indexBy(itemsList, (i) => i.key),
+    items: itemsMap as ReadonlyMap<string, Item>,
     recipes: indexBy(recipes, (r) => r.key),
     machines: indexBy(machines, (m) => m.key),
     belts: indexBy(belts, (b) => b.key),

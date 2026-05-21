@@ -44,8 +44,16 @@ interface Props {
   bottleneckMode?: boolean
   /** belt tier baseline for utilization math; default "yellow" (15/s/lane) */
   beltTier?: BeltTier
+  /**
+   * Per-item belt-tier override. When a lane's item key is present here,
+   * utilization math for that lane uses the overridden tier — letting one
+   * lane be "turbo" while the global tier remains yellow.
+   */
+  beltOverrides?: Record<string, BeltTier>
   /** rate display unit for badges + labels; default "sec" */
   rateUnit?: RateUnit
+  /** Draw the underground-belt "crossing" chevron markers. Default true. */
+  showCrossings?: boolean
 }
 
 /**
@@ -72,7 +80,9 @@ export function CanvasTiles({
   tilePx,
   bottleneckMode,
   beltTier = "yellow",
+  beltOverrides,
   rateUnit = "sec",
+  showCrossings = true,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const spriteRef = useRef<HTMLImageElement | null>(null)
@@ -106,7 +116,9 @@ export function CanvasTiles({
     TILE_PX,
     bottleneckMode,
     beltTier,
+    beltOverrides,
     rateUnit,
+    showCrossings,
   ])
 
   function draw() {
@@ -126,27 +138,29 @@ export function CanvasTiles({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.imageSmoothingEnabled = false
 
-    // Background
-    ctx.fillStyle = "rgba(255,255,255,0.02)"
-    ctx.fillRect(0, 0, W, H)
-
-    // Subtle tile grid
-    ctx.strokeStyle = "rgba(255,255,255,0.05)"
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    for (let x = 0; x <= blueprint.width; x++) {
-      ctx.moveTo(px(x) + 0.5, 0)
-      ctx.lineTo(px(x) + 0.5, H)
-    }
-    for (let y = 0; y <= blueprint.height; y++) {
-      ctx.moveTo(0, px(y) + 0.5)
-      ctx.lineTo(W, px(y) + 0.5)
-    }
-    ctx.stroke()
+    // No background / grid drawn here — the SchematicView viewport paints
+    // the grid via CSS background-image so it extends across the WHOLE
+    // viewport (not just the blueprint bounds). The CSS grid tracks the
+    // camera transform, so panning/zooming the canvas keeps grid lines in
+    // sync with content.
+    ctx.clearRect(0, 0, W, H)
 
     // Lane fill picker — by item normally, by utilization in bottleneck mode.
-    const laneFill = (lane: { item: string; rate: number }): string =>
-      bottleneckMode ? laneUtilization(lane.rate, beltTier).color : itemColorFor(lane.item, 0.7)
+    // A per-item entry in `beltOverrides` swaps the tier for that lane only,
+    // so the user can pin (e.g.) turbo on one item while the global stays yellow.
+    const tierForLane = (item: string): BeltTier =>
+      (beltOverrides && beltOverrides[item]) ?? beltTier
+    const laneFill = (lane: {
+      item: string
+      rate: number
+      isFluid?: boolean
+    }): string =>
+      bottleneckMode
+        ? laneUtilization(lane.rate, tierForLane(lane.item), lane.isFluid === true).color
+        : // Bump to 0.92 so lane colors stay saturated against the dark
+          // background — at 0.7 the muted tableau10 tones (gray, brown,
+          // teal) washed out and made sub-bus lanes look dim.
+          itemColorFor(lane.item, 0.92)
 
     const BELT_W_TILES = blueprint.beltWidth
     const BELT_W_PX = BELT_W_TILES * TILE_PX
@@ -169,19 +183,42 @@ export function CanvasTiles({
       const hgt = y1Px - y0Px
       const isPipe = belt.laneA?.isFluid === true
       if (isPipe && belt.laneA) {
-        // Pipe: full belt width filled by laneA's color (no laneB on pipes).
-        const fillColor = laneFill(belt.laneA)
+        // PIPE rendering: cylindrical look via horizontal gradient (edges
+        // darker, middle lighter) + periodic horizontal "joints" every
+        // few tiles, mimicking real Factorio pipe segments. Borderless on
+        // the long axis — joints take the place of borders to communicate
+        // "this is plumbing, not belting".
+        const fillColor = laneFill(belt.laneA) // base item / util tint
+        // Inset slightly so the pipe doesn't fill the full tile width —
+        // gives it a noticeable round shoulder against the dark canvas.
+        const INSET = Math.max(1, Math.floor(TILE_PX * 0.18))
+        const px0 = x + INSET
+        const pxw = BELT_W_PX - INSET * 2
+        // Cylindrical gradient: dim edges → bright middle → dim edges.
+        const grad = ctx.createLinearGradient(px0, 0, px0 + pxw, 0)
+        grad.addColorStop(0, "rgba(0,0,0,0.65)")
+        grad.addColorStop(0.18, fillColor)
+        grad.addColorStop(0.5, "rgba(255,255,255,0.18)")
+        grad.addColorStop(0.82, fillColor)
+        grad.addColorStop(1, "rgba(0,0,0,0.65)")
         ctx.fillStyle = fillColor
-        ctx.fillRect(x, y0Px, BELT_W_PX, hgt)
-        // Inner highlight strip down the middle — gives the "tube" feel.
-        ctx.fillStyle = "rgba(255,255,255,0.15)"
-        ctx.fillRect(x + BELT_W_PX / 2 - 1, y0Px, 2, hgt)
-        // Soft outer rim
-        ctx.strokeStyle = "rgba(125, 211, 252, 0.55)"
+        ctx.fillRect(px0, y0Px, pxw, hgt)
+        ctx.fillStyle = grad
+        ctx.fillRect(px0, y0Px, pxw, hgt)
+        // Outer rim — thin, sky-blue, no dash. Looks like a pipe outline.
+        ctx.strokeStyle = "rgba(125, 211, 252, 0.7)"
         ctx.lineWidth = 1
-        ctx.setLineDash([4, 3])
-        ctx.strokeRect(x + 0.5, y0Px + 0.5, BELT_W_PX - 1, hgt - 1)
-        ctx.setLineDash([])
+        ctx.strokeRect(px0 + 0.5, y0Px + 0.5, pxw - 1, hgt - 1)
+        // Joints every ~4 tiles — small horizontal bands across the pipe
+        // that suggest pipe segments. Use a soft dark band + a hairline
+        // highlight above it.
+        const JOINT_EVERY = Math.max(48, TILE_PX * 4)
+        for (let yy = y0Px + JOINT_EVERY; yy < y0Px + hgt - 4; yy += JOINT_EVERY) {
+          ctx.fillStyle = "rgba(0,0,0,0.45)"
+          ctx.fillRect(px0, yy, pxw, 2)
+          ctx.fillStyle = "rgba(255,255,255,0.18)"
+          ctx.fillRect(px0, yy - 1, pxw, 1)
+        }
         return
       }
       // Solid belt
@@ -210,14 +247,20 @@ export function CanvasTiles({
     //     styling. Flow arrows are added here for solid belts only —
     //     pipes don't have lane-level flow indicators.
     for (const belt of blueprint.belts) {
-      drawBeltColumn(belt, 0, H)
+      // Honor per-belt truncation if the layout set y0/y1 (lane terminates
+      // at its last consumer instead of running the full canvas height).
+      const yStart = belt.y0 != null ? px(belt.y0) : 0
+      const yEnd = belt.y1 != null ? px(belt.y1) : H
+      drawBeltColumn(belt, yStart, yEnd)
       if (belt.laneA?.isFluid) continue
       const x = px(belt.x)
       // Flow arrows (solid belts only).
       ctx.fillStyle = "rgba(0,0,0,0.55)"
       const arrowEvery = 6
       const tipSize = LANE_W_PX * 0.4
-      for (let y = 3; y < blueprint.height; y += arrowEvery) {
+      const arrowStart = belt.y0 ?? 0
+      const arrowEnd = belt.y1 ?? blueprint.height
+      for (let y = arrowStart + 3; y < arrowEnd; y += arrowEvery) {
         const cy = px(y) + TILE_PX / 2
         if (belt.laneA) {
           const cx = x + LANE_W_PX / 2
@@ -240,58 +283,9 @@ export function CanvasTiles({
       }
     }
 
-    // --- Lane icons: render the item sprite at intervals down EVERY belt
-    //     (root + nested). The same item-identification cue as Sankey side
-    //     icons. Skips if the sprite sheet hasn't loaded yet. ---
+    // (Lane icons drawn LATER, after group frames + sub-bus belts are
+    // filled — otherwise the local belt fill overwrites the icons.)
     const sprite = spriteRef.current
-    if (sprite) {
-      const ICON_EVERY = 6 // tiles between repeats down the belt
-      // Enable smoothing JUST for icon draws so they look less pixelated
-      // when scaled below source resolution. We restore the default
-      // (no smoothing) afterward so machine sprites + UI stay crisp.
-      ctx.imageSmoothingEnabled = true
-      ctx.imageSmoothingQuality = "high"
-      const drawLaneIcon = (item: string, cx: number, cy: number, size: number) => {
-        const it = catalog.items.get(item)
-        if (!it) return
-        const c = catalog.sprites.cell
-        ctx.drawImage(
-          sprite,
-          it.iconCol * c,
-          it.iconRow * c,
-          c,
-          c,
-          cx - size / 2,
-          cy - size / 2,
-          size,
-          size,
-        )
-      }
-      const drawBeltLanesIn = (
-        belts: ReadonlyArray<import("../types").BusBelt>,
-        y0: number,
-        y1: number,
-      ) => {
-        // Icon size scales with the lane width — a 2-tile belt gives a
-        // ~22 px icon at default zoom, plenty of room to read it.
-        const iconSize = Math.max(10, LANE_W_PX * 0.85)
-        for (const belt of belts) {
-          const xL = px(belt.x) + LANE_W_PX / 2
-          const xR = px(belt.x) + LANE_W_PX + LANE_W_PX / 2
-          for (let row = y0 + 3; row < y1; row += ICON_EVERY) {
-            const cy = px(row) + TILE_PX / 2
-            if (belt.laneA) drawLaneIcon(belt.laneA.item, xL, cy, iconSize)
-            if (belt.laneB) drawLaneIcon(belt.laneB.item, xR, cy, iconSize)
-          }
-        }
-      }
-      const walkForIcons = (n: import("../types").BusNode) => {
-        drawBeltLanesIn(n.belts, n.y, n.y + n.h)
-        for (const c of n.children) walkForIcons(c)
-      }
-      if (blueprint.root) walkForIcons(blueprint.root)
-      ctx.imageSmoothingEnabled = false
-    }
 
     // --- Lane highlight overlay — drawn over the belt fill so the user
     //     can see which lane the inspector is showing details for. ---
@@ -349,6 +343,10 @@ export function CanvasTiles({
     ctx.textAlign = "left"
     const labelRepeat = Math.max(20, Math.ceil(blueprint.height / 4))
     for (const belt of blueprint.belts) {
+      // Clamp the label strip to the belt's actual y-range so labels don't
+      // float past the truncated end of a belt.
+      const labelTop = belt.y0 ?? 0
+      const labelBot = belt.y1 ?? blueprint.height
       const drawLabel = (lane: { item: string; rate: number }, side: "A" | "B") => {
         const name = catalog.items.get(lane.item)?.name ?? lane.item
         const text = `${name} ${fmtRateUnit(lane.rate, rateUnit)}`
@@ -356,7 +354,7 @@ export function CanvasTiles({
         ctx.strokeStyle = "rgba(0,0,0,0.85)"
         ctx.lineWidth = 3
         ctx.fillStyle = "rgba(255,255,255,0.92)"
-        for (let tileY = 0; tileY < blueprint.height; tileY += labelRepeat) {
+        for (let tileY = labelTop; tileY < labelBot; tileY += labelRepeat) {
           ctx.save()
           ctx.translate(cx, px(tileY) + 4)
           ctx.rotate(Math.PI / 2)
@@ -478,22 +476,188 @@ export function CanvasTiles({
       const focused =
         highlightCellKey === cell.recipeKey ||
         (highlightCellKeys?.has(cell.recipeKey) ?? false)
+      const cellLeftCol = cell.x
+      const cellRightCol = cell.x + cell.w
       for (const port of cell.inputs) {
+        // Direct ports are handled by the direct-connection pass below.
+        if (port.scope === "direct") continue
         const beltExitX = port.beltX + BELT_W_TILES
-        const cellLeftCol = cell.x
         drawSideBelt(port.dropY, beltExitX, cellLeftCol, port.item, "east", focused)
-        drawCrossings(port.dropY, port.crossings, focused)
+        if (showCrossings) drawCrossings(port.dropY, port.crossings, focused)
       }
       for (const port of cell.outputs) {
-        const beltEntryX = port.beltX + BELT_W_TILES
-        const cellLeftCol = cell.x
-        drawSideBelt(port.dropY, cellLeftCol, beltEntryX, port.item, "west", focused)
-        drawCrossings(port.dropY, port.crossings, focused)
+        if (port.scope === "direct") continue
+        if (port.edge === "E") {
+          // Right-bus output — side-belt flows east from cell to belt.
+          drawSideBelt(port.dropY, cellRightCol, port.beltX, port.item, "east", focused)
+        } else {
+          const beltEntryX = port.beltX + BELT_W_TILES
+          drawSideBelt(port.dropY, cellLeftCol, beltEntryX, port.item, "west", focused)
+        }
+        if (showCrossings) drawCrossings(port.dropY, port.crossings, focused)
+      }
+    }
+
+    // --- Direct connections: 1-tile-wide vertical segment + 2 side stubs.
+    // For each direct link, draw:
+    //   • A vertical segment at column `dc.x` from y0..y1 (the connector).
+    //   • A short horizontal stub at producer.y connecting to producer's
+    //     W perimeter (cell.x - 1), and another at consumer.y.
+    //   • Inserters at (cell.x - 1, slotY) — they're already pushed onto
+    //     ctx.inserters by busLayout, so the existing inserter pass renders
+    //     them. We just need the belt segment + horizontal stubs here.
+    const directConnections = blueprint.directConnections ?? []
+    const directSprite = spriteRef.current
+    for (const dc of directConnections) {
+      const fromCell = blueprint.cells.find((c) => c.recipeKey === dc.fromCellKey)
+      const toCell = blueprint.cells.find((c) => c.recipeKey === dc.toCellKey)
+      if (!fromCell || !toCell) continue
+      const focused =
+        highlightCellKey === fromCell.recipeKey ||
+        highlightCellKey === toCell.recipeKey ||
+        (highlightCellKeys?.has(fromCell.recipeKey) ?? false) ||
+        (highlightCellKeys?.has(toCell.recipeKey) ?? false)
+      const dim = hasFocus && !focused
+      const alpha = focused ? 0.9 : dim ? 0.22 : 0.7
+      const segX = dc.x * TILE_PX
+      const segXMid = segX + TILE_PX / 2
+      const segYTop = dc.y0 * TILE_PX + TILE_PX / 2
+      const segYBot = (dc.y1 + 1) * TILE_PX - TILE_PX / 2
+      const w = Math.max(3, Math.floor(TILE_PX * 0.55))
+      const fillColor = itemColorFor(dc.item, alpha)
+      ctx.fillStyle = fillColor
+      ctx.fillRect(segXMid - w / 2, segYTop, w, segYBot - segYTop)
+      ctx.strokeStyle = `rgba(0,0,0,${dim ? 0.4 : 0.7})`
+      ctx.lineWidth = 1
+      ctx.strokeRect(segXMid - w / 2 + 0.5, segYTop + 0.5, w - 1, segYBot - segYTop - 1)
+      const prodStubY = dc.y0 * TILE_PX + TILE_PX / 2 - w / 2
+      const consStubY = dc.y1 * TILE_PX + TILE_PX / 2 - w / 2
+      const prodCellLeft = fromCell.x * TILE_PX
+      const consCellLeft = toCell.x * TILE_PX
+      ctx.fillStyle = fillColor
+      ctx.fillRect(segXMid, prodStubY, prodCellLeft - segXMid, w)
+      ctx.fillRect(segXMid, consStubY, consCellLeft - segXMid, w)
+
+      // Label: item icon + rate at the midpoint of the vertical segment.
+      // Skip if the segment is too short to read.
+      const segHeight = segYBot - segYTop
+      if (segHeight >= TILE_PX * 1.5) {
+        const labelCy = (segYTop + segYBot) / 2
+        const iconSize = Math.max(10, Math.floor(TILE_PX * 0.9))
+        // Backdrop pill so the label reads against the colored segment
+        const text = fmtRateUnit(dc.rate, rateUnit)
+        ctx.font = '600 10px "JetBrains Mono", ui-monospace, monospace'
+        const textW = ctx.measureText(text).width
+        const pillPad = 4
+        const pillW = iconSize + 2 + textW + pillPad * 2
+        const pillH = Math.max(iconSize, 14) + 2
+        const pillX = segXMid - pillW / 2
+        const pillY = labelCy - pillH / 2
+        ctx.fillStyle = `rgba(10, 10, 15, ${focused ? 0.95 : 0.85})`
+        ctx.beginPath()
+        const r = 3
+        ctx.moveTo(pillX + r, pillY)
+        ctx.lineTo(pillX + pillW - r, pillY)
+        ctx.quadraticCurveTo(pillX + pillW, pillY, pillX + pillW, pillY + r)
+        ctx.lineTo(pillX + pillW, pillY + pillH - r)
+        ctx.quadraticCurveTo(pillX + pillW, pillY + pillH, pillX + pillW - r, pillY + pillH)
+        ctx.lineTo(pillX + r, pillY + pillH)
+        ctx.quadraticCurveTo(pillX, pillY + pillH, pillX, pillY + pillH - r)
+        ctx.lineTo(pillX, pillY + r)
+        ctx.quadraticCurveTo(pillX, pillY, pillX + r, pillY)
+        ctx.closePath()
+        ctx.fill()
+        ctx.strokeStyle = `rgba(255,255,255,${focused ? 0.45 : 0.2})`
+        ctx.lineWidth = 1
+        ctx.stroke()
+        // Item icon (left of text)
+        if (directSprite) {
+          const it = catalog.items.get(dc.item)
+          if (it) {
+            const c = catalog.sprites.cell
+            ctx.imageSmoothingEnabled = true
+            ctx.drawImage(
+              directSprite,
+              it.iconCol * c,
+              it.iconRow * c,
+              c,
+              c,
+              pillX + pillPad,
+              labelCy - iconSize / 2,
+              iconSize,
+              iconSize,
+            )
+            ctx.imageSmoothingEnabled = false
+          }
+        }
+        // Rate text
+        ctx.fillStyle = focused ? "rgb(255, 255, 255)" : "rgba(255, 255, 255, 0.85)"
+        ctx.textBaseline = "middle"
+        ctx.textAlign = "left"
+        ctx.fillText(text, pillX + pillPad + iconSize + 2, labelCy)
       }
     }
 
     // --- Group frames: outline + local sub-bus inside each ---
     drawGroupsAndLocalBuses()
+
+    // --- Lane icons: render the item sprite at intervals down EVERY belt
+    //     (root + nested). Drawn LAST among belt visuals so the local
+    //     sub-bus belt fill (rendered just above) doesn't cover them.
+    if (sprite) {
+      const ICON_EVERY = 6 // tiles between repeats down the belt
+      ctx.imageSmoothingEnabled = true
+      ctx.imageSmoothingQuality = "high"
+      const drawLaneIcon = (item: string, cx: number, cy: number, size: number) => {
+        const it = catalog.items.get(item)
+        if (!it) return
+        const c = catalog.sprites.cell
+        // Dark circular backdrop so the icon reads against any belt color.
+        const bgR = size * 0.6
+        ctx.fillStyle = "rgba(10, 10, 15, 0.85)"
+        ctx.beginPath()
+        ctx.arc(cx, cy, bgR, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.25)"
+        ctx.lineWidth = 1
+        ctx.stroke()
+        ctx.drawImage(
+          sprite,
+          it.iconCol * c,
+          it.iconRow * c,
+          c,
+          c,
+          cx - size / 2,
+          cy - size / 2,
+          size,
+          size,
+        )
+      }
+      const drawBeltLanesIn = (
+        belts: ReadonlyArray<import("../types").BusBelt>,
+        y0: number,
+        y1: number,
+      ) => {
+        const iconSize = Math.max(10, LANE_W_PX * 0.85)
+        for (const belt of belts) {
+          const xL = px(belt.x) + LANE_W_PX / 2
+          const xR = px(belt.x) + LANE_W_PX + LANE_W_PX / 2
+          const beltTop = belt.y0 ?? y0
+          const beltBot = belt.y1 ?? y1
+          for (let row = beltTop + 3; row < beltBot; row += ICON_EVERY) {
+            const cy = px(row) + TILE_PX / 2
+            if (belt.laneA) drawLaneIcon(belt.laneA.item, xL, cy, iconSize)
+            if (belt.laneB) drawLaneIcon(belt.laneB.item, xR, cy, iconSize)
+          }
+        }
+      }
+      const walkForIcons = (n: import("../types").BusNode) => {
+        drawBeltLanesIn(n.belts, n.y, n.y + n.h)
+        for (const c of n.children) walkForIcons(c)
+      }
+      if (blueprint.root) walkForIcons(blueprint.root)
+      ctx.imageSmoothingEnabled = false
+    }
     function drawGroupsAndLocalBuses() {
       for (const g of blueprint.groups) {
         // Group frame
@@ -510,16 +674,20 @@ export function CanvasTiles({
         ctx.setLineDash([])
 
         // Local belts INSIDE this group — vertical columns spanning the
-        // group's full height.
+        // group's full height (or the truncated y0..y1 span if set).
         for (const belt of g.localBelts) {
           const x = px(belt.x)
-          drawBeltColumn(belt, gy, gy + gh)
+          const beltTop = belt.y0 != null ? px(belt.y0) : gy
+          const beltBot = belt.y1 != null ? px(belt.y1) : gy + gh
+          drawBeltColumn(belt, beltTop, beltBot)
           // Flow arrows (skipped for pipes)
           if (!belt.laneA?.isFluid) {
             ctx.fillStyle = "rgba(0,0,0,0.55)"
             const arrowEvery = 6
             const tipSize = LANE_W_PX * 0.4
-            for (let yt = g.y + 2; yt < g.y + g.h; yt += arrowEvery) {
+            const arrowStart = belt.y0 ?? g.y
+            const arrowEnd = belt.y1 ?? g.y + g.h
+            for (let yt = arrowStart + 2; yt < arrowEnd; yt += arrowEvery) {
               const cy = px(yt) + TILE_PX / 2
               if (belt.laneA) {
                 const cx = x + LANE_W_PX / 2
@@ -733,8 +901,12 @@ export function CanvasTiles({
         const cx = px(ins.x) + TILE_PX / 2
         const cy = px(ins.y) + TILE_PX / 2
         const r = TILE_PX * 0.4
-        const isInput = ins.facing === "east"
+        // Ring color follows port direction; triangle direction follows facing.
+        // (Facing alone is ambiguous — an E-edge output points east, same as
+        // a W-edge input.)
+        const isInput = ins.direction === "input"
         const ringColor = isInput ? INPUT_RING : OUTPUT_RING
+        const facingEast = ins.facing === "east"
         // body
         ctx.fillStyle = `rgba(28, 28, 36, ${dim ? 0.6 : 0.95})`
         ctx.beginPath()
@@ -755,7 +927,8 @@ export function CanvasTiles({
         ctx.fillStyle = ringColor
         ctx.beginPath()
         const tip = r * 0.7
-        if (isInput) {
+        // Triangle points in the facing direction (east ▶ or west ◀).
+        if (facingEast) {
           ctx.moveTo(cx + tip, cy)
           ctx.lineTo(cx - tip * 0.4, cy - tip * 0.7)
           ctx.lineTo(cx - tip * 0.4, cy + tip * 0.7)

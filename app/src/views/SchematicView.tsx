@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Catalog } from "../factorio"
 import type { FlowGraph } from "../solver/expand"
 import { busLayout } from "../blueprint/layout/busLayout"
@@ -8,8 +8,15 @@ import { useCamera } from "../hooks/useCamera"
 import { useSelection } from "../hooks/useSelection"
 import { useKeymap } from "../hooks/useKeymap"
 import { fmt, fmtPct, fmtRateUnit, type RateUnit } from "../util/format"
-import { laneUtilization, type BeltTier } from "../blueprint/util/utilization"
+import {
+  BELT_TIER_LABELS,
+  laneUtilization,
+  type BeltTier,
+} from "../blueprint/util/utilization"
 import { TopologyPanel } from "./schematic/TopologyPanel"
+import { RecipePicker } from "./schematic/RecipePicker"
+import { MachineCategoryPicker } from "./schematic/MachineCategoryPicker"
+import { IntermediatesPanel } from "./schematic/IntermediatesPanel"
 import {
   DEFAULT_CONFIG,
   loadConfig,
@@ -52,6 +59,8 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
         groupGapY: config.groupGapY,
         trunkMinConsumers: config.trunkMinConsumers,
         maxNestingDepth: config.maxNestingDepth,
+        outputBusSide: config.outputBusSide,
+        beltAssignments: config.beltAssignments,
       }),
     [
       catalog,
@@ -63,6 +72,8 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
       config.groupGapY,
       config.trunkMinConsumers,
       config.maxNestingDepth,
+      config.outputBusSide,
+      config.beltAssignments,
     ],
   )
   const [hoveredCell, setHoveredCell] = useState<Cell | null>(null)
@@ -74,6 +85,7 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
   } | null>(null)
 
   const {
+    camera,
     transform,
     isPanning,
     viewportRef,
@@ -160,6 +172,70 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
     b: () => updateConfig("bottleneckMode", !config.bottleneckMode),
   })
 
+  // Sidebar resize: width persisted in localStorage; mouse-drag updates width
+  // relative to the parent flex row's right edge. Clamp to [240, 720] px.
+  const SIDEBAR_WIDTH_KEY = "schematic.sidebarWidth.v1"
+  const SIDEBAR_MIN_WIDTH = 240
+  const SIDEBAR_MAX_WIDTH = 720
+  const SIDEBAR_DEFAULT_WIDTH = 320
+  const rowRef = useRef<HTMLDivElement | null>(null)
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return SIDEBAR_DEFAULT_WIDTH
+    try {
+      const raw = window.localStorage.getItem(SIDEBAR_WIDTH_KEY)
+      if (raw == null) return SIDEBAR_DEFAULT_WIDTH
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return SIDEBAR_DEFAULT_WIDTH
+      return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, n))
+    } catch {
+      return SIDEBAR_DEFAULT_WIDTH
+    }
+  })
+
+  const onResizeMouseMove = useCallback((e: MouseEvent) => {
+    const row = rowRef.current
+    if (!row) return
+    const rect = row.getBoundingClientRect()
+    const next = rect.right - e.clientX
+    const clamped = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, next))
+    setSidebarWidth(clamped)
+  }, [])
+
+  const onResizeMouseUp = useCallback(() => {
+    window.removeEventListener("mousemove", onResizeMouseMove)
+    window.removeEventListener("mouseup", onResizeMouseUp)
+    document.body.style.cursor = ""
+    document.body.style.userSelect = ""
+    try {
+      // Read the freshest width directly off the state via a setter callback.
+      setSidebarWidth((w) => {
+        window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(w))
+        return w
+      })
+    } catch {
+      // localStorage may be unavailable (private mode); silent no-op.
+    }
+  }, [onResizeMouseMove])
+
+  const onResizeMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      e.preventDefault()
+      window.addEventListener("mousemove", onResizeMouseMove)
+      window.addEventListener("mouseup", onResizeMouseUp)
+      document.body.style.cursor = "col-resize"
+      document.body.style.userSelect = "none"
+    },
+    [onResizeMouseMove, onResizeMouseUp],
+  )
+
+  // Defensive: cleanup window listeners if the component unmounts mid-drag.
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("mousemove", onResizeMouseMove)
+      window.removeEventListener("mouseup", onResizeMouseUp)
+    }
+  }, [onResizeMouseMove, onResizeMouseUp])
+
   return (
     <div className="flex flex-col gap-2 flex-1 min-h-0" data-testid="schematic-view">
       <div className="flex items-center gap-3 text-xs flex-wrap flex-shrink-0">
@@ -175,14 +251,31 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
         )}
         <Legend />
       </div>
-      <div className="flex gap-3 flex-1 min-h-0">
+      <div ref={rowRef} className="flex gap-3 flex-1 min-h-0">
         <div
           ref={viewportRef}
           className="flex-1 overflow-hidden bg-card rounded border border-border relative"
-          style={{
-            height: "100%",
-            cursor: isPanning ? "grabbing" : "default",
-          }}
+          style={(() => {
+            // CSS-painted background grid: matches the canvas grid (same color
+            // & tile size) and tracks the camera transform via modulo offset,
+            // so the grid extends across the WHOLE viewport — no more
+            // partial-grid look when the blueprint is smaller than the
+            // viewport or when zoomed out.
+            const tileSizePx = Math.max(1, zoom * camera.scale)
+            const offsetX = ((camera.x % tileSizePx) + tileSizePx) % tileSizePx
+            const offsetY = ((camera.y % tileSizePx) + tileSizePx) % tileSizePx
+            return {
+              height: "100%",
+              cursor: isPanning ? "grabbing" : "default",
+              backgroundColor: "rgb(10, 10, 15)",
+              backgroundImage: `
+                linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)
+              `,
+              backgroundSize: `${tileSizePx}px ${tileSizePx}px`,
+              backgroundPosition: `${offsetX}px ${offsetY}px`,
+            }
+          })()}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
@@ -202,19 +295,39 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
               tilePx={zoom}
               bottleneckMode={bottleneckMode}
               beltTier={beltTier}
+              beltOverrides={config.beltOverrides}
               rateUnit={rateUnit}
+              showCrossings={config.showCrossings}
             />
           </div>
           <CameraHint />
           {bottleneckMode && <BottleneckBadge />}
           {bottleneckMode && <BottleneckLegend />}
         </div>
+        <SidebarResizeHandle onMouseDown={onResizeMouseDown} />
         <aside
-          className="w-80 shrink-0 flex flex-col gap-2 overflow-auto"
+          className="shrink-0 flex flex-col gap-2 overflow-auto"
           data-testid="inspector"
-          style={{ height: "100%" }}
+          style={{ height: "100%", width: sidebarWidth }}
         >
           <TopologyPanel config={config} update={updateConfig} />
+          <RecipePicker
+            catalog={catalog}
+            flow={flow}
+            choices={config.recipeChoices ?? {}}
+            onChange={(next: Record<string, string>) =>
+              updateConfig("recipeChoices", next)
+            }
+          />
+          <MachineCategoryPicker
+            catalog={catalog}
+            flow={flow}
+            defaults={config.machineCategoryDefaults ?? {}}
+            onChange={(next: Record<string, string>) =>
+              updateConfig("machineCategoryDefaults", next)
+            }
+          />
+          <IntermediatesPanel catalog={catalog} flow={flow} rateUnit={rateUnit} />
           <InspectorPanel
             catalog={catalog}
             blueprint={blueprint}
@@ -225,9 +338,56 @@ export function SchematicView({ catalog, flow, rateUnit = "sec" }: Props) {
             onClear={clear}
             beltTier={beltTier}
             rateUnit={rateUnit}
+            config={config}
+            updateConfig={updateConfig}
           />
         </aside>
       </div>
+    </div>
+  )
+}
+
+// Drag handle that lives between the schematic viewport and the inspector
+// aside. Width is controlled by the parent's state — this is a pure visual
+// affordance with a `col-resize` cursor and an amber hover tint. The center
+// "grip" is a short vertical line drawn via a pseudo-element-less pure DIV
+// so we don't need extra CSS files.
+function SidebarResizeHandle({
+  onMouseDown,
+}: {
+  onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void
+}) {
+  const [hover, setHover] = useState(false)
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      data-testid="sidebar-resize-handle"
+      onMouseDown={onMouseDown}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        width: 6,
+        flexShrink: 0,
+        cursor: "col-resize",
+        background: hover ? "rgba(255, 176, 0, 0.18)" : "transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background-color 120ms ease-out",
+        userSelect: "none",
+      }}
+    >
+      {/* Short center line as the discoverable grip */}
+      <div
+        style={{
+          width: 2,
+          height: 28,
+          borderRadius: 1,
+          background: hover ? "rgba(255, 176, 0, 0.75)" : "rgba(255, 255, 255, 0.22)",
+          transition: "background-color 120ms ease-out",
+        }}
+      />
     </div>
   )
 }
@@ -368,6 +528,8 @@ interface InspectorPanelProps {
   onClear: () => void
   beltTier: BeltTier
   rateUnit: RateUnit
+  config: SchematicConfig
+  updateConfig: <K extends keyof SchematicConfig>(key: K, value: SchematicConfig[K]) => void
 }
 
 function InspectorPanel({
@@ -380,6 +542,8 @@ function InspectorPanel({
   onClear,
   beltTier,
   rateUnit,
+  config,
+  updateConfig,
 }: InspectorPanelProps) {
   // Lane selected — show its details + consumers/producers list.
   if (selectedLane) {
@@ -391,6 +555,8 @@ function InspectorPanel({
         beltTier={beltTier}
         rateUnit={rateUnit}
         onClear={onClear}
+        config={config}
+        updateConfig={updateConfig}
       />
     )
   }
@@ -421,7 +587,14 @@ function InspectorPanel({
         <div className="opacity-50 mb-2 uppercase tracking-wide text-[10px]">
           hovering (click to pin)
         </div>
-        <CellDetails cell={hovered} beltTier={beltTier} rateUnit={rateUnit} />
+        <CellDetails
+          cell={hovered}
+          beltTier={beltTier}
+          rateUnit={rateUnit}
+          catalog={catalog}
+          config={config}
+          updateConfig={updateConfig}
+        />
       </div>
     )
   }
@@ -454,7 +627,15 @@ function InspectorPanel({
             clear
           </button>
         </div>
-        <CellDetails cell={cell} expanded beltTier={beltTier} rateUnit={rateUnit} />
+        <CellDetails
+          cell={cell}
+          expanded
+          beltTier={beltTier}
+          rateUnit={rateUnit}
+          catalog={catalog}
+          config={config}
+          updateConfig={updateConfig}
+        />
       </div>
     )
   }
@@ -512,6 +693,8 @@ function LaneDetails({
   beltTier,
   rateUnit,
   onClear,
+  config,
+  updateConfig,
 }: {
   catalog: Catalog
   blueprint: Blueprint
@@ -519,9 +702,26 @@ function LaneDetails({
   beltTier: BeltTier
   rateUnit: RateUnit
   onClear: () => void
+  config: SchematicConfig
+  updateConfig: <K extends keyof SchematicConfig>(key: K, value: SchematicConfig[K]) => void
 }) {
   const itemName = catalog.items.get(lane.item)?.name ?? lane.item
-  const util = laneUtilization(lane.rate, beltTier)
+  // Per-lane belt-tier override falls back to the global tier. Utilization
+  // math + the "@ <tier>" caption both honor the override.
+  const overrideTier = config.beltOverrides?.[lane.item]
+  const effectiveTier = overrideTier ?? beltTier
+  const isFluid = catalog.fluidItems.has(lane.item)
+  const util = laneUtilization(lane.rate, effectiveTier, isFluid)
+
+  const onBeltTierChange = (v: string) => {
+    const next = { ...(config.beltOverrides ?? {}) }
+    if (v === "__default") {
+      delete next[lane.item]
+    } else {
+      next[lane.item] = v as BeltTier
+    }
+    updateConfig("beltOverrides", next)
+  }
 
   // Aggregate producers + consumers by walking the flat cell list and
   // looking at ports that match (beltX, item).
@@ -566,7 +766,91 @@ function LaneDetails({
           </span>
         </div>
         <div className="opacity-50 text-[10px]">
-          @ {beltTier} belt · {util.label}
+          @ {effectiveTier} belt · {util.label}
+          {overrideTier && (
+            <span className="ml-1" style={{ color: "#FFC940" }}>
+              (override)
+            </span>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <label
+            className="opacity-80 text-[10px] uppercase tracking-wide"
+            htmlFor="lane-belt-tier-override"
+          >
+            Belt tier
+          </label>
+          <select
+            id="lane-belt-tier-override"
+            data-testid="lane-belt-tier-override"
+            value={overrideTier ?? "__default"}
+            onChange={(e) => onBeltTierChange(e.target.value)}
+            className="text-xs font-mono bg-background border border-border rounded px-1 py-0.5"
+            style={{ height: 22, minWidth: 120 }}
+          >
+            <option value="__default">Default (global)</option>
+            {(["yellow", "red", "blue", "turbo"] as BeltTier[]).map((t) => (
+              <option key={t} value={t}>
+                {BELT_TIER_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Bus assignment — move this item to a different bus column. */}
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <label
+            className="opacity-80 text-[11px]"
+            htmlFor="lane-bus-assignment"
+          >
+            Bus
+          </label>
+          <select
+            id="lane-bus-assignment"
+            data-testid="lane-bus-assignment"
+            value={config.beltAssignments?.[lane.item] ?? "__default"}
+            onChange={(e) => {
+              const next = { ...(config.beltAssignments ?? {}) }
+              if (e.target.value === "__default") delete next[lane.item]
+              else if (e.target.value === "__new_left") {
+                // Find first unused L-suffix.
+                const used = new Set(Object.values(next))
+                let n = 2
+                while (used.has(`L${n}`)) n++
+                next[lane.item] = `L${n}`
+              } else if (e.target.value === "__new_right") {
+                const used = new Set(Object.values(next))
+                let n = 2
+                while (used.has(`R${n}`)) n++
+                next[lane.item] = `R${n}`
+              } else {
+                next[lane.item] = e.target.value
+              }
+              updateConfig("beltAssignments", next)
+            }}
+            className="text-xs font-mono bg-background border border-border rounded px-1 py-0.5"
+            style={{ height: 22, minWidth: 120 }}
+          >
+            <option value="__default">Default</option>
+            <option value="left">Left bus</option>
+            <option value="right">Right bus</option>
+            {/* Existing user-created buses */}
+            {[
+              ...new Set(
+                Object.values(config.beltAssignments ?? {}).filter(
+                  (b) => b !== "left" && b !== "right",
+                ),
+              ),
+            ]
+              .sort()
+              .map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            <option value="__new_left">+ new left bus (L#)</option>
+            <option value="__new_right">+ new right bus (R#)</option>
+          </select>
         </div>
       </div>
 
@@ -602,12 +886,39 @@ function CellDetails({
   expanded,
   beltTier,
   rateUnit,
+  catalog,
+  config,
+  updateConfig,
 }: {
   cell: Cell
   expanded?: boolean
   beltTier: BeltTier
   rateUnit: RateUnit
+  catalog: Catalog
+  config: SchematicConfig
+  updateConfig: <K extends keyof SchematicConfig>(key: K, value: SchematicConfig[K]) => void
 }) {
+  // Compatible machines: every machine in this recipe's crafting category.
+  // Sorted fastest-first to match the solver's default heuristic. Empty when
+  // the recipe is unknown (shouldn't happen post-load, but be defensive).
+  const recipe = catalog.recipes.get(cell.recipeKey)
+  const compatibleMachines = useMemo(() => {
+    if (!recipe) return []
+    const list = catalog.machinesByCategory.get(recipe.category) ?? []
+    return [...list].sort((a, b) => b.craftingSpeed - a.craftingSpeed)
+  }, [catalog, recipe])
+  const overrideKey = config.machineOverrides?.[cell.recipeKey]
+
+  const onMachineChange = (v: string) => {
+    const next = { ...(config.machineOverrides ?? {}) }
+    if (v === "__default") {
+      delete next[cell.recipeKey]
+    } else {
+      next[cell.recipeKey] = v
+    }
+    updateConfig("machineOverrides", next)
+  }
+
   const util = (rate: number) => {
     const u = laneUtilization(rate, beltTier)
     return (
@@ -634,6 +945,31 @@ function CellDetails({
         <div className="opacity-50 mt-1">
           {cell.w}×{cell.h} tiles
         </div>
+        {compatibleMachines.length > 0 && (
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <label
+              className="opacity-80 text-[10px] uppercase tracking-wide"
+              htmlFor="cell-machine-override"
+            >
+              Machine
+            </label>
+            <select
+              id="cell-machine-override"
+              data-testid="cell-machine-override"
+              value={overrideKey ?? "__default"}
+              onChange={(e) => onMachineChange(e.target.value)}
+              className="text-xs font-mono bg-background border border-border rounded px-1 py-0.5"
+              style={{ height: 22, minWidth: 160 }}
+            >
+              <option value="__default">Default (auto)</option>
+              {compatibleMachines.map((m) => (
+                <option key={m.key} value={m.key}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div>
         <div className="opacity-60 mb-1">

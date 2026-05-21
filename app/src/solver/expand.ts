@@ -69,12 +69,53 @@ const RAW_ITEMS = new Set([
   "holmium-ore",
 ])
 
-function pickRecipe(catalog: Catalog, item: string): Recipe | undefined {
-  const candidates = catalog.recipesByProduct.get(item) ?? []
-  return candidates.find((r) => r.key === item) ?? candidates[0]
+/**
+ * Recycling recipes (Space Age) destroy items for partial component
+ * recovery. They shouldn't be picked as a producer for normal item
+ * demand. Filter them by category or key suffix.
+ */
+function isRecyclingRecipe(r: Recipe): boolean {
+  return r.category === "recycling" || r.key.endsWith("-recycling")
 }
 
-function pickMachine(catalog: Catalog, recipe: Recipe): Machine | undefined {
+function pickRecipe(
+  catalog: Catalog,
+  item: string,
+  choices: Record<string, string> = {},
+): Recipe | undefined {
+  const all = catalog.recipesByProduct.get(item) ?? []
+  // User-pinned choice wins (even if it's a recycling recipe — user knows
+  // what they're doing).
+  const chosenKey = choices[item]
+  if (chosenKey) {
+    const chosen = all.find((r) => r.key === chosenKey)
+    if (chosen) return chosen
+  }
+  // Filter out recycling recipes from default selection.
+  const candidates = all.filter((r) => !isRecyclingRecipe(r))
+  return candidates.find((r) => r.key === item) ?? candidates[0] ?? all[0]
+}
+
+function pickMachine(
+  catalog: Catalog,
+  recipe: Recipe,
+  overrides: Record<string, string> = {},
+  categoryDefaults: Record<string, string> = {},
+): Machine | undefined {
+  // 1. Per-recipe override always wins.
+  const overrideKey = overrides[recipe.key]
+  if (overrideKey) {
+    const m = catalog.machines.get(overrideKey)
+    if (m) return m
+  }
+  // 2. Per-category default (so "use Assembler 1 for everything crafting"
+  //    works without pinning each recipe).
+  const categoryKey = categoryDefaults[recipe.category]
+  if (categoryKey) {
+    const m = catalog.machines.get(categoryKey)
+    if (m && m.craftingCategories.has(recipe.category)) return m
+  }
+  // 3. Fallback: fastest machine in the category.
   const candidates = catalog.machinesByCategory.get(recipe.category) ?? []
   if (candidates.length === 0) return undefined
   return [...candidates].sort((a, b) => b.craftingSpeed - a.craftingSpeed)[0]
@@ -84,6 +125,9 @@ export function expand(
   catalog: Catalog,
   targets: Target[],
   inputs: Input[] = [],
+  machineOverrides: Record<string, string> = {},
+  recipeChoices: Record<string, string> = {},
+  machineCategoryDefaults: Record<string, string> = {},
 ): FlowGraph {
   const nodes = new Map<string, FlowNode>()
   const edges: FlowEdge[] = []
@@ -150,7 +194,7 @@ export function expand(
     // `d.rate` as the unmet portion. We don't mutate `d` directly — keep
     // the original safe in case we ever need it for debugging.
     const residualRate = remaining
-    const recipe = RAW_ITEMS.has(d.item) ? undefined : pickRecipe(catalog, d.item)
+    const recipe = RAW_ITEMS.has(d.item) ? undefined : pickRecipe(catalog, d.item, recipeChoices)
 
     if (!recipe) {
       const id = `source:${d.item}`
@@ -166,7 +210,7 @@ export function expand(
     const product = recipe.products.find((p) => p.item === d.item)
     if (!product || product.amount === 0) continue
     const craftsPerSec = residualRate / product.amount
-    const machine = pickMachine(catalog, recipe)
+    const machine = pickMachine(catalog, recipe, machineOverrides, machineCategoryDefaults)
 
     const existing = nodes.get(id)
     if (existing) {

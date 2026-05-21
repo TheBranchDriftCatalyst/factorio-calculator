@@ -1,14 +1,14 @@
-// Belt utilization heatmap helpers.
+// Belt + pipe utilization heatmap helpers.
 //
 // Factorio belt tiers (items/sec per lane):
-//   yellow → 15  (tier 1, easy unlocks)
+//   yellow → 15  (tier 1)
 //   red    → 30  (tier 2)
-//   blue   → 45  (tier 3, end of vanilla)
-//   turbo  → 60  (Space Age, late-game)
+//   blue   → 45  (tier 3)
+//   turbo  → 60  (Space Age)
 //
-// We surface a small enum + helpers so the schematic can show
-// utilization against the user's actual belt choice — a 30 items/s
-// flow saturates a yellow belt but barely touches turbo.
+// Factorio pipe throughput depends on segment length, but for a short
+// connector (≤17 pipes) the standard throughput is 1200 fluid units/sec.
+// Long pipe runs degrade. We default to the "short segment" throughput.
 
 export type BeltTier = "yellow" | "red" | "blue" | "turbo"
 
@@ -26,6 +26,9 @@ export const BELT_TIER_LABELS: Record<BeltTier, string> = {
   turbo: "Turbo · 60/s",
 }
 
+/** Vanilla pipe throughput, fluid units / sec, short segment. */
+export const PIPE_CAPACITY = 1200
+
 export interface UtilLevel {
   /** 0..∞ — capped at 10 visually */
   ratio: number
@@ -35,8 +38,18 @@ export interface UtilLevel {
   label: "idle" | "ok" | "warm" | "saturated" | "overloaded"
 }
 
-export function laneUtilization(rate: number, tier: BeltTier = "yellow"): UtilLevel {
-  const cap = BELT_TIER_LANE_CAPACITY[tier]
+/**
+ * Returns the saturation level of a lane.
+ * @param rate   items (or fluid units) per second on the lane.
+ * @param tier   belt tier when the lane is a solid belt.
+ * @param isFluid when true, uses pipe capacity instead of belt tier.
+ */
+export function laneUtilization(
+  rate: number,
+  tier: BeltTier = "yellow",
+  isFluid = false,
+): UtilLevel {
+  const cap = isFluid ? PIPE_CAPACITY : BELT_TIER_LANE_CAPACITY[tier]
   const ratio = rate / cap
   if (ratio < 0.05) return { ratio, color: "rgba(82, 82, 91, 0.75)", label: "idle" }
   if (ratio < 0.5) return { ratio, color: "rgba(16, 185, 129, 0.78)", label: "ok" }

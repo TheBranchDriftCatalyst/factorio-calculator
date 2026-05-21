@@ -23,6 +23,13 @@
 export type Tile = readonly [x: number, y: number]
 export type Facing = "north" | "south" | "east" | "west"
 
+/**
+ * Which cell edge a port sits on. W = west (left), E = east (right),
+ * N = north (top), S = south (bottom). Inserters live on the perimeter
+ * tile flagged by the port's `edge` + `slot`.
+ */
+export type Edge = "N" | "E" | "S" | "W"
+
 /** A single carried-item sub-lane on a belt. */
 export interface BusLane {
   item: string
@@ -36,6 +43,14 @@ export interface BusBelt {
   x: number // ABSOLUTE tile column in the canvas
   laneA?: BusLane
   laneB?: BusLane
+  /**
+   * Optional vertical extent of the belt. When set, the renderer truncates
+   * the belt to [y0, y1] instead of running it the full scope height —
+   * lets a lane terminate at its last consumer rather than wasting space
+   * extending past it. Coordinates are absolute tile rows.
+   */
+  y0?: number
+  y1?: number
 }
 
 export interface MachinePlacement {
@@ -57,8 +72,28 @@ export interface CellPort {
   /** absolute tile row of the inserter / where the drop line enters the cell */
   dropY: number
   direction: "input" | "output"
-  /** "trunk" = main bus tap; "local" = sub-bus inside the cell's own group */
-  scope: "trunk" | "local"
+  /**
+   * "trunk" = main bus tap.
+   * "local" = sub-bus inside the cell's own group.
+   * "direct" = 1:1 link straight to the partner cell, no shared bus column.
+   */
+  scope: "trunk" | "local" | "direct"
+  /**
+   * When `scope === "direct"`, the recipeKey of the partner cell at the
+   * other end of the connection. Lets the renderer pair the two ports.
+   */
+  partnerCellKey?: string
+  /**
+   * Which cell edge this port sits on. Drives perimeter inserter
+   * placement: a W-edge port has its inserter at (cell.x - 1, cell.y + slot),
+   * an E-edge port at (cell.x + cell.w, cell.y + slot).
+   */
+  edge: Edge
+  /**
+   * Offset along the edge where the port lives, in tiles. For W/E it's
+   * the row (0 = top of cell); for N/S it's the column (0 = left of cell).
+   */
+  slot: number
   /**
    * Columns where this port's side-belt crosses ANOTHER belt — these need
    * underground belt / long-inserter in real Factorio. Empty when the
@@ -72,12 +107,39 @@ export interface InserterPlacement {
   x: number
   y: number
   facing: Facing
+  /**
+   * Whether this inserter feeds INTO the cell (input port) or OUT of it
+   * (output port). Used by the renderer for ring color — `facing` alone
+   * isn't enough since an E-edge output points east just like a W-edge
+   * input does.
+   */
+  direction: "input" | "output"
   /** absolute column of the belt this inserter taps */
   beltX: number
   cellKey: string
   item: string
   rate: number
-  scope: "trunk" | "local"
+  scope: "trunk" | "local" | "direct"
+}
+
+/**
+ * A direct producer→consumer link for an item with exactly one producer
+ * AND one consumer in scope. Replaces the full vertical bus column with
+ * a short segment running between the two cells' W perimeter inserters.
+ */
+export interface DirectConnection {
+  item: string
+  rate: number
+  fromCellKey: string
+  toCellKey: string
+  /** absolute tile column the connecting segment lives in */
+  x: number
+  /** producer-side slot Y (top of segment) */
+  y0: number
+  /** consumer-side slot Y (bottom of segment) */
+  y1: number
+  /** True if this is a fluid (pipe-style, not belt) */
+  isFluid?: boolean
 }
 
 export interface Cell {
@@ -91,6 +153,11 @@ export interface Cell {
   machines: MachinePlacement[]
   inputs: CellPort[]
   outputs: CellPort[]
+  /**
+   * Per-edge view of `inputs[] ∪ outputs[]`. Each port appears in exactly
+   * one bucket. Renderer reads this to draw perimeter inserters.
+   */
+  portsByEdge: Record<Edge, CellPort[]>
 }
 
 /**
@@ -175,5 +242,7 @@ export interface Blueprint {
   cells: Cell[]
   /** All inserters (trunk-gutter AND group-local-gutter), differentiated by `scope`. */
   inserters: InserterPlacement[]
+  /** 1:1 producer→consumer links rendered as short segments rather than full bus columns. */
+  directConnections: DirectConnection[]
   unsupported: Array<{ recipeKey: string; reason: string }>
 }

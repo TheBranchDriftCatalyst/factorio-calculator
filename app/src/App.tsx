@@ -14,6 +14,11 @@ import { CommandPalette, type Command } from "./components/CommandPalette"
 import { useKeymap } from "./hooks/useKeymap"
 import { ProfileSidebar } from "./views/profiles/ProfileSidebar"
 import type { RateUnit } from "./util/format"
+import {
+  loadConfig as loadSchematicConfig,
+  SCHEMATIC_CONFIG_EVENT,
+  STORAGE_KEY as SCHEMATIC_STORAGE_KEY,
+} from "./views/schematic/SchematicConfig"
 
 const DEFAULT_DATASET = "space-age-2.0.55.json"
 const DEFAULT_TARGETS: Target[] = [{ item: "electronic-circuit", rate: 1 }]
@@ -81,6 +86,41 @@ export function App() {
   const [tab, setTab] = useState<Tab>(() => tabFromHash())
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [rateUnit, setRateUnit] = useState<RateUnit>("sec")
+  // Per-recipe machine overrides + per-item recipe choices live in
+  // SchematicConfig (localStorage). We mirror them here so the solver
+  // re-runs whenever the user pins a different choice via the schematic.
+  const [machineOverrides, setMachineOverrides] = useState<Record<string, string>>(
+    () => (typeof window === "undefined" ? {} : loadSchematicConfig().machineOverrides ?? {}),
+  )
+  const [recipeChoices, setRecipeChoices] = useState<Record<string, string>>(
+    () => (typeof window === "undefined" ? {} : loadSchematicConfig().recipeChoices ?? {}),
+  )
+  const [machineCategoryDefaults, setMachineCategoryDefaults] = useState<
+    Record<string, string>
+  >(() =>
+    typeof window === "undefined"
+      ? {}
+      : loadSchematicConfig().machineCategoryDefaults ?? {},
+  )
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const sync = () => {
+      const cfg = loadSchematicConfig()
+      setMachineOverrides(cfg.machineOverrides ?? {})
+      setRecipeChoices(cfg.recipeChoices ?? {})
+      setMachineCategoryDefaults(cfg.machineCategoryDefaults ?? {})
+    }
+    window.addEventListener(SCHEMATIC_CONFIG_EVENT, sync)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === SCHEMATIC_STORAGE_KEY) sync()
+    }
+    window.addEventListener("storage", onStorage)
+    return () => {
+      window.removeEventListener(SCHEMATIC_CONFIG_EVENT, sync)
+      window.removeEventListener("storage", onStorage)
+    }
+  }, [])
 
   // Persist targets on every change. Cheap enough to do unconditionally; the
   // payload is tiny.
@@ -164,8 +204,15 @@ export function App() {
 
   const flow: FlowGraph | null = useMemo(() => {
     if (!catalog) return null
-    return expand(catalog, targets, inputs)
-  }, [catalog, targets, inputs])
+    return expand(
+      catalog,
+      targets,
+      inputs,
+      machineOverrides,
+      recipeChoices,
+      machineCategoryDefaults,
+    )
+  }, [catalog, targets, inputs, machineOverrides, recipeChoices, machineCategoryDefaults])
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
