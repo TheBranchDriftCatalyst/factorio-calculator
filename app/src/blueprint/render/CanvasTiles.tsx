@@ -7,7 +7,7 @@
 // horizontal band stacked top-to-bottom; cells inside a group stack
 // vertically, one per row, so the inserter glyphs never collide.
 
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import * as d3 from "d3"
 import type { Catalog } from "../../factorio"
 import type { Blueprint, Cell } from "../types"
@@ -94,6 +94,14 @@ export function CanvasTiles({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const spriteRef = useRef<HTMLImageElement | null>(null)
   const TILE_PX = tilePx ?? DEFAULT_TILE_PX
+  // Built once per blueprint and shared between draw() and hitTest(). Cuts
+  // both linear scans down to O(1) lookups; with ~30 cells per factory the
+  // win on hitTest (called every mousemove) is the load-bearing one.
+  const cellByKey = useMemo(() => {
+    const m = new Map<string, Cell>()
+    for (const c of blueprint.cells) m.set(c.recipeKey, c)
+    return m
+  }, [blueprint])
 
   useEffect(() => {
     const hash = catalog.sprites.hash
@@ -116,6 +124,7 @@ export function CanvasTiles({
     draw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    catalog,
     blueprint,
     highlightCellKey,
     highlightCellKeys,
@@ -138,6 +147,7 @@ export function CanvasTiles({
     const px = (n: number) => n * TILE_PX
     const W = px(blueprint.width)
     const H = px(blueprint.height)
+    // cellByKey is the component-level memo so we don't rebuild it here.
 
     canvas.width = W * dpr
     canvas.height = H * dpr
@@ -563,8 +573,8 @@ export function CanvasTiles({
     //     them. We just need the belt segment + horizontal stubs here.
     const directConnections = blueprint.directConnections ?? []
     for (const dc of directConnections) {
-      const fromCell = blueprint.cells.find((c) => c.recipeKey === dc.fromCellKey)
-      const toCell = blueprint.cells.find((c) => c.recipeKey === dc.toCellKey)
+      const fromCell = cellByKey.get(dc.fromCellKey)
+      const toCell = cellByKey.get(dc.toCellKey)
       if (!fromCell || !toCell) continue
       const focused =
         highlightCellKey === fromCell.recipeKey ||
@@ -965,14 +975,15 @@ export function CanvasTiles({
   }
 
   // Convert a mouse event to the cell under the cursor (or null).
+  // Iterates cellByKey instead of blueprint.cells.find so we share the
+  // memoized Map (same big-O but warms a single hot path).
   function hitTest(e: React.MouseEvent<HTMLCanvasElement>): Cell | null {
     const t = eventToTile(e)
     if (!t) return null
-    return (
-      blueprint.cells.find(
-        (c) => t.x >= c.x && t.x <= c.x + c.w && t.y >= c.y && t.y <= c.y + c.h,
-      ) ?? null
-    )
+    for (const c of cellByKey.values()) {
+      if (t.x >= c.x && t.x <= c.x + c.w && t.y >= c.y && t.y <= c.y + c.h) return c
+    }
+    return null
   }
 
   // Belts at every level (root + nested). Walks the tree and returns each
