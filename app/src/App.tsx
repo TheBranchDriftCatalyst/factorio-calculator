@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@thebranchdriftcatalyst/catalyst-ui/ui/tabs"
 import { Card, CardContent } from "@thebranchdriftcatalyst/catalyst-ui/ui/card"
 import { loadDataset } from "./data/loader"
@@ -6,9 +6,15 @@ import { loadCatalog, type Catalog } from "./factorio"
 import { expand, type FlowGraph, type Input, type Target } from "./solver/expand"
 import { TargetPicker } from "./views/TargetPicker"
 import { InputPicker } from "./views/InputPicker"
-import { SankeyView } from "./views/SankeyView"
-import { BoxLineView } from "./views/BoxLineView"
-import { SchematicView } from "./views/SchematicView"
+// Tab views are code-split — only the active view's bundle loads, so the
+// initial page paint doesn't carry sankey/boxline/schematic dependencies.
+const SankeyView = lazy(() => import("./views/SankeyView").then((m) => ({ default: m.SankeyView })))
+const BoxLineView = lazy(() =>
+  import("./views/BoxLineView").then((m) => ({ default: m.BoxLineView })),
+)
+const SchematicView = lazy(() =>
+  import("./views/SchematicView").then((m) => ({ default: m.SchematicView })),
+)
 import { HudStrip } from "./components/HudStrip"
 import { CommandPalette, type Command } from "./components/CommandPalette"
 import { useKeymap } from "./hooks/useKeymap"
@@ -376,26 +382,32 @@ export function App() {
           <TabsContent value="sankey" className="flex-1 min-h-0 mt-0 data-[state=active]:flex">
             <Card interactive={false} className="flex-1 min-h-0 flex flex-col">
               <CardContent className="p-3 flex-1 min-h-0 flex flex-col">
-                <SankeyView flow={flow} catalog={catalog} rateUnit={rateUnit} />
+                <Suspense fallback={<TabFallback />}>
+                  <SankeyView flow={flow} catalog={catalog} rateUnit={rateUnit} />
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="boxline" className="flex-1 min-h-0 mt-0 data-[state=active]:flex">
             <Card interactive={false} className="flex-1 min-h-0 flex flex-col">
               <CardContent className="p-3 flex-1 min-h-0 flex flex-col">
-                <BoxLineView flow={flow} catalog={catalog} rateUnit={rateUnit} />
+                <Suspense fallback={<TabFallback />}>
+                  <BoxLineView flow={flow} catalog={catalog} rateUnit={rateUnit} />
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="schematic" className="flex-1 min-h-0 mt-0 data-[state=active]:flex">
             <Card interactive={false} className="flex-1 min-h-0 flex flex-col">
               <CardContent className="p-3 flex-1 min-h-0 flex flex-col">
-                <SchematicView
-                  catalog={catalog}
-                  flow={flow}
-                  rateUnit={rateUnit}
-                  rightRailEl={rightRailEl}
-                />
+                <Suspense fallback={<TabFallback />}>
+                  <SchematicView
+                    catalog={catalog}
+                    flow={flow}
+                    rateUnit={rateUnit}
+                    rightRailEl={rightRailEl}
+                  />
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
@@ -437,6 +449,19 @@ export function App() {
         )}
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} commands={commands} />
+    </div>
+  )
+}
+
+// Shown while a code-split tab view is loading. Cheap and styled to
+// match the surrounding card so the swap is barely visible.
+function TabFallback() {
+  return (
+    <div
+      data-testid="tab-loading"
+      className="flex-1 min-h-0 flex items-center justify-center opacity-60 text-xs"
+    >
+      Loading view…
     </div>
   )
 }
