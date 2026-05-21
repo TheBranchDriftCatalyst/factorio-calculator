@@ -226,15 +226,21 @@ export function expand(
     const id = recipe.key
     const product = recipe.products.find((p) => p.item === d.item)
     if (!product || product.amount === 0) continue
-    const craftsPerSec = residualRate / product.amount
     const machine = pickMachine(catalog, recipe, machineOverrides, machineCategoryDefaults)
+    // Productivity: built-in prodBonus on machines (electromagnetic-plant
+    // = +50%, foundry = +50%) multiplies effective output per craft.
+    // Ingredients are NOT consumed at a higher rate, only outputs go up.
+    const existingNode = nodes.get(id)
+    const prodMult = (existingNode?.machine ?? machine)
+      ? 1 + ((existingNode?.machine ?? machine)!.prodBonus ?? 0)
+      : 1
+    const craftsPerSec = residualRate / (product.amount * prodMult)
 
-    const existing = nodes.get(id)
-    if (existing) {
-      existing.rate += craftsPerSec
-      if (existing.machine) {
-        existing.count = (existing.rate * recipe.time) / existing.machine.craftingSpeed
-        existing.powerW = existing.count * existing.machine.power
+    if (existingNode) {
+      existingNode.rate += craftsPerSec
+      if (existingNode.machine) {
+        existingNode.count = (existingNode.rate * recipe.time) / existingNode.machine.craftingSpeed
+        existingNode.powerW = existingNode.count * existingNode.machine.power
       }
     } else {
       const count = machine ? (craftsPerSec * recipe.time) / machine.craftingSpeed : 0
@@ -325,11 +331,15 @@ function balanceCeil(
     }
     for (const node of nodes) {
       if (!node.recipe || !node.machine) continue
+      const prodMult = 1 + (node.machine.prodBonus ?? 0)
       for (const product of node.recipe.products) {
         if (product.amount <= 0) continue
         const demand = demandByItem.get(product.item) ?? 0
         if (demand <= 0) continue
-        const requiredCrafts = demand / product.amount
+        // Effective per-craft output = amount × (1 + prodBonus). Without
+        // this, prod-bonus machines (EM-plant, foundry) get sized as if
+        // they had vanilla output and end up ×1.5 over-built.
+        const requiredCrafts = demand / (product.amount * prodMult)
         // Monotonic — never let an iteration lower the rate. Belt-and-suspenders
         // with the > guard above, but explicit so future edits don't break it.
         const newRate = Math.max(node.rate, requiredCrafts)

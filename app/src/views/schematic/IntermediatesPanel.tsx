@@ -63,8 +63,12 @@ export function IntermediatesPanel({
       // Crafts/sec at the integer machine count (vs n.rate which is the
       // fractional ideal demand).
       const actualCraftsPerSec = (ceilMachines * speed) / time
+      // Output multiplier from machine productivity (EM-plant, foundry).
+      // Productivity boosts PRODUCTS only — ingredients are still
+      // consumed at the base per-craft rate.
+      const prodMult = 1 + (n.machine?.prodBonus ?? 0)
       for (const p of n.recipe.products) {
-        produced.set(p.item, (produced.get(p.item) ?? 0) + p.amount * actualCraftsPerSec)
+        produced.set(p.item, (produced.get(p.item) ?? 0) + p.amount * prodMult * actualCraftsPerSec)
       }
       for (const ing of n.recipe.ingredients) {
         consumed.set(ing.item, (consumed.get(ing.item) ?? 0) + ing.amount * actualCraftsPerSec)

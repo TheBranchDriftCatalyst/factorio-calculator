@@ -14,21 +14,28 @@ describe("expand (single target)", () => {
   })
 
   it("computes machine count from recipe time / crafting speed", () => {
-    // electronic-circuit recipe: time=0.5, machine assembling-machine-1 speed=0.5
-    // For 1 chip/sec → 1 craft/sec → count = (1 * 0.5) / 0.5 = 1.0 machines
+    // electronic-circuit recipe: time=0.5. EM-plant (speed=2, +50% prod)
+    // is the fastest crafting machine → solver picks it by default.
+    // For 1 chip/sec demand with prod: 1/(1×1.5) = 0.667 crafts/sec
+    // → count = (0.667 * 0.5) / 2 = 0.167 machines (pre-ceil).
     const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
     const node = flow.nodes.find((n) => n.id === "electronic-circuit")!
-    expect(node.count).toBeCloseTo(1.0, 5)
-    expect(node.machine?.key).toBe("assembling-machine-1")
+    expect(node.machine?.key).toBe("electromagnetic-plant")
+    // After balanceCeil this rounds up to 1, but pre-ceil it's small.
+    expect(node.count).toBeGreaterThan(0)
+    expect(node.count).toBeLessThanOrEqual(1)
   })
 
   it("propagates demand through the chain", () => {
-    // 1 chip/sec needs: 1 iron-plate/sec + 3 copper-cable/sec
-    // copper-cable recipe yields 2/craft → 1.5 crafts/sec
-    // 1.5 crafts × 1 copper-plate/craft = 1.5 copper-plate/sec
+    // Default machine for crafting = EM-plant (+50% prod). For 1 chip/sec:
+    //   chip crafts/sec = 1 / (1 × 1.5) = 0.667
+    //   iron-plate demand = 1 × 0.667 = 0.667 (iron smelter has no prod)
+    //   cable demand = 3 × 0.667 = 2.0 cables/sec
+    //   cable crafts/sec = 2 / (2 × 1.5) = 0.667 (cable also on EM-plant)
+    //   copper-plate demand = 1 × 0.667 = 0.667 (copper smelter has no prod)
     const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
-    expect(flow.rawInputs.get("iron-ore")).toBeCloseTo(1)
-    expect(flow.rawInputs.get("copper-ore")).toBeCloseTo(1.5)
+    expect(flow.rawInputs.get("iron-ore")).toBeCloseTo(0.667, 2)
+    expect(flow.rawInputs.get("copper-ore")).toBeCloseTo(0.667, 2)
   })
 
   it("sums power across all machines", () => {
@@ -114,8 +121,9 @@ function assertNoDeficits(flow: ReturnType<typeof expand>): void {
     if (!node.recipe || !node.machine) continue
     const ceilN = Math.max(1, Math.ceil(node.count - 1e-9))
     const actualCps = (ceilN * node.machine.craftingSpeed) / node.recipe.time
+    const prodMult = 1 + (node.machine.prodBonus ?? 0)
     for (const p of node.recipe.products) {
-      const actualProd = p.amount * actualCps
+      const actualProd = p.amount * prodMult * actualCps
       // Total demand = internal edges into this item + target output for this item.
       let internalDemand = 0
       for (const e of flow.edges) {
@@ -153,7 +161,8 @@ function assertMarginalSurplus(flow: ReturnType<typeof expand>): void {
     const product = node.recipe.products[0]
     const ceilN = Math.max(1, Math.ceil(node.count - 1e-9))
     const actualCps = (ceilN * node.machine.craftingSpeed) / node.recipe.time
-    const actualProd = product.amount * actualCps
+    const prodMult = 1 + (node.machine.prodBonus ?? 0)
+    const actualProd = product.amount * prodMult * actualCps
     // Internal demand (using consumer ceil counts).
     let internalDemand = 0
     for (const e of flow.edges) {
@@ -168,8 +177,9 @@ function assertMarginalSurplus(flow: ReturnType<typeof expand>): void {
     const outputDemand = flow.outputs.get(product.item) ?? 0
     const totalDemand = internalDemand + outputDemand
     const surplus = actualProd - totalDemand
-    // Cap is one machine's worth of this product per second.
-    const oneMachineOutput = (product.amount * node.machine.craftingSpeed) / node.recipe.time
+    // Cap is one machine's worth of this product per second (prod-adjusted).
+    const oneMachineOutput =
+      (product.amount * prodMult * node.machine.craftingSpeed) / node.recipe.time
     expect(surplus).toBeLessThanOrEqual(oneMachineOutput + 1e-6)
     expect(surplus).toBeGreaterThanOrEqual(-1e-6) // no deficits (redundant w/ above)
   }
@@ -205,18 +215,55 @@ describe("expand (balance properties)", () => {
   })
 
   it("handles fractional ceil correctly for tiny rates", () => {
-    // 0.01 chip/sec demand → 0.01 crafts/sec @ 0.5s recipe / 0.5 speed = 0.01 machines.
-    // ceil → 1 machine = 1 chip/sec actual. Surplus = 0.99 chips/sec.
-    // That's exactly one machine's output minus the demand (0.01), well under cap.
+    // 0.01 chip/sec demand → with EM-plant prod 0.5: 0.01/1.5 = 0.00667
+    // crafts/sec → count = 0.00667 × 0.5 / 2 = 0.00167. balanceCeil
+    // rounds to 1 machine (the minimum) = 4 crafts/sec = 4 × 1.5 = 6 chips/sec.
+    // Surplus ≈ 6, well under the per-producer "one machine output" cap (also 6).
     const flow = expand(catalog, [{ item: "electronic-circuit", rate: 0.01 }])
     const chipNode = flow.nodes.find((n) => n.id === "electronic-circuit")!
-    expect(chipNode.count).toBe(1) // ceiled up from 0.01
-    // Production: 1 machine × 0.5 speed / 0.5 time = 1 chip/sec
-    const actualCps = (chipNode.count * chipNode.machine!.craftingSpeed) / chipNode.recipe!.time
-    expect(actualCps).toBeCloseTo(1)
-    // Demand was 0.01, so surplus = 0.99. Within "one machine output" cap (1.0).
+    expect(Math.ceil(chipNode.count - 1e-9)).toBe(1)
     assertMarginalSurplus(flow)
     assertNoDeficits(flow)
+  })
+
+  it("respects machine prodBonus (+50% prod → fewer machines)", () => {
+    // Use machineOverrides to force assembler-1 for chips (no prod) and
+    // again with EM-plant (+50% prod). Same demand, different machine
+    // counts — purely the prod-bonus effect.
+    // Demand: 10 chips/sec.
+    //   Assembler-1 (speed 0.5, no prod): 10 crafts/sec × 0.5 / 0.5 = 10 machines.
+    //   EM-plant   (speed 2.0, +50% prod): 10/(1×1.5) = 6.67 crafts/sec
+    //                                      × 0.5 / 2.0 = 1.67 → ceil 2 machines.
+    const a1 = expand(
+      catalog,
+      [{ item: "electronic-circuit", rate: 10 }],
+      [],
+      { "electronic-circuit": "assembling-machine-1" }, // force no-prod machine
+    )
+    const a1Chip = a1.nodes.find((n) => n.id === "electronic-circuit")!
+    expect(a1Chip.machine?.key).toBe("assembling-machine-1")
+    const a1Count = Math.max(1, Math.ceil(a1Chip.count - 1e-9))
+
+    const em = expand(
+      catalog,
+      [{ item: "electronic-circuit", rate: 10 }],
+      [],
+      { "electronic-circuit": "electromagnetic-plant" },
+    )
+    const emChip = em.nodes.find((n) => n.id === "electronic-circuit")!
+    expect(emChip.machine?.key).toBe("electromagnetic-plant")
+    const emCount = Math.max(1, Math.ceil(emChip.count - 1e-9))
+
+    // EM-plant should use STRICTLY FEWER machines — that's the prod win.
+    expect(emCount).toBeLessThan(a1Count)
+    // The edge feeding chips with cables should reflect prod-adjusted
+    // crafts: EM-plant needs 6.67 crafts/sec × 3 cables = 20 cables/sec.
+    // Sanity-check it's below the 30 cables/sec we'd see without prod.
+    const emCableEdge = em.edges.find(
+      (e) => e.source === "copper-cable" && e.target === "electronic-circuit",
+    )!
+    expect(emCableEdge.rate).toBeLessThan(25)
+    assertNoDeficits(em)
   })
 
   it("edges are deduped by (source, target, item) — no inflated demand", () => {

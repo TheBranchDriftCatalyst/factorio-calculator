@@ -70,6 +70,20 @@ export const miniDataset: KirkRawDataset = {
       energy_usage: 75_000,
       energy_source: { type: "electric" },
     },
+    // Pretend Space Age electromagnetic plant — +50% built-in prod.
+    // Same crafting category as assembler-1 so the solver's "fastest in
+    // category" pick lands on this when available. Used to exercise the
+    // prodBonus solver path.
+    {
+      key: "electromagnetic-plant",
+      localized_name: { en: "Electromagnetic plant" },
+      crafting_categories: ["crafting"],
+      crafting_speed: 2,
+      module_slots: 0,
+      prod_bonus: 0.5,
+      energy_usage: 2_000_000,
+      energy_source: { type: "electric" },
+    },
   ],
   belts: [
     { key: "transport-belt", localized_name: { en: "Transport belt" }, speed: 0.03125 },
