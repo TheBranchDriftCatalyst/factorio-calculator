@@ -32,7 +32,7 @@ import type { Blueprint } from "../types"
 import { busLayout } from "./busLayout"
 import { scoreBlueprint, annealAssignments } from "./anneal"
 import { computeAutoBusAssignments } from "./autoBus"
-import { interleavedLayout } from "./interleaved"
+import { generateStageVariations, interleavedLayout } from "./interleaved"
 import { LAYOUT_TEMPLATES, templatesFor, type TemplateId } from "./templates"
 
 /**
@@ -235,18 +235,25 @@ export function solveCsp(
 
     // 3c. ALSO try interleaved layout — it sidesteps the auto-bus
     // assignments entirely (each item lives in exactly one stage
-    // column) so the anneal's choices don't apply. We just score the
-    // raw interleaved output with the same templates applied and
-    // pick the lower-scored layout.
+    // column) so the anneal's choices don't apply. We score multiple
+    // STAGE-ASSIGNMENT VARIATIONS via generateStageVariations and
+    // pick the lowest-scored. This lets the CSP exploit cells with
+    // earliest != latest flexibility — e.g. an iron-plate consumed
+    // only by a late-stage cell can move forward, freeing earlier
+    // bus columns. Cost: up to 3 extra layout calls per leaf.
     if (considerInterleaved) {
-      const interleavedBp = cloneBlueprint(interleavedLayout(catalog, flow, baseOpts))
-      applyTemplates(interleavedBp, templateChoices)
-      const interleavedScore = scoreCspBlueprint(interleavedBp, templateChoices, obj)
-      busCalls += 1
-      if (interleavedScore < score) {
-        score = interleavedScore
-        winningBp = interleavedBp
-        winningAssignments = {}
+      for (const stagesOverride of generateStageVariations(flow)) {
+        const interleavedBp = cloneBlueprint(
+          interleavedLayout(catalog, flow, { ...baseOpts, _stagesOverride: stagesOverride }),
+        )
+        applyTemplates(interleavedBp, templateChoices)
+        const interleavedScore = scoreCspBlueprint(interleavedBp, templateChoices, obj)
+        busCalls += 1
+        if (interleavedScore < score) {
+          score = interleavedScore
+          winningBp = interleavedBp
+          winningAssignments = {}
+        }
       }
     }
 

@@ -111,6 +111,92 @@ export function computeStages(flow: FlowGraph): Map<string, number> {
   return depth
 }
 
+/**
+ * Compute the LATEST stage each recipe can be assigned to without
+ * violating producer-before-consumer ordering. Mirror of computeStages
+ * walking the DAG backward from sinks.
+ *
+ * Used by the CSP solver to enumerate alternative stage assignments —
+ * cells where `latest > earliest` have flexibility that the solver
+ * can exploit to balance bus density across columns.
+ */
+export function computeLatestStages(flow: FlowGraph): Map<string, number> {
+  const isRecipe = new Set<string>()
+  for (const n of flow.nodes) {
+    if (n.recipe) isRecipe.add(n.id)
+  }
+  const downstream = new Map<string, string[]>()
+  for (const e of flow.edges) {
+    if (!isRecipe.has(e.source)) continue
+    if (!isRecipe.has(e.target)) continue
+    if (!downstream.has(e.source)) downstream.set(e.source, [])
+    downstream.get(e.source)!.push(e.target)
+  }
+  const earliest = computeStages(flow)
+  const maxDepth = earliest.size === 0 ? 0 : Math.max(...earliest.values())
+  // distToDeepestSink[id] = longest path from id to any sink (recipe with
+  // no recipe consumers). For a sink itself, the distance is 0.
+  const distToSink = new Map<string, number>()
+  const visiting = new Set<string>()
+  function compute(id: string): number {
+    if (distToSink.has(id)) return distToSink.get(id)!
+    if (visiting.has(id)) {
+      distToSink.set(id, 0)
+      return 0
+    }
+    visiting.add(id)
+    const downs = downstream.get(id) ?? []
+    let max = 0
+    for (const d of downs) max = Math.max(max, compute(d) + 1)
+    visiting.delete(id)
+    distToSink.set(id, max)
+    return max
+  }
+  for (const id of isRecipe) compute(id)
+  const latest = new Map<string, number>()
+  for (const id of isRecipe) {
+    latest.set(id, maxDepth - compute(id))
+  }
+  return latest
+}
+
+/**
+ * Enumerate a small set of stage-assignment variations to feed the
+ * CSP solver. Each variation is a complete map of recipeId → stage
+ * that satisfies producer-before-consumer.
+ *
+ * We yield (at most):
+ *   1. earliest — the default longest-path-from-source assignment
+ *   2. latest   — every cell pulled as late as possible
+ *   3. mixed    — flexible cells shifted by 1 from earliest (if any)
+ *
+ * Identical variants are deduplicated by their JSON serialization.
+ */
+export function* generateStageVariations(
+  flow: FlowGraph,
+): Generator<Map<string, number>> {
+  const earliest = computeStages(flow)
+  const latest = computeLatestStages(flow)
+  const seen = new Set<string>()
+  const yieldUnique = function* (m: Map<string, number>) {
+    const key = JSON.stringify([...m.entries()].sort())
+    if (seen.has(key)) return
+    seen.add(key)
+    yield m
+  }
+  yield* yieldUnique(earliest)
+  yield* yieldUnique(latest)
+  // Mixed: shift each cell whose [earliest, latest] range is > 0 by
+  // +1 from its earliest position (clamped to latest). Keeps cells
+  // with no flexibility at their original stage.
+  const mixed = new Map<string, number>()
+  for (const [id, e] of earliest) {
+    const l = latest.get(id) ?? e
+    mixed.set(id, Math.min(e + 1, l))
+  }
+  yield* yieldUnique(mixed)
+}
+
 interface ResolvedOpts extends LayoutConfig {}
 
 function resolveOpts(opts: Partial<LayoutConfig>): ResolvedOpts {
@@ -306,10 +392,13 @@ function buildChains(
 export function interleavedLayout(
   catalog: Catalog,
   flow: FlowGraph,
-  opts: Partial<LayoutConfig> = {},
+  opts: Partial<LayoutConfig> & { _stagesOverride?: Map<string, number> } = {},
 ): Blueprint {
   const o = resolveOpts(opts)
-  const stages = computeStages(flow)
+  // _stagesOverride is the CSP solver's hook to swap in an alternative
+  // stage assignment. When absent, fall back to the default longest-
+  // path computation.
+  const stages = opts._stagesOverride ?? computeStages(flow)
   const { plans, finalOutputs, directLinks } = planStages(flow, stages)
 
   const isFluid = (item: string) => catalog.fluidItems.has(item)

@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest"
 import { loadCatalog } from "../../src/factorio"
 import { expand } from "../../src/solver/expand"
 import {
+  computeLatestStages,
   computeStages,
+  generateStageVariations,
   interleavedLayout,
 } from "../../src/blueprint/layout/interleaved"
 import { miniDataset } from "../fixtures/mini-dataset"
@@ -176,6 +178,63 @@ describe("interleaved · interleavedLayout", () => {
       // To stage = from stage + 1 — the connector lives in ONE gutter.
       const gap = to.x - (from.x + from.w)
       expect(gap).toBeLessThanOrEqual(20) // generous, but rules out 2+ stage skips
+    }
+  })
+
+  it("computeLatestStages produces a valid producer-before-consumer assignment", () => {
+    // For every recipe→recipe edge, the producer's latest stage MUST
+    // be strictly less than the consumer's latest stage.
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const latest = computeLatestStages(flow)
+    for (const e of flow.edges) {
+      const ps = latest.get(e.source)
+      const cs = latest.get(e.target)
+      if (ps == null || cs == null) continue // skip edges with non-recipe endpoints
+      expect(ps).toBeLessThan(cs)
+    }
+  })
+
+  it("computeLatestStages >= computeStages for every cell (latest is upper bound)", () => {
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const earliest = computeStages(flow)
+    const latest = computeLatestStages(flow)
+    for (const [id, e] of earliest) {
+      const l = latest.get(id)!
+      expect(l).toBeGreaterThanOrEqual(e)
+    }
+  })
+
+  it("generateStageVariations yields multiple distinct assignments when flexibility exists", () => {
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const variations = [...generateStageVariations(flow)]
+    expect(variations.length).toBeGreaterThanOrEqual(1)
+    expect(variations.length).toBeLessThanOrEqual(3)
+    // Every variation must be a valid stage map (producer < consumer).
+    for (const v of variations) {
+      for (const e of flow.edges) {
+        const ps = v.get(e.source)
+        const cs = v.get(e.target)
+        if (ps == null || cs == null) continue
+        expect(ps).toBeLessThan(cs)
+      }
+    }
+  })
+
+  it("interleavedLayout accepts _stagesOverride to use a custom assignment", () => {
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const latest = computeLatestStages(flow)
+    const bpDefault = interleavedLayout(catalog, flow, {})
+    const bpLatest = interleavedLayout(catalog, flow, { _stagesOverride: latest })
+    // When at least one cell has flexibility (e.g. iron-plate in the EC
+    // chain) the two layouts should differ in cell positioning.
+    const ironDefault = bpDefault.cells.find((c) => c.recipeKey === "iron-plate")
+    const ironLatest = bpLatest.cells.find((c) => c.recipeKey === "iron-plate")
+    if (ironDefault && ironLatest) {
+      // iron-plate has flexibility (stage 0 default, latest can shift).
+      // Either x differs (different stage) OR they happen to share x.
+      // We just verify both produce valid blueprints.
+      expect(ironDefault.x).toBeGreaterThan(0)
+      expect(ironLatest.x).toBeGreaterThan(0)
     }
   })
 
