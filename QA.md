@@ -93,10 +93,34 @@ we start writing tests. Mark each item with **U** (unit), **I** (integration),
 - Per-category default machine picker
 - Dropdown options include "fastest (auto)" + compatible machines — `category-default-{category}`
 
+## 11a. Schematic — BOM Panel (`src/views/schematic/BomPanel.tsx`, testid: `bom-panel`)
+- "Bill of materials" — what to take into Factorio to build this schematic
+- Header badge: `{machines}M · {belts}B · {inserters}I`
+- Machines section: per-machine row with icon, name, kW total, ceil count — testid `bom-machine-{key}`
+- Transport section:
+  - Belt tiles split per tier (yellow/red/blue/turbo), highest-tier override wins per belt — testid `bom-belts-{tier}`
+  - Inserter total — testid `bom-inserters`
+- Hidden when flow is empty (no machines and no belts)
+
+## 11b. Schematic — Fuels Panel (`src/views/schematic/FuelsPanel.tsx`, testid: `fuels-panel`)
+- Lists every catalog item with positive `fuelValue` + `fuelCategory`
+- Header badge: `{used}/{known}` (used fuels / total known fuels)
+- Columns: Fuel / Energy (MJ) / Burn rate / Burners
+- For burner-consuming recipes in the flow: shows burn rate (items/sec attributed via shared `fuelCategory`) + number of burner machines
+- Unused fuels dimmed (`opacity: 0.5`) — listed alphabetically after used ones
+- Row testid: `fuel-{itemKey}`
+- Hidden when catalog has no fuel items
+
 ## 11. Schematic — Intermediates Panel (`src/views/schematic/IntermediatesPanel.tsx`, testid: `intermediates-panel`)
-- Lists items with both produced + consumed > 0
-- Columns: Item / Prod / Cons / Net
-- Net color-coded (green ≈0, amber surplus, red deficit)
+- Lists items with both produced + consumed > 0, plus structurally-forced byproducts (multi-product recipes whose surplus needs a sink)
+- Columns: Item / Prod / Cons / Status
+- Row testids: `intermediate-{item}`; status badge testid `intermediate-{item}-status` with `data-state={ok|surplus|byproduct|deficit}`
+- Status color-coded:
+  - `ok` green (≈0 leftover)
+  - `surplus` amber (single-product ceil-overshoot)
+  - `byproduct` cyan (multi-product forced surplus — actionable, needs a sink)
+  - `deficit` red (defensive — shouldn't occur after balanceCeil)
+- Clicking a row highlights the item on the canvas; clicking again clears (Enter/Space also fire)
 
 ## 12. Schematic — Lane Inspector (testid: `lane-inspector`)
 - Header: "Lane · Left/Right sub-lane"
@@ -111,10 +135,18 @@ we start writing tests. Mark each item with **U** (unit), **I** (integration),
 - Empty state (`cell-inspector-empty`)
 - Hover preview (not pinned)
 - Pinned single cell: recipe + machine count + power + I/O lists
+- I/O shape row (testid: `cell-io-shape`) — shows the recipe's I/O shape label, e.g. `I/O 2:1` (2 inputs → 1 output, no fluids) or `I/O 2:3 (fluids: 2→3)` (suffix appears only when fluids are present on either side)
 - Multi-select: count + distinct recipe rollup
 
 ## 14. Schematic — Sidebar Resize Handle (testid: `sidebar-resize-handle`)
+- `role="separator"`, `aria-orientation="vertical"`, `aria-label="Resize right sidebar"`
 - Drag to resize sidebar [240..720] px, default 320
+- Keyboard-operable (per WAI-ARIA separator pattern):
+  - `ArrowLeft` / `ArrowRight` — nudge 16px
+  - `Shift + ArrowLeft/Right` — nudge 64px
+  - `Home` — jump to max
+  - `End` — jump to min
+- `aria-valuenow` / `aria-valuemin` / `aria-valuemax` reflect current/configured bounds
 - Persists to `schematic.sidebarWidth.v1`
 
 ## 15. Schematic — Direct Connections (new, no testid yet)
@@ -144,12 +176,16 @@ we start writing tests. Mark each item with **U** (unit), **I** (integration),
 ## 20. Persistence (localStorage)
 - `fbp.targets.v1` — targets array
 - `fbp.inputs.v1` — inputs array
-- `schematic.config.v1` — all schematic knobs (incl. machineOverrides, beltOverrides, recipeChoices, machineCategoryDefaults, beltAssignments)
+- `fbp.machineOverrides.v1` — per-cell machine override map (owned by App, feeds solver)
+- `fbp.recipeChoices.v1` — per-item recipe choice map (owned by App, feeds solver)
+- `fbp.machineCategoryDefaults.v1` — per-category default machine map (owned by App, feeds solver)
+- `schematic.config.v1` — view-only schematic knobs (zoom, beltSpacing, beltOverrides, beltAssignments, bottleneckMode, etc.). No longer carries machineOverrides / recipeChoices / machineCategoryDefaults — those got hoisted to App and live under their own keys.
 - `schematic.sidebarWidth.v1` — sidebar px
 - `fbp.profiles.v1` — saved profiles
 - `theme:name`, `theme:variant` — theme
 - URL hash — active tab
-- Cross-tab sync via storage events; same-tab via `SCHEMATIC_CONFIG_EVENT` CustomEvent
+- Cross-tab sync: standard `storage` events on each of the dedicated keys above. The legacy `SCHEMATIC_CONFIG_EVENT` CustomEvent was removed when solver-relevant config was hoisted into App; same-tab updates flow through React state directly.
+- Migration: on first mount App calls `loadLegacyOverrides()` ONCE to seed machineOverrides / recipeChoices / machineCategoryDefaults from any pre-existing `schematic.config.v1` blob, so prior persisted choices survive the hoist.
 
 ## 21. Theme System
 - Themes: catalyst (light/dark), others?
@@ -167,31 +203,49 @@ we start writing tests. Mark each item with **U** (unit), **I** (integration),
 | Cmd/Ctrl + wheel | schematic | zoom |
 | Esc | schematic | clear selection |
 
+## 23. Solver Web Worker (`src/solver/expand.worker.ts`, `src/solver/expandClient.ts`)
+- `expand()` runs off the main thread via a Vite-native Web Worker so input typing / canvas painting stay smooth on big factories
+- Catalog is hydrated ONCE per dataset via a `hydrate` postMessage and stashed at worker module scope; subsequent `solve` messages carry only `targets` / `inputs` / `machineOverrides` / `recipeChoices` / `machineCategoryDefaults`
+- Request IDs (`nextId`) gate replies — stale responses from older in-flight requests are discarded so fast typing doesn't render a stale flow
+- Fallback: if `new Worker()` throws or the worker emits an `error` event, `solveExpand()` runs `expand()` on the main thread; pending requests are rejected so callers don't hang
+- Test-only `_resetExpandWorker()` teardown for unit/integration suites
+
+## 24. Shared CollapsiblePanel Component (`src/components/CollapsiblePanel.tsx`)
+- Single shell used by all 5 right-rail panels: BOM, Fuels, Intermediates, Machine Category, Topology
+- `aria-expanded` on the header button; content region has matching `id` and `aria-controls`
+- Chevron is `aria-hidden="true"` (decorative only — state is conveyed by aria-expanded)
+- `defaultCollapsed` defaults to true; caller passes `testId`, `title`, optional `badge`, optional `contentClassName`
+
+## 25. App-level Contexts (`src/factorio/CatalogContext.tsx`, `src/util/RateUnitContext.tsx`)
+- `CatalogProvider` / `useCatalog()` — read-only `Catalog` provided at App level after loading completes. Right-rail panels consume the catalog via the hook rather than prop-drilling.
+- `RateUnitProvider` / `useRateUnit()` — active rate-display unit (`sec` / `min` / `hr`). Threaded into BOM / Fuels / Intermediates / Lane / Cell inspectors via the hook.
+- Both hooks throw when called outside their provider so misconfiguration is a stack trace, not a silently-wrong render.
+
 ---
 
 ## Existing Test Coverage
-- **Unit (`app/test/unit/`)**
-  - `catalog.test.ts` — catalog loader, fluid detection, item icon merge
-  - `solver.test.ts` — `expand()` with recipe choices, machine overrides, category defaults
-  - `busLayout.test.ts` — 20 tests covering cells, belts, ports, groups, direct connections
-- **Integration (`app/test/integration/`)**
+- **Unit (`app/test/unit/`)** — 57 tests
+  - `solver.test.ts` — 18 tests · `expand()` with recipe choices, machine overrides, category defaults
+  - `busLayout.test.ts` — 20 tests · cells, belts, ports, groups, direct connections
+  - `catalog.test.ts` — 9 tests · catalog loader, fluid detection, item icon merge
+  - `ioShape.test.ts` — 10 tests · I/O shape classification + label formatting
+- **Integration (`app/test/integration/`)** — 5 tests
   - `target-picker.test.tsx` — add/remove/change item/rate/mode/unit
-- **E2E (`app/test/e2e/`)**
-  - `app.spec.ts` — boot, theme, catalog stats, sankey/boxline/catalog render, add second target, combobox search, remove target, icon rendering, schematic canvas + cell inspector, zoom slider resizes canvas
+- **E2E (`app/test/e2e/`)** — 30 tests
+  - `app.spec.ts` — 11 tests · boot, theme, catalog stats, sankey/boxline/catalog render, target/combobox flows, icon rendering, schematic canvas + cell inspector, zoom resize
+  - `qa-coverage.spec.ts` — 11 tests · recipe picker, default machine picker, intermediates panel (incl. byproduct state), sidebar resize, command palette, bottleneck toggle, profile save/load
+  - `schematic-deliverable.spec.ts` — 8 tests · cross-view schematic deliverables (BOM/fuels/intermediates, pinned cell/lane, bottleneck mode, rate units, layouts)
+- Test artifacts (screenshots, traces) live in `app/test/e2e/_artifacts/` — not the old `__screenshots__/` directory.
 
 ## Coverage Gaps (high priority for new tests)
 1. Multi-bus assignment (Default/Left/Right/L#/R#/+new variants) — no test
-2. Direct connections + label rendering — no test
-3. Belt truncation y0/y1 — no test
-4. Recipe picker — no test
-5. Default machine picker — no test
-6. Intermediates panel — no test
-7. Lane inspector belt-tier override — no test
-8. Sidebar resize — no test
-9. Command palette — no test
-10. Profile sidebar (save/load/delete) — no test
-11. Bottleneck-mode color buckets — no test (only toggle exists)
-12. Camera pan/zoom math — no test
-13. Cross-tab config sync — no test
-14. `showCrossings` toggle effect — no test (just wired up)
-15. Inputs picker — no test (only the implicit coverage via TargetPicker)
+2. Direct connections rendering + label content — no test
+3. Belt truncation `y0`/`y1` invariant (each belt ends at last consumer; final outputs extend to bottom) — no test
+4. Lane inspector belt-tier override end-to-end — the dropdown change must propagate to the utilization badge / effective tier indicator; no test
+5. Bottleneck-mode color BUCKETS per lane — we have a toggle test, not bucket-color assertions
+6. Profile delete + empty state — only save/load roundtrip is covered
+7. `InputPicker` — no integration coverage (only `TargetPicker` has it)
+8. `useCamera` hook math (pan/zoom transforms, fit-to-content) — no unit test
+9. Cross-tab config sync — no test that opens two pages and verifies `storage` event propagation across the dedicated keys
+10. I/O shape row in Cell Inspector (`cell-io-shape`) — just landed, no E2E assertion
+11. Web Worker fallback path — no test for what happens when worker init fails and `expand()` runs on the main thread
