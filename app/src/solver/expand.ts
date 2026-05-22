@@ -5,6 +5,9 @@
 // modules, productivity/quality, beacons.
 
 import type { Catalog, Machine, Recipe } from "../factorio"
+import { computeIOShape, type IOShape } from "./ioShape"
+
+export type { IOShape } from "./ioShape"
 
 export interface Target {
   item: string
@@ -43,6 +46,14 @@ export interface FlowNode {
   rate: number // crafts/sec (for recipes) or items/sec (for sources)
   count: number // # machines required
   powerW: number // total power draw (watts)
+  /**
+   * I/O shape metadata — only present on recipe-producing nodes. Source
+   * (`source:*`), supplied-input (`input:*`), and synthetic output sink
+   * (`output:*`) nodes leave this undefined. Surfaced here so downstream
+   * tooling (sub-schematic templates, clustering heuristics) can read it
+   * without re-walking the recipe.
+   */
+  ioShape?: IOShape
 }
 
 export interface FlowEdge {
@@ -280,7 +291,8 @@ export function expand(req: SolveRequest): FlowGraph {
     } else {
       const count = machine ? (craftsPerSec * recipe.time) / machine.craftingSpeed : 0
       const powerW = machine ? count * machine.power : 0
-      nodes.set(id, { id, recipe, machine, rate: craftsPerSec, count, powerW })
+      const ioShape = computeIOShape(recipe, catalog.fluidItems)
+      nodes.set(id, { id, recipe, machine, rate: craftsPerSec, count, powerW, ioShape })
     }
     if (d.parent) addEdge(id, d.parent, d.item, residualRate)
 

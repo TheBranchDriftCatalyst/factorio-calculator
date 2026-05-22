@@ -12,6 +12,7 @@ import { useRateUnit } from "../../../util/RateUnitContext"
 import { laneUtilization, type BeltTier } from "../../../blueprint/util/utilization"
 import { ItemIcon } from "../../../components/Icon"
 import { pickMachineCandidates } from "../../../solver/expand"
+import { computeIOShape, ioShapeLabel } from "../../../solver/ioShape"
 
 interface Props {
   cell: Cell
@@ -63,6 +64,15 @@ export function CellDetails({
     return compatibleMachines[0]
   }, [overrideKey, catalog, compatibleMachines])
 
+  // Lightweight on-the-fly I/O shape label — purely informational. The
+  // shape is recipe-determined and surfaced here so users can eyeball
+  // stream-count metadata before sub-schematic templates start consuming
+  // it (fbp-9iw / fbp-xm0).
+  const shapeLabel = useMemo(() => {
+    if (!recipe) return null
+    return ioShapeLabel(computeIOShape(recipe, catalog.fluidItems))
+  }, [recipe, catalog])
+
   const onMachineChange = (v: string) => {
     setMachineOverrides((prev) => {
       const next = { ...prev }
@@ -96,6 +106,16 @@ export function CellDetails({
             {machine?.name ?? "—"} ·{" "}
             <span className="font-mono">×{cell.demanded}</span> · {cell.w}×{cell.h} tiles
           </div>
+          {shapeLabel && (
+            <div
+              className="opacity-60 font-mono"
+              data-testid="cell-io-shape"
+              style={{ fontSize: 10 }}
+              title="I/O shape: solid/fluid input streams → solid/fluid output streams"
+            >
+              I/O {shapeLabel}
+            </div>
+          )}
         </div>
       </div>
 
