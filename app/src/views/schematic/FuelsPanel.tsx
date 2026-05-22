@@ -11,15 +11,15 @@
 
 import { useMemo } from "react"
 import type { Catalog, Item } from "../../factorio"
+import { useCatalog } from "../../factorio/CatalogContext"
 import type { FlowGraph } from "../../solver/expand"
 import { fmt, fmtRateUnit, type RateUnit } from "../../util/format"
+import { useRateUnit } from "../../util/RateUnitContext"
 import { ItemIcon } from "../../components/Icon"
 import { CollapsiblePanel } from "../../components/CollapsiblePanel"
 
 interface Props {
-  catalog: Catalog
   flow: FlowGraph | null
-  rateUnit: RateUnit
   defaultCollapsed?: boolean
 }
 
@@ -33,7 +33,9 @@ interface Row {
   used: boolean
 }
 
-export function FuelsPanel({ catalog, flow, rateUnit, defaultCollapsed = true }: Props) {
+export function FuelsPanel({ flow, defaultCollapsed = true }: Props) {
+  const catalog = useCatalog()
+  const rateUnit = useRateUnit()
   const rows: Row[] = useMemo(() => {
     // 1. Collect every fuel item from the catalog (anything with both a
     //    positive fuelValue and a fuelCategory).

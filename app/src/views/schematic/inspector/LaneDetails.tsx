@@ -5,9 +5,10 @@
 // item to a different bus.
 
 import { useId } from "react"
-import type { Catalog } from "../../../factorio"
+import { useCatalog } from "../../../factorio/CatalogContext"
 import type { Blueprint } from "../../../blueprint/types"
-import { fmtPct, fmtRateUnit, type RateUnit } from "../../../util/format"
+import { fmtPct, fmtRateUnit } from "../../../util/format"
+import { useRateUnit } from "../../../util/RateUnitContext"
 import {
   BELT_TIER_LABELS,
   laneUtilization,
@@ -16,26 +17,24 @@ import {
 import type { SchematicConfig } from "../SchematicConfig"
 
 interface Props {
-  catalog: Catalog
   blueprint: Blueprint
   lane: { beltX: number; lane: "A" | "B"; item: string; rate: number }
   beltTier: BeltTier
-  rateUnit: RateUnit
   onClear: () => void
   config: SchematicConfig
   updateConfig: <K extends keyof SchematicConfig>(key: K, value: SchematicConfig[K]) => void
 }
 
 export function LaneDetails({
-  catalog,
   blueprint,
   lane,
   beltTier,
-  rateUnit,
   onClear,
   config,
   updateConfig,
 }: Props) {
+  const catalog = useCatalog()
+  const rateUnit = useRateUnit()
   // useId so multiple LaneDetails (e.g. if we ever side-by-side them) don't
   // produce duplicate label-for ids in the DOM.
   const tierId = useId()

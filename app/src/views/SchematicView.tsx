@@ -368,7 +368,6 @@ export function SchematicView({
                 cell or lane they just interacted with without scrolling
                 past Topology + Default Machines + Intermediates. */}
             <InspectorPanel
-              catalog={catalog}
               blueprint={blueprint}
               hovered={hoveredCell}
               selectedKeys={selected}
@@ -376,7 +375,6 @@ export function SchematicView({
               cellByKey={cellByKey}
               onClear={clear}
               beltTier={beltTier}
-              rateUnit={rateUnit}
               config={config}
               updateConfig={updateConfig}
               machineOverrides={machineOverrides}
@@ -384,23 +382,19 @@ export function SchematicView({
             />
             <TopologyPanel config={config} update={updateConfig} />
             <MachineCategoryPicker
-              catalog={catalog}
               flow={flow}
               defaults={machineCategoryDefaults}
               onChange={setMachineCategoryDefaults}
             />
             <BomPanel
-              catalog={catalog}
               flow={flow}
               blueprint={blueprint}
               beltTier={config.beltTier}
               beltOverrides={config.beltOverrides}
             />
-            <FuelsPanel catalog={catalog} flow={flow} rateUnit={rateUnit} />
+            <FuelsPanel flow={flow} />
             <IntermediatesPanel
-              catalog={catalog}
               flow={flow}
-              rateUnit={rateUnit}
               highlightedItem={highlightedItem}
               onItemClick={setHighlightedItem}
             />

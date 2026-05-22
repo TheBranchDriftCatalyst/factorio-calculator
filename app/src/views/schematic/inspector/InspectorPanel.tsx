@@ -2,16 +2,14 @@
 // select aggregate, or pinned lane. Picks the right sub-component for
 // whatever the user has interacted with.
 
-import type { Catalog } from "../../../factorio"
 import type { Blueprint, Cell } from "../../../blueprint/types"
-import { fmt, type RateUnit } from "../../../util/format"
+import { fmt } from "../../../util/format"
 import type { BeltTier } from "../../../blueprint/util/utilization"
 import type { SchematicConfig } from "../SchematicConfig"
 import { CellDetails } from "./CellDetails"
 import { LaneDetails } from "./LaneDetails"
 
 interface Props {
-  catalog: Catalog
   blueprint: Blueprint
   hovered: Cell | null
   selectedKeys: Set<string>
@@ -19,7 +17,6 @@ interface Props {
   cellByKey: Map<string, Cell>
   onClear: () => void
   beltTier: BeltTier
-  rateUnit: RateUnit
   config: SchematicConfig
   updateConfig: <K extends keyof SchematicConfig>(key: K, value: SchematicConfig[K]) => void
   // App-owned solver-relevant override; CellDetails dispatches edits via the setter.
@@ -28,7 +25,6 @@ interface Props {
 }
 
 export function InspectorPanel({
-  catalog,
   blueprint,
   hovered,
   selectedKeys,
@@ -36,7 +32,6 @@ export function InspectorPanel({
   cellByKey,
   onClear,
   beltTier,
-  rateUnit,
   config,
   updateConfig,
   machineOverrides,
@@ -46,11 +41,9 @@ export function InspectorPanel({
   if (selectedLane) {
     return (
       <LaneDetails
-        catalog={catalog}
         blueprint={blueprint}
         lane={selectedLane}
         beltTier={beltTier}
-        rateUnit={rateUnit}
         onClear={onClear}
         config={config}
         updateConfig={updateConfig}
@@ -87,8 +80,6 @@ export function InspectorPanel({
         <CellDetails
           cell={hovered}
           beltTier={beltTier}
-          rateUnit={rateUnit}
-          catalog={catalog}
           beltOverrides={config.beltOverrides ?? {}}
           machineOverrides={machineOverrides}
           setMachineOverrides={setMachineOverrides}
@@ -131,8 +122,6 @@ export function InspectorPanel({
           cell={cell}
           expanded
           beltTier={beltTier}
-          rateUnit={rateUnit}
-          catalog={catalog}
           beltOverrides={config.beltOverrides ?? {}}
           machineOverrides={machineOverrides}
           setMachineOverrides={setMachineOverrides}

@@ -4,7 +4,7 @@
 // the flow + walks the blueprint's bus tree for belt tile totals.
 
 import { useMemo } from "react"
-import type { Catalog } from "../../factorio"
+import { useCatalog } from "../../factorio/CatalogContext"
 import type { Blueprint, BusBelt, BusNode } from "../../blueprint/types"
 import type { FlowGraph } from "../../solver/expand"
 import { fmt } from "../../util/format"
@@ -13,7 +13,6 @@ import { CollapsiblePanel } from "../../components/CollapsiblePanel"
 import type { BeltTier } from "../../blueprint/util/utilization"
 
 interface Props {
-  catalog: Catalog
   flow: FlowGraph | null
   blueprint: Blueprint | null
   /** Global belt tier (yellow/red/blue/turbo). */
@@ -54,13 +53,13 @@ interface MachineRow {
 }
 
 export function BomPanel({
-  catalog,
   flow,
   blueprint,
   beltTier = "yellow",
   beltOverrides,
   defaultCollapsed = true,
 }: Props) {
+  const catalog = useCatalog()
   const machines: MachineRow[] = useMemo(() => {
     if (!flow) return []
     const by = new Map<string, MachineRow>()

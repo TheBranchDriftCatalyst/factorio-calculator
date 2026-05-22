@@ -3,6 +3,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@thebranchdriftcatalys
 import { Card, CardContent } from "@thebranchdriftcatalyst/catalyst-ui/ui/card"
 import { loadDataset } from "./data/loader"
 import { loadCatalog, type Catalog } from "./factorio"
+import { CatalogProvider } from "./factorio/CatalogContext"
+import { RateUnitProvider } from "./util/RateUnitContext"
 import { type FlowGraph, type Input, type Target } from "./solver/expand"
 import { solveExpand } from "./solver/expandClient"
 import { TargetPicker } from "./views/TargetPicker"
@@ -372,7 +374,10 @@ export function App() {
     }
   }, [catalog, targets, inputs, machineOverrides, recipeChoices, machineCategoryDefaults])
 
-  return (
+  // Render the main UI tree. Wrapped in CatalogProvider + RateUnitProvider
+  // only when the catalog is loaded — descendants that call useCatalog()
+  // can assume a non-null catalog, and the loading state stays trivial.
+  const body = (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <ProfileSidebar
         currentTargets={targets}
@@ -569,6 +574,16 @@ export function App() {
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} commands={commands} />
     </div>
+  )
+
+  // Providers only mount once the catalog has finished loading — that
+  // way `useCatalog()` is guaranteed to return a non-null value and the
+  // pre-load splash stays a single trivially-rendered subtree.
+  if (!catalog) return body
+  return (
+    <CatalogProvider value={catalog}>
+      <RateUnitProvider value={rateUnit}>{body}</RateUnitProvider>
+    </CatalogProvider>
   )
 }
 

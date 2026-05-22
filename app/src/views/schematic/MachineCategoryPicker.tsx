@@ -4,12 +4,11 @@
 // individually. Per-recipe `machineOverrides` still wins over these.
 
 import { useMemo } from "react"
-import type { Catalog } from "../../factorio"
+import { useCatalog } from "../../factorio/CatalogContext"
 import type { FlowGraph } from "../../solver/expand"
 import { CollapsiblePanel } from "../../components/CollapsiblePanel"
 
 interface Props {
-  catalog: Catalog
   /**
    * The current solved flow. We only list categories that actually have
    * recipes in this flow — listing every category in the catalog would
@@ -27,12 +26,12 @@ interface CategoryEntry {
 }
 
 export function MachineCategoryPicker({
-  catalog,
   flow,
   defaults,
   onChange,
   defaultCollapsed = true,
 }: Props) {
+  const catalog = useCatalog()
   // Categories that appear in the current flow.
   const categoriesInFlow = useMemo(() => {
     const s = new Set<string>()

@@ -5,9 +5,10 @@
 // for both "hover preview" and "pinned" states (toggled via `expanded`).
 
 import { useId, useMemo } from "react"
-import type { Catalog } from "../../../factorio"
+import { useCatalog } from "../../../factorio/CatalogContext"
 import type { Cell, CellPort } from "../../../blueprint/types"
-import { fmtPct, fmtRateUnit, type RateUnit } from "../../../util/format"
+import { fmtPct, fmtRateUnit } from "../../../util/format"
+import { useRateUnit } from "../../../util/RateUnitContext"
 import { laneUtilization, type BeltTier } from "../../../blueprint/util/utilization"
 import { ItemIcon } from "../../../components/Icon"
 import { pickMachineCandidates } from "../../../solver/expand"
@@ -18,8 +19,6 @@ interface Props {
   beltTier: BeltTier
   /** Per-item belt-tier overrides (view-only — affects utilization math only). */
   beltOverrides: Record<string, BeltTier>
-  rateUnit: RateUnit
-  catalog: Catalog
   // App-owned: changing this re-runs the solver. View-only props (zoom,
   // beltTier, beltOverrides) flow in separately and don't touch it.
   machineOverrides: Record<string, string>
@@ -36,12 +35,11 @@ export function CellDetails({
   expanded,
   beltTier,
   beltOverrides,
-  rateUnit,
-  catalog,
   machineOverrides,
   setMachineOverrides,
   machineCategoryDefaults,
 }: Props) {
+  const catalog = useCatalog()
   const recipe = catalog.recipes.get(cell.recipeKey)
   const compatibleMachines = useMemo(() => {
     if (!recipe) return []
@@ -135,9 +133,7 @@ export function CellDetails({
         ports={cell.inputs}
         accent="rgba(125, 211, 252, 0.85)"
         accentBg="rgba(125, 211, 252, 0.08)"
-        catalog={catalog}
         beltTier={beltTier}
-        rateUnit={rateUnit}
         beltOverrides={beltOverrides}
       />
 
@@ -148,9 +144,7 @@ export function CellDetails({
         ports={cell.outputs}
         accent="rgba(255, 201, 64, 0.85)"
         accentBg="rgba(255, 201, 64, 0.08)"
-        catalog={catalog}
         beltTier={beltTier}
-        rateUnit={rateUnit}
         beltOverrides={beltOverrides}
       />
     </div>
@@ -163,9 +157,7 @@ function PortBlock({
   ports,
   accent,
   accentBg,
-  catalog,
   beltTier,
-  rateUnit,
   beltOverrides,
 }: {
   title: string
@@ -173,9 +165,7 @@ function PortBlock({
   ports: ReadonlyArray<CellPort>
   accent: string
   accentBg: string
-  catalog: Catalog
   beltTier: BeltTier
-  rateUnit: RateUnit
   beltOverrides: Record<string, BeltTier>
 }) {
   return (
@@ -203,10 +193,8 @@ function PortBlock({
             <PortRow
               key={`${p.item}-${p.beltX}-${i}`}
               port={p}
-              catalog={catalog}
               // Per-item override beats global tier.
               effectiveTier={beltOverrides[p.item] ?? beltTier}
-              rateUnit={rateUnit}
             />
           ))}
         </div>
@@ -217,15 +205,13 @@ function PortBlock({
 
 function PortRow({
   port,
-  catalog,
   effectiveTier,
-  rateUnit,
 }: {
   port: CellPort
-  catalog: Catalog
   effectiveTier: BeltTier
-  rateUnit: RateUnit
 }) {
+  const catalog = useCatalog()
+  const rateUnit = useRateUnit()
   const itemName = catalog.items.get(port.item)?.name ?? port.item
   const isFluid = catalog.fluidItems.has(port.item)
   const u = laneUtilization(port.rate, effectiveTier, isFluid)

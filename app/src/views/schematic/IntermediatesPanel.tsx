@@ -6,15 +6,15 @@
 
 import { useMemo } from "react"
 import type { Catalog } from "../../factorio"
+import { useCatalog } from "../../factorio/CatalogContext"
 import type { FlowGraph } from "../../solver/expand"
 import { fmtRateUnit, type RateUnit } from "../../util/format"
+import { useRateUnit } from "../../util/RateUnitContext"
 import { ItemIcon } from "../../components/Icon"
 import { CollapsiblePanel } from "../../components/CollapsiblePanel"
 
 interface Props {
-  catalog: Catalog
   flow: FlowGraph | null
-  rateUnit: RateUnit
   defaultCollapsed?: boolean
   /**
    * Item currently highlighted (lanes carrying it glow on canvas). Used
@@ -46,13 +46,13 @@ interface Row {
 }
 
 export function IntermediatesPanel({
-  catalog,
   flow,
-  rateUnit,
   defaultCollapsed = true,
   highlightedItem,
   onItemClick,
 }: Props) {
+  const catalog = useCatalog()
+  const rateUnit = useRateUnit()
   const rows: Row[] = useMemo(() => {
     if (!flow) return []
     const produced = new Map<string, number>()
