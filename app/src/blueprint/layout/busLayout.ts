@@ -886,33 +886,50 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
   // (intermediate outputs) the strip — never overlapping a machine
   // sprite. Single-machine cells keep the legacy "distribute ports
   // evenly down the W edge" layout since there's no strip to feed.
+  //
+  // Lane packing: inputs pair up into 2-lane belts (free pickup —
+  // Factorio inserters can pick from either lane). N inputs collapse
+  // to ⌈N/2⌉ feed belts. Outputs stay one-per-rail since inline drops
+  // always land on the far lane.
   const isManifold = strip.machines.length > 1
-  const inputRails = isManifold ? inIngs.length : 0
+  const inputBelts = isManifold ? Math.ceil(inIngs.length / 2) : inIngs.length
   const outputRails = isManifold ? localOuts.length : 0
   const cellW = Math.max(strip.w, mw)
-  // Manifold layout: cellH = rails-top + strip + rails-bottom. Legacy
+  // Manifold layout: cellH = belts-top + strip + rails-bottom. Legacy
   // layout: cellH grows to fit whichever edge has the most ports.
   const cellH = isManifold
-    ? Math.max(strip.h + inputRails + outputRails, eastCount + 1)
+    ? Math.max(strip.h + inputBelts + outputRails, eastCount + 1)
     : Math.max(strip.h, Math.max(westCount, eastCount) + 1)
   // Strip vertical offset within the cell — manifolds push it down past
-  // the input rails; legacy centers it.
-  const stripDY = isManifold ? inputRails : Math.floor((cellH - strip.h) / 2)
+  // the input belts; legacy centers it.
+  const stripDY = isManifold ? inputBelts : Math.floor((cellH - strip.h) / 2)
   const machines: MachinePlacement[] = strip.machines.map((m) => ({
     ...m,
     y: m.y + stripDY,
   }))
 
   // Per-edge slot rows.
-  //   • Manifold cells: inputs in dedicated rails at the TOP (rows
-  //     [0..inputRails-1]); intermediate outputs in dedicated rails at
-  //     the BOTTOM (rows [cellH-outputRails..cellH-1]).
+  //   • Manifold cells:
+  //     - Inputs pair into 2-lane belts at the TOP (rows [0..inputBelts-1]).
+  //       Even-index inputs = lane A (near); odd-index = lane B (far).
+  //     - Intermediate outputs in dedicated rails at the BOTTOM (rows
+  //       [cellH-outputRails..cellH-1]), one per rail.
   //   • Legacy (single-machine): distribute all W ports evenly down
   //     the cell's vertical extent.
   let inputSlots: number[]
+  let inputLanes: ("A" | "B" | undefined)[]
   let outputSlots: number[]
   if (isManifold) {
-    inputSlots = Array.from({ length: inIngs.length }, (_, i) => yStart + i)
+    inputSlots = inIngs.map((_, i) => yStart + Math.floor(i / 2))
+    // Solo input on a belt (e.g. the lone leftover when N is odd) gets
+    // undefined lane → renderer paints full-height single-lane.
+    const pairedLane = (i: number): "A" | "B" | undefined => {
+      const isPaired =
+        (i % 2 === 1) || (i + 1 < inIngs.length)
+      if (!isPaired) return undefined
+      return i % 2 === 0 ? "A" : "B"
+    }
+    inputLanes = inIngs.map((_, i) => pairedLane(i))
     outputSlots = Array.from(
       { length: localOuts.length },
       (_, i) => yStart + cellH - outputRails + i,
@@ -922,6 +939,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
       yStart + Math.floor(((i + 1) * cellH) / (westCount + 1)),
     )
     inputSlots = westSlots.slice(0, inIngs.length)
+    inputLanes = inIngs.map(() => undefined)
     outputSlots = westSlots.slice(inIngs.length)
   }
   const eastSlots = Array.from({ length: eastCount }, (_, i) =>
@@ -962,6 +980,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
   for (const ing of inIngs) {
     const direct = isDirectIn(ing.item)
     const beltX = direct ? directBeltXByItem.get(ing.item)! : ctx.beltXByItem.get(ing.item)!
+    const lane = inputLanes[inIdx]
     const dropY = inputSlots[inIdx++]
     const rate = ing.amount * node.rate
     const portScope = portScopeFor(ing.item)
@@ -986,6 +1005,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
       scope: buildPortScope(portScope, partnerCellKey),
       edge: "W",
       slot: dropY - yStart,
+      lane,
     })
     if (direct) {
       const ep = ctx.directEndpoints.get(ing.item) ?? {}

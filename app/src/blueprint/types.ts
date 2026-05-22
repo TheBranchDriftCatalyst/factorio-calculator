@@ -101,6 +101,22 @@ export interface CellPort {
    */
   slot: number
   /**
+   * Which belt LANE this port taps. Real Factorio belts have two lanes
+   * (left/right halves of a 1-tile-wide belt). Inserter pickup is lane-
+   * configurable, so a single feed belt can carry two distinct items —
+   * one per lane — and two perimeter inserters at the same tile pick
+   * from different lanes.
+   *
+   *   • undefined (legacy): port owns the whole belt; single-lane render
+   *   • "A" / "B": port shares the belt at port.slot with a sibling port;
+   *     "A" = near lane (top half of horizontal rail), "B" = far lane.
+   *
+   * Manifold cells pair up INPUTS into 2-lane belts (free pickup); outputs
+   * stay one-per-rail (Factorio inline drops always land on the far lane,
+   * so two outputs on one belt would just saturate the same lane).
+   */
+  lane?: "A" | "B"
+  /**
    * Columns where this port's side-belt crosses ANOTHER belt — these need
    * underground belt / long-inserter in real Factorio. Empty when the
    * path is clear. Each entry is an absolute tile column.

@@ -922,14 +922,26 @@ export function CanvasTiles({
         highlightCellKey === cell.recipeKey ||
         (highlightCellKeys?.has(cell.recipeKey) ?? false)
       const dim = hasFocus && !focused
-      // Skip rails for direct ports — they have their own connector.
+      // Group inputs by dropY so 2-lane belts (paired inputs sharing a
+      // dropY) render as a single 2-lane rail, not two single-lane rails
+      // painted on top of each other. Outputs are always single-lane —
+      // Factorio inline drops are fixed to the far lane so we don't
+      // pair them.
+      const inputsByRow = new Map<number, typeof cell.inputs>()
       for (const port of cell.inputs) {
         if (port.scope.kind === "direct") continue
-        drawManifoldRail(cell, port, "input", focused, dim)
+        const list = inputsByRow.get(port.dropY) ?? []
+        list.push(port)
+        inputsByRow.set(port.dropY, list)
+      }
+      for (const ports of inputsByRow.values()) {
+        // Sort by lane so A always renders top half, B bottom half.
+        ports.sort((a, b) => (a.lane === "B" ? 1 : 0) - (b.lane === "B" ? 1 : 0))
+        drawManifoldRail(cell, ports, "input", focused, dim)
       }
       for (const port of cell.outputs) {
         if (port.scope.kind === "direct") continue
-        drawManifoldRail(cell, port, "output", focused, dim)
+        drawManifoldRail(cell, [port], "output", focused, dim)
       }
     }
 
@@ -938,26 +950,53 @@ export function CanvasTiles({
 
     function drawManifoldRail(
       cell: Cell,
-      port: { item: string; dropY: number; edge: string; beltX: number },
+      ports: ReadonlyArray<{
+        item: string
+        dropY: number
+        edge: string
+        beltX: number
+        lane?: "A" | "B"
+      }>,
       role: "input" | "output",
       focused: boolean,
       dim: boolean,
     ) {
-      // For E-edge output ports, the side-belt EXITS the strip's east
-      // side toward the right bus — the rail ends at cell.x + cell.w.
-      // For everything else (W-edge inputs/outputs), the rail starts at
-      // cell.x. We always paint left → right across the strip width.
+      if (ports.length === 0) return
+      const head = ports[0]
       const x0 = cell.x
       const x1 = cell.x + cell.w
-      const yPx = px(port.dropY)
+      const yPx = px(head.dropY)
       const alphaBg = focused ? 0.7 : dim ? 0.16 : 0.5
       const alphaArrow = focused ? 0.95 : dim ? 0.3 : 0.7
       // Match drawSideBelt's 2-px inset so the side-belt and the rail
       // read as one continuous belt at the cell.x seam.
       const railTop = yPx + 2
       const railH = TILE_PX - 4
-      ctx.fillStyle = itemColorFor(port.item, alphaBg)
-      ctx.fillRect(px(x0), railTop, px(x1) - px(x0), railH)
+      const railWidthPx = px(x1) - px(x0)
+      // Paint the belt body. Two ports sharing this row → 2-lane belt
+      // (lane A = top half, lane B = bottom half). One port → full
+      // height single lane.
+      if (ports.length >= 2) {
+        const halfH = Math.floor(railH / 2)
+        // Lane A (top)
+        ctx.fillStyle = itemColorFor(ports[0].item, alphaBg)
+        ctx.fillRect(px(x0), railTop, railWidthPx, halfH)
+        // Lane B (bottom)
+        ctx.fillStyle = itemColorFor(ports[1].item, alphaBg)
+        ctx.fillRect(px(x0), railTop + halfH, railWidthPx, railH - halfH)
+        // Mid-rail lane divider — thin dark line so the two lanes read
+        // as distinct halves of the same belt.
+        ctx.strokeStyle = `rgba(0,0,0,${dim ? 0.5 : 0.85})`
+        ctx.lineWidth = 1
+        ctx.beginPath()
+        ctx.moveTo(px(x0), railTop + halfH + 0.5)
+        ctx.lineTo(px(x1), railTop + halfH + 0.5)
+        ctx.stroke()
+      } else {
+        ctx.fillStyle = itemColorFor(head.item, alphaBg)
+        ctx.fillRect(px(x0), railTop, railWidthPx, railH)
+      }
+      // Top/bottom borders.
       ctx.strokeStyle = `rgba(0,0,0,${dim ? 0.4 : 0.75})`
       ctx.lineWidth = 1
       ctx.beginPath()
@@ -967,13 +1006,9 @@ export function CanvasTiles({
       ctx.lineTo(px(x1), railTop + railH - 0.5)
       ctx.stroke()
       // Direction arrows — sample at intervals along the rail rather
-      // than once per machine. For a 12-machine strip this drops from
-      // 12 arrows to ~3, keeping the rail readable as a belt without
-      // turning into a row of triangles.
-      const arrowDir = role === "input" || port.edge === "E" ? 1 : -1
+      // than once per machine.
+      const arrowDir = role === "input" || head.edge === "E" ? 1 : -1
       ctx.fillStyle = `rgba(0,0,0,${alphaArrow})`
-      const railWidthPx = px(x1) - px(x0)
-      // Aim for one arrow per ~3 tiles of rail.
       const arrowSpacingPx = Math.max(TILE_PX * 3, 30)
       const arrowCount = Math.max(1, Math.floor(railWidthPx / arrowSpacingPx))
       const cy = yPx + TILE_PX / 2
@@ -987,47 +1022,58 @@ export function CanvasTiles({
         ctx.closePath()
         ctx.fill()
       }
-      // Inserter taps — drawn only at the FIRST row of machines under
-      // the rail (rather than every column on every row). Skip the
-      // column the belt enters/exits from, since the side-belt is the
-      // connection there.
-      ctx.fillStyle = itemColorFor(port.item, focused ? 1 : dim ? 0.4 : 0.85)
+      // Inserter taps at each machine column on the first machine row.
+      // For 2-lane belts, paint a tap PER LANE per machine (one for
+      // each item it picks).
       ctx.strokeStyle = `rgba(0,0,0,${dim ? 0.5 : 0.85})`
       ctx.lineWidth = 1
       const tapRadius = Math.max(1.2, TILE_PX * 0.1)
-      // Use the first machine's row to define which Y is the "top
-      // row" so the taps line up under the rail.
       const topRowY = cell.machines[0].y
       for (let i = 0; i < cell.machines.length; i++) {
         const m = cell.machines[i]
-        if (m.y !== topRowY) continue // skip lower rows; one tap-row is enough
+        if (m.y !== topRowY) continue
         if (role === "input" && i === 0) continue
-        if (role === "output" && port.edge === "E" && i === cell.machines.length - 1) continue
-        if (role === "output" && port.edge === "W" && i === 0) continue
+        if (role === "output" && head.edge === "E" && i === cell.machines.length - 1) continue
+        if (role === "output" && head.edge === "W" && i === 0) continue
         const cx = (m.x + m.w / 2) * TILE_PX
-        ctx.beginPath()
-        ctx.arc(cx, cy, tapRadius, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.stroke()
+        for (let j = 0; j < ports.length; j++) {
+          // Stack taps vertically inside the rail so 2 lanes show 2 dots.
+          const yOffset = ports.length === 1 ? 0 : (j === 0 ? -tapRadius : tapRadius)
+          ctx.fillStyle = itemColorFor(ports[j].item, focused ? 1 : dim ? 0.4 : 0.85)
+          ctx.beginPath()
+          ctx.arc(cx, cy + yOffset, tapRadius, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.stroke()
+        }
       }
-      // Item icon embedded on the rail (left-anchored) so the user
-      // doesn't have to trace back to the trunk bus to know what's
-      // flowing. Skipped when the rail is too short to fit an icon.
+      // Item icons on the rail's left end. For 2-lane belts, show both
+      // icons stacked vertically so the user reads "this belt carries
+      // these two items."
       if (atlas && railWidthPx >= TILE_PX * 2) {
-        const iconSize = Math.max(8, Math.floor(TILE_PX * 0.7))
-        const iconX = px(x0) + Math.max(2, TILE_PX * 0.15)
-        const iconY = cy - iconSize / 2
+        const iconSize =
+          ports.length >= 2
+            ? Math.max(6, Math.floor((TILE_PX * 0.55)))
+            : Math.max(8, Math.floor(TILE_PX * 0.7))
+        const iconX = px(x0) + Math.max(2, TILE_PX * 0.12)
         const prevSmoothing = ctx.imageSmoothingEnabled
         ctx.imageSmoothingEnabled = true
         ctx.globalAlpha = focused ? 1 : dim ? 0.45 : 0.92
-        atlas.drawItem(
-          ctx,
-          catalog.items.get(port.item),
-          iconX,
-          iconY,
-          iconSize,
-          iconSize,
-        )
+        for (let j = 0; j < ports.length; j++) {
+          const halfH = railH / 2
+          const laneCenterY =
+            ports.length === 1
+              ? cy
+              : railTop + halfH * (j + 0.5)
+          const iconY = laneCenterY - iconSize / 2
+          atlas.drawItem(
+            ctx,
+            catalog.items.get(ports[j].item),
+            iconX,
+            iconY,
+            iconSize,
+            iconSize,
+          )
+        }
         ctx.globalAlpha = 1
         ctx.imageSmoothingEnabled = prevSmoothing
       }
@@ -1040,6 +1086,16 @@ export function CanvasTiles({
       // visually pops out of the wider blueprint.
       const focusActive =
         highlightCellKey != null || (highlightCellKeys?.size ?? 0) > 0
+      // For 2-lane manifold belts, two inserters land at the same (x,y)
+      // — one per lane. Detect that here and shift them visually so
+      // both glyphs are readable instead of stacking.
+      const stackKey = (x: number, y: number) => `${x}|${y}`
+      const stackIndex = new Map<string, number>()
+      const stackCount = new Map<string, number>()
+      for (const ins of blueprint.inserters) {
+        const k = stackKey(ins.x, ins.y)
+        stackCount.set(k, (stackCount.get(k) ?? 0) + 1)
+      }
       for (const ins of blueprint.inserters) {
         const focused =
           highlightCellKey === ins.cellKey ||
@@ -1048,9 +1104,20 @@ export function CanvasTiles({
         const a = dim ? 0.3 : 1
         const INPUT_RING = `rgba(125, 211, 252, ${a})`
         const OUTPUT_RING = `rgba(245, 158, 11, ${a})`
+        // Stack offset for overlapping inserters (2-lane belts share
+        // a perimeter tile). Lane A inserter shifts slightly up, lane
+        // B shifts slightly down so both glyphs read cleanly.
+        const k = stackKey(ins.x, ins.y)
+        const stackTotal = stackCount.get(k) ?? 1
+        const idxInStack = stackIndex.get(k) ?? 0
+        stackIndex.set(k, idxInStack + 1)
+        const stackOffsetPx =
+          stackTotal > 1
+            ? (idxInStack - (stackTotal - 1) / 2) * (TILE_PX * 0.35)
+            : 0
         const cx = px(ins.x) + TILE_PX / 2
-        const cy = px(ins.y) + TILE_PX / 2
-        const r = TILE_PX * 0.4
+        const cy = px(ins.y) + TILE_PX / 2 + stackOffsetPx
+        const r = stackTotal > 1 ? TILE_PX * 0.28 : TILE_PX * 0.4
         // Ring color follows port direction; triangle direction follows facing.
         // (Facing alone is ambiguous — an E-edge output points east, same as
         // a W-edge input.)

@@ -329,3 +329,61 @@ describe("busLayout · similarity reorder (fbp-xm0)", () => {
     }
   })
 })
+
+// Lane packing — Factorio inserter pickup is lane-configurable, so a
+// single feed belt can carry two distinct items. Manifold cells with
+// multiple inputs collapse to ⌈N/2⌉ feed belts instead of N rails.
+describe("busLayout · lane-packed manifold inputs (fbp-5gt)", () => {
+  it("manifold cell with N inputs uses ⌈N/2⌉ feed belt rows", () => {
+    // Bump the rate so electronic-circuit becomes a manifold strip.
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 10 }] })
+    const bp = busLayout(catalog, flow)
+    for (const cell of bp.cells) {
+      if (cell.machines.length <= 1) continue
+      if (cell.inputs.length < 2) continue
+      const inputRows = new Set(cell.inputs.map((p) => p.dropY))
+      const expected = Math.ceil(cell.inputs.length / 2)
+      expect(inputRows.size).toBe(expected)
+    }
+  })
+
+  it("paired inputs share a dropY and carry opposite lane labels", () => {
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 10 }] })
+    const bp = busLayout(catalog, flow)
+    for (const cell of bp.cells) {
+      if (cell.machines.length <= 1) continue
+      // Group inputs by row; rows with 2 ports must have one lane A and one lane B.
+      const byRow = new Map<number, typeof cell.inputs>()
+      for (const p of cell.inputs) {
+        const list = byRow.get(p.dropY) ?? []
+        list.push(p)
+        byRow.set(p.dropY, list)
+      }
+      for (const list of byRow.values()) {
+        if (list.length === 1) {
+          // Single port on its row — lane is undefined when not paired.
+          // (Solo when N is odd.)
+        } else {
+          expect(list.length).toBe(2)
+          const lanes = new Set(list.map((p) => p.lane))
+          expect(lanes.has("A")).toBe(true)
+          expect(lanes.has("B")).toBe(true)
+        }
+      }
+    }
+  })
+
+  it("intermediate outputs stay one-per-rail (drop is lane-fixed)", () => {
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 10 }] })
+    const bp = busLayout(catalog, flow)
+    for (const cell of bp.cells) {
+      if (cell.machines.length <= 1) continue
+      const outputRows = new Set(cell.outputs.map((p) => p.dropY))
+      // Every W-edge output (intermediate) gets its own row. Lane field
+      // stays undefined.
+      const wOutputs = cell.outputs.filter((p) => p.edge === "W")
+      expect(outputRows.size).toBeGreaterThanOrEqual(wOutputs.length)
+      for (const p of wOutputs) expect(p.lane).toBeUndefined()
+    }
+  })
+})
