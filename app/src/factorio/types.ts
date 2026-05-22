@@ -42,6 +42,17 @@ export interface Machine {
    */
   fuelCategories: ReadonlySet<string>
   size?: Size // tile footprint, may be undefined for entries not in sizes.json yet
+  /**
+   * Maximum I/O streams this machine can accept on input/output sides,
+   * split by solid vs fluid. Populated from `machineSlots.ts` overrides.
+   * Used by feasibility checks (can a recipe physically run on this
+   * machine?) and by factory templates (the manifold layout needs to
+   * know where to place the input ports).
+   */
+  slots: {
+    input: { solid: number; fluid: number }
+    output: { solid: number; fluid: number }
+  }
 }
 
 export interface Belt {

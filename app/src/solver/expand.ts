@@ -6,6 +6,7 @@
 
 import type { Catalog, Machine, Recipe } from "../factorio"
 import { computeIOShape, type IOShape } from "./ioShape"
+import { isMachineFeasible } from "./feasibility"
 
 export type { IOShape } from "./ioShape"
 
@@ -109,23 +110,30 @@ export function pickMachine(
   overrides: Record<string, string> = {},
   categoryDefaults: Record<string, string> = {},
 ): Machine | undefined {
-  // 1. Per-recipe override always wins.
+  // 1. Per-recipe override always wins — even if it's infeasible.
+  //    User-pinned choices propagate so the UI can surface the
+  //    ⚠ feasibility chip; silent fallback would hide the user's intent.
   const overrideKey = overrides[recipe.key]
   if (overrideKey) {
     const m = catalog.machines.get(overrideKey)
     if (m) return m
   }
   // 2. Per-category default (so "use Assembler 1 for everything crafting"
-  //    works without pinning each recipe).
+  //    works without pinning each recipe). Again, even if infeasible —
+  //    explicit choices win.
   const categoryKey = categoryDefaults[recipe.category]
   if (categoryKey) {
     const m = catalog.machines.get(categoryKey)
     if (m && m.craftingCategories.has(recipe.category)) return m
   }
-  // 3. Fallback: fastest machine in the category.
+  // 3. Fallback: fastest FEASIBLE machine in the category. If none are
+  //    feasible (modded data, edge cases), fall back to the fastest of
+  //    any kind so the solver always returns SOMETHING.
   const candidates = catalog.machinesByCategory.get(recipe.category) ?? []
   if (candidates.length === 0) return undefined
-  return [...candidates].sort((a, b) => b.craftingSpeed - a.craftingSpeed)[0]
+  const sorted = [...candidates].sort((a, b) => b.craftingSpeed - a.craftingSpeed)
+  const feasible = sorted.find((m) => isMachineFeasible(m, recipe, catalog.fluidItems))
+  return feasible ?? sorted[0]
 }
 
 /**
@@ -144,7 +152,17 @@ export function pickMachineCandidates(
   categoryDefaults: Record<string, string> = {},
 ): Machine[] {
   const all = catalog.machinesByCategory.get(recipe.category) ?? []
-  const sorted = [...all].sort((a, b) => b.craftingSpeed - a.craftingSpeed)
+  // Sort by craftingSpeed within feasibility class: feasible first
+  // (sorted fastest-first), infeasible last (sorted fastest-first within
+  // that group). The UI shows the head of this list as "default" — we
+  // never want the default pick to be infeasible if a feasible option
+  // exists.
+  const sorted = [...all].sort((a, b) => {
+    const af = isMachineFeasible(a, recipe, catalog.fluidItems)
+    const bf = isMachineFeasible(b, recipe, catalog.fluidItems)
+    if (af !== bf) return af ? -1 : 1
+    return b.craftingSpeed - a.craftingSpeed
+  })
   const result: Machine[] = []
   const seen = new Set<string>()
   const push = (m: Machine | undefined) => {

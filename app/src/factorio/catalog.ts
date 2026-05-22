@@ -3,6 +3,7 @@
 
 import sizesJson from "./data/sizes.json"
 import { FLUID_CONNECTIONS, INSERTER_REACH } from "./data/overrides"
+import { slotsFor } from "./machineSlots"
 import type {
   Belt,
   Catalog,
@@ -97,6 +98,7 @@ function toMachine(raw: KirkRawMachine): Machine {
     energySource,
     fuelCategories,
     size: sz ? ([sz[0], sz[1]] as Size) : undefined,
+    slots: slotsFor(raw.key),
   }
 }
 
