@@ -73,6 +73,14 @@ interface StorageContextValue {
   setSettings: (next: StorageSettings) => void
   /** Pull remote → local for a key prefix (used after enabling Gist). */
   refreshFromRemote: (prefix?: string) => Promise<void>
+  /**
+   * PUSH every local key under `prefix` up to the remote. Used right
+   * after switching to a remote backend so existing local profiles
+   * immediately appear in the gist (otherwise the gist isn't created
+   * until the next profile-save and the user sees nothing). Returns
+   * the number of keys pushed.
+   */
+  pushToRemote: (prefix?: string) => Promise<number>
 }
 
 const StorageContext = createContext<StorageContextValue | null>(null)
@@ -119,6 +127,28 @@ export function StorageProvider({ children }: { children: ReactNode }) {
     [store],
   )
 
+  const pushToRemote = useCallback(
+    async (prefix = "") => {
+      // Use a fresh LocalStorageKVStore (not the cached one) so we can
+      // enumerate local-only keys regardless of which adapter is
+      // currently active. Then write each to the remote half of the
+      // cache (which fans out to GitHub).
+      if (!(store instanceof CachingKVStore)) return 0
+      const local = new LocalStorageKVStore()
+      const keys = await local.list(prefix)
+      let pushed = 0
+      for (const k of keys) {
+        const v = await local.get(k)
+        if (v != null) {
+          await store.set(k, v)
+          pushed++
+        }
+      }
+      return pushed
+    },
+    [store],
+  )
+
   const value = useMemo<StorageContextValue>(
     () => ({
       store,
@@ -126,8 +156,9 @@ export function StorageProvider({ children }: { children: ReactNode }) {
       activeBackend: store.id,
       setSettings,
       refreshFromRemote,
+      pushToRemote,
     }),
-    [store, settings, setSettings, refreshFromRemote],
+    [store, settings, setSettings, refreshFromRemote, pushToRemote],
   )
 
   return <StorageContext.Provider value={value}>{children}</StorageContext.Provider>
@@ -149,6 +180,7 @@ export function useStorage(): StorageContextValue {
       activeBackend: "local",
       setSettings: () => {},
       refreshFromRemote: async () => {},
+      pushToRemote: async () => 0,
     }
   }
   return ctx

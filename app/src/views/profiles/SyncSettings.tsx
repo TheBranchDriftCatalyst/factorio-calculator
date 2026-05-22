@@ -14,6 +14,7 @@
 
 import { useState } from "react"
 import { GistKVStore } from "../../storage/gist"
+import { LocalStorageKVStore } from "../../storage/local"
 import { useStorage, type StorageSettings } from "../../storage"
 
 /**
@@ -136,7 +137,8 @@ export function SyncSettings() {
       setStatus({ kind: "ok", msg: "Switched to local storage." })
       return
     }
-    if (!draftToken.trim()) {
+    const token = draftToken.trim()
+    if (!token) {
       setStatus({ kind: "err", msg: "Token required for Gist sync." })
       return
     }
@@ -148,20 +150,63 @@ export function SyncSettings() {
       })
       return
     }
+
+    setStatus({ kind: "info", msg: "Saving…" })
+    // We work with a temporary GistKVStore directly here instead of
+    // through the React context's CachingKVStore. Reason: setSettings
+    // schedules a re-render, but the CachingKVStore inside the
+    // context only rebuilds AFTER that render — so calling
+    // pushToRemote() right now would still hit the OLD store. Doing
+    // the push manually side-steps the staleness.
+    let gistId = idResult.id
+    const remote = new GistKVStore({ token, gistId })
+    remote.onGistCreated = (id) => {
+      gistId = id
+    }
+
+    // 1. Push every local profile up. If gistId was blank, the FIRST
+    //    write here creates the gist via POST /gists; subsequent
+    //    writes patch it. If no local profiles exist yet, we write a
+    //    tiny init marker so the gist gets created and the user sees
+    //    it on GitHub immediately.
+    const localStore = new LocalStorageKVStore()
+    const profileKeys = await localStore.list("fbp.profiles")
+    if (profileKeys.length === 0 && !gistId) {
+      await remote.set(
+        "_fbp_init.json",
+        JSON.stringify({
+          created: new Date().toISOString(),
+          note: "Factorio Blueprint Calculator sync gist — created automatically.",
+        }),
+      )
+    }
+    for (const k of profileKeys) {
+      const v = await localStore.get(k)
+      if (v != null) await remote.set(k, v)
+    }
+    if (!gistId) {
+      setStatus({
+        kind: "err",
+        msg: "Couldn't create gist — check that the token has the 'gist' scope.",
+      })
+      return
+    }
+
+    // 2. Persist settings with the (possibly newly-minted) gist id.
     setSettings({
       backend: "gist",
-      gist: {
-        token: draftToken.trim(),
-        gistId: idResult.id,
-      },
+      gist: { token, gistId },
     })
-    // Normalize the field display so a URL paste shows as the bare id.
-    if (idResult.id && idResult.id !== draftGistId.trim()) {
-      setDraftGistId(idResult.id)
-    }
-    // Pull remote → local so existing remote profiles appear right away.
+    setDraftGistId(gistId) // canonical display
+
+    // 3. Pull remote → local so anything already in the gist becomes
+    //    visible locally too (e.g. profiles synced from a different
+    //    device).
     await refreshFromRemote("fbp.profiles")
-    setStatus({ kind: "ok", msg: "Saved. Synced from remote." })
+    setStatus({
+      kind: "ok",
+      msg: `Synced ${profileKeys.length} key${profileKeys.length === 1 ? "" : "s"} to gist ${gistId.slice(0, 8)}…`,
+    })
   }
 
   const statusColor =
@@ -194,6 +239,17 @@ export function SyncSettings() {
       >
         Sync · active: {activeBackend}
       </div>
+      {settings.backend === "gist" && settings.gist?.gistId && (
+        <a
+          href={`https://gist.github.com/${settings.gist.gistId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="sync-gist-link"
+          style={{ color: AMBER, fontSize: 10, textDecoration: "underline" }}
+        >
+          View gist on GitHub ↗
+        </a>
+      )}
 
       <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
         <span style={{ color: LABEL, fontSize: 10 }}>Backend</span>
