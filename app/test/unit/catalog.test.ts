@@ -50,4 +50,16 @@ describe("loadCatalog", () => {
     expect(catalog.fluidConnections.get("chemical-plant")?.length).toBe(4)
     expect(catalog.fluidConnections.get("oil-refinery")?.length).toBe(5)
   })
+
+  it("populates rawItems from items without a non-recycling recipe", () => {
+    // miniDataset has no explicit `resources` or `planets` tagging, so the
+    // set falls back to the heuristic: ores have no producing recipe and
+    // surface as raw inputs to the solver.
+    expect(catalog.rawItems.has("iron-ore")).toBe(true)
+    expect(catalog.rawItems.has("copper-ore")).toBe(true)
+    // Craftable items must NOT be in the raw set or the solver would
+    // refuse to expand their recipes.
+    expect(catalog.rawItems.has("iron-plate")).toBe(false)
+    expect(catalog.rawItems.has("electronic-circuit")).toBe(false)
+  })
 })

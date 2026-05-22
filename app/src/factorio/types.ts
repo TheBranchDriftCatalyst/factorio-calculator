@@ -87,6 +87,14 @@ export interface Catalog {
   modules: ReadonlyMap<string, Module>
   /** Items that are FLUIDS (water, crude-oil, etc.) — carried by pipes, not belts. */
   fluidItems: ReadonlySet<string>
+  /**
+   * Items that count as raw, un-craftable resources for the solver: ores,
+   * pumped fluids, agricultural raw products, scrap. Populated from
+   * dataset-level signals (`resources[]`, `planets[].resources.*`) plus a
+   * fallback for items that have no non-recycling recipe producing them.
+   * Lets modded datasets declare their own raw items without hard-coding.
+   */
+  rawItems: ReadonlySet<string>
   // Pipe connection positions per machine key. Empty array if machine has no fluid I/O.
   fluidConnections: ReadonlyMap<string, ReadonlyArray<FluidConnection>>
   // Producers indexed by crafting_category for solver lookup.
@@ -114,6 +122,30 @@ export interface KirkRawDataset {
   rocket_silo?: ReadonlyArray<KirkRawMachine>
   agricultural_tower?: ReadonlyArray<KirkRawMachine>
   fluids?: ReadonlyArray<KirkRawItem>
+  /**
+   * Mineable resource definitions (`resources[]` in Kirk's JSON). Each entry
+   * declares the raw item(s) produced by mining/extraction. Used to
+   * populate `Catalog.rawItems` so the solver knows what counts as a raw
+   * input without hard-coding ore names.
+   */
+  resources?: ReadonlyArray<{
+    key: string
+    category?: string
+    results?: ReadonlyArray<KirkRawRecipeIngredient>
+  }>
+  /**
+   * Planet definitions. The `resources` sub-object lists items obtained
+   * via mining (`resource`), offshore pumps (`offshore`), and agriculture
+   * (`plants`). All three count as raw inputs for the solver.
+   */
+  planets?: ReadonlyArray<{
+    key: string
+    resources?: {
+      resource?: ReadonlyArray<string>
+      offshore?: ReadonlyArray<string>
+      plants?: ReadonlyArray<string>
+    }
+  }>
   /**
    * Top-level fuel registry. Each entry pairs a fuel item with its
    * energy value (joules) and category (e.g. "chemical", "nuclear").

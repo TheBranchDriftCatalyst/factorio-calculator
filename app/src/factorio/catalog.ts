@@ -189,6 +189,55 @@ export function loadCatalog(raw: KirkRawDataset): Catalog {
     cell: 32,
   }
 
+  // Index recipes by output item now — used both for `recipesByProduct` in
+  // the Catalog AND below for the rawItems fallback heuristic.
+  const recipesByProduct = groupBy(recipes, (r) => r.products.map((p) => p.item))
+
+  // Raw items: catalog-driven definition of "un-craftable resource". The
+  // solver consults this set to short-circuit demand into a `source:` node
+  // instead of recursing through a recipe. Modded datasets can declare
+  // their own raw items via the same channels.
+  //
+  // Primary signals (explicit dataset tags):
+  //   1. `resources[].results[].name`   — mineable ores/fluids
+  //   2. `planets[].resources.offshore` — pumped fluids (water, lava, …)
+  //   3. `planets[].resources.plants`   — agricultural raw products
+  // Fallback (heuristic):
+  //   4. Any item whose ONLY producers are recycling recipes (Space-Age
+  //      oddballs like `wood` / `holmium-ore`). Items with no producers
+  //      at all are also implicitly raw — the solver short-circuits them
+  //      via `pickRecipe` returning undefined — but we include them in
+  //      the set anyway so callers can introspect the raw set uniformly.
+  const rawSet = new Set<string>()
+  for (const r of raw.resources ?? []) {
+    for (const p of r.results ?? []) {
+      if (p.name) rawSet.add(p.name)
+    }
+  }
+  for (const p of raw.planets ?? []) {
+    for (const k of p.resources?.offshore ?? []) rawSet.add(k)
+    for (const k of p.resources?.plants ?? []) rawSet.add(k)
+    for (const k of p.resources?.resource ?? []) rawSet.add(k)
+  }
+  const isRecycling = (r: Recipe): boolean =>
+    r.category === "recycling" ||
+    r.category === "recycling-or-hand-crafting" ||
+    r.key.endsWith("-recycling")
+  // Items in items[]/fluids[] with no non-recycling producer count as raw.
+  // Use the ingredient/result item names too so any item REFERENCED by a
+  // recipe (even if missing from items[]) is considered.
+  const referencedItems = new Set<string>()
+  for (const it of itemsList) referencedItems.add(it.key)
+  for (const r of recipes) {
+    for (const ing of r.ingredients) referencedItems.add(ing.item)
+    for (const p of r.products) referencedItems.add(p.item)
+  }
+  for (const item of referencedItems) {
+    const producers = recipesByProduct.get(item)
+    if (!producers || producers.every(isRecycling)) rawSet.add(item)
+  }
+  const rawItems: ReadonlySet<string> = rawSet
+
   // Items merged with icon-aware fallback so a fluid record (no icon
   // coords) doesn't shadow a real items record (proper icon_col/row).
   const itemsMap = new Map<string, Item>()
@@ -222,9 +271,10 @@ export function loadCatalog(raw: KirkRawDataset): Catalog {
     inserters: indexBy(inserters, (i) => i.key),
     modules: indexBy(modules, (m) => m.key),
     fluidItems,
+    rawItems,
     fluidConnections,
     machinesByCategory: groupBy(machines, (m) => m.craftingCategories),
-    recipesByProduct: groupBy(recipes, (r) => r.products.map((p) => p.item)),
+    recipesByProduct,
     sprites,
   }
 }
