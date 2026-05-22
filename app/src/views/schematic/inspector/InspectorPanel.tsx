@@ -92,6 +92,7 @@ export function InspectorPanel({
           beltOverrides={config.beltOverrides ?? {}}
           machineOverrides={machineOverrides}
           setMachineOverrides={setMachineOverrides}
+          machineCategoryDefaults={config.machineCategoryDefaults ?? {}}
         />
       </div>
     )
@@ -135,6 +136,7 @@ export function InspectorPanel({
           beltOverrides={config.beltOverrides ?? {}}
           machineOverrides={machineOverrides}
           setMachineOverrides={setMachineOverrides}
+          machineCategoryDefaults={config.machineCategoryDefaults ?? {}}
         />
       </div>
     )

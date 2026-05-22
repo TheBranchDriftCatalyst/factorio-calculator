@@ -78,7 +78,7 @@ export function isRecyclingRecipe(r: Recipe): boolean {
   return r.category === "recycling" || r.key.endsWith("-recycling")
 }
 
-function pickRecipe(
+export function pickRecipe(
   catalog: Catalog,
   item: string,
   choices: Record<string, string> = {},
@@ -96,7 +96,7 @@ function pickRecipe(
   return candidates.find((r) => r.key === item) ?? candidates[0] ?? all[0]
 }
 
-function pickMachine(
+export function pickMachine(
   catalog: Catalog,
   recipe: Recipe,
   overrides: Record<string, string> = {},
@@ -119,6 +119,44 @@ function pickMachine(
   const candidates = catalog.machinesByCategory.get(recipe.category) ?? []
   if (candidates.length === 0) return undefined
   return [...candidates].sort((a, b) => b.craftingSpeed - a.craftingSpeed)[0]
+}
+
+/**
+ * Full sorted candidate list for a UI machine picker. Mirrors `pickMachine`'s
+ * precedence so the "selected" element is always index 0:
+ *   1. Per-recipe override (if present and known to the catalog) goes first.
+ *   2. Per-category default (if present) goes next.
+ *   3. Remaining category machines sorted by craftingSpeed descending.
+ * No duplicates: a machine that's already been promoted to the head isn't
+ * repeated in the tail.
+ */
+export function pickMachineCandidates(
+  catalog: Catalog,
+  recipe: Recipe,
+  overrides: Record<string, string> = {},
+  categoryDefaults: Record<string, string> = {},
+): Machine[] {
+  const all = catalog.machinesByCategory.get(recipe.category) ?? []
+  const sorted = [...all].sort((a, b) => b.craftingSpeed - a.craftingSpeed)
+  const result: Machine[] = []
+  const seen = new Set<string>()
+  const push = (m: Machine | undefined) => {
+    if (!m || seen.has(m.key)) return
+    seen.add(m.key)
+    result.push(m)
+  }
+  const overrideKey = overrides[recipe.key]
+  if (overrideKey) {
+    const m = catalog.machines.get(overrideKey)
+    if (m) push(m)
+  }
+  const categoryKey = categoryDefaults[recipe.category]
+  if (categoryKey) {
+    const m = catalog.machines.get(categoryKey)
+    if (m && m.craftingCategories.has(recipe.category)) push(m)
+  }
+  for (const m of sorted) push(m)
+  return result
 }
 
 export function expand(

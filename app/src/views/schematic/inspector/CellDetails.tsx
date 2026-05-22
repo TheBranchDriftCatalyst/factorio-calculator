@@ -10,6 +10,7 @@ import type { Cell, CellPort } from "../../../blueprint/types"
 import { fmtPct, fmtRateUnit, type RateUnit } from "../../../util/format"
 import { laneUtilization, type BeltTier } from "../../../blueprint/util/utilization"
 import { ItemIcon } from "../../../components/Icon"
+import { pickMachineCandidates } from "../../../solver/expand"
 
 interface Props {
   cell: Cell
@@ -23,6 +24,11 @@ interface Props {
   // beltTier, beltOverrides) flow in separately and don't touch it.
   machineOverrides: Record<string, string>
   setMachineOverrides: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  /**
+   * Per-category default machine. Influences which entry shows up first in
+   * the compatible-machines list (and what the "default (auto)" pick means).
+   */
+  machineCategoryDefaults?: Record<string, string>
 }
 
 export function CellDetails({
@@ -34,20 +40,26 @@ export function CellDetails({
   catalog,
   machineOverrides,
   setMachineOverrides,
+  machineCategoryDefaults,
 }: Props) {
   const recipe = catalog.recipes.get(cell.recipeKey)
   const compatibleMachines = useMemo(() => {
     if (!recipe) return []
-    const list = catalog.machinesByCategory.get(recipe.category) ?? []
-    return [...list].sort((a, b) => b.craftingSpeed - a.craftingSpeed)
-  }, [catalog, recipe])
+    return pickMachineCandidates(
+      catalog,
+      recipe,
+      machineOverrides,
+      machineCategoryDefaults ?? {},
+    )
+  }, [catalog, recipe, machineOverrides, machineCategoryDefaults])
   const overrideKey = machineOverrides[cell.recipeKey]
   // useId so multiple CellDetails (e.g. multi-select rendered side-by-side)
   // don't produce duplicate label-for ids.
   const machineSelectId = useId()
 
   // Effective machine for this cell — override or the solver's default
-  // (fastest in the recipe's category).
+  // (per the same precedence chain pickMachineCandidates encodes: index 0
+  // is the chosen pick).
   const machine = useMemo(() => {
     if (overrideKey) return catalog.machines.get(overrideKey)
     return compatibleMachines[0]

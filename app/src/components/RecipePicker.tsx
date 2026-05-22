@@ -6,7 +6,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import { ChevronsUpDown, Check } from "lucide-react"
-import type { Catalog, Machine, Recipe } from "../factorio"
+import type { Catalog, Recipe } from "../factorio"
+import { pickMachine } from "../solver/expand"
 import { ItemIcon } from "./Icon"
 
 interface Props {
@@ -187,10 +188,11 @@ function RecipeCard({
     )
   }
 
-  // Fastest machine in the recipe's category — informative hint.
-  const machine: Machine | undefined = [
-    ...(catalog.machinesByCategory.get(recipe.category) ?? []),
-  ].sort((a, b) => b.craftingSpeed - a.craftingSpeed)[0]
+  // Solver-default machine for the recipe — informative hint. No
+  // overrides/categoryDefaults at this site: the picker is purely a recipe
+  // chooser, so the machine column should show the same default the solver
+  // would pick absent any user customisation.
+  const machine = pickMachine(catalog, recipe, {}, {})
 
   return (
     <button

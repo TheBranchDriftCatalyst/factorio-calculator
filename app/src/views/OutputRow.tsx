@@ -1,43 +1,37 @@
 import { useMemo } from "react"
 import { Button } from "@thebranchdriftcatalyst/catalyst-ui/ui/button"
 import { Input } from "@thebranchdriftcatalyst/catalyst-ui/ui/input"
-import type { Catalog, Machine, Recipe } from "../factorio"
+import type { Catalog } from "../factorio"
 import { ItemCombobox } from "../components/ItemCombobox"
 import { RecipePicker } from "../components/RecipePicker"
 import { RATE_UNIT_MULT, type RateUnit } from "../util/format"
+import { pickRecipe, pickMachine, isRecyclingRecipe } from "../solver/expand"
 
 export type OutputMode = "rate" | "machines"
 
-// Mirror solver picks so the UI's machine-count maths line up with the actual
-// solver chain. Out of solver concern: solver still sees an items/sec target.
-function pickRecipe(catalog: Catalog, item: string): Recipe | undefined {
-  const candidates = catalog.recipesByProduct.get(item) ?? []
-  return candidates.find((r) => r.key === item) ?? candidates[0]
-}
-
-function pickMachine(catalog: Catalog, recipe: Recipe): Machine | undefined {
-  const candidates = catalog.machinesByCategory.get(recipe.category) ?? []
-  if (candidates.length === 0) return undefined
-  return [...candidates].sort((a, b) => b.craftingSpeed - a.craftingSpeed)[0]
-}
-
 /**
- * items/sec produced by `n` of the fastest machine running the primary recipe
- * for `item`. Returns undefined when no recipe/machine is available so callers
- * can keep the previous rate untouched.
+ * items/sec produced by `n` of the solver-default machine running the primary
+ * recipe for `item`. Mirrors solver picks (including recycling-recipe exclusion
+ * and per-recipe / per-category overrides) AND factors in the machine's
+ * built-in prodBonus, so the UI's machine-count maths match what the solver
+ * actually builds. Returns undefined when no recipe/machine is available so
+ * callers can keep the previous rate untouched.
  */
 export function machinesToRate(
   catalog: Catalog,
   item: string,
   n: number,
 ): number | undefined {
-  const recipe = pickRecipe(catalog, item)
+  const recipe = pickRecipe(catalog, item, {})
   if (!recipe) return undefined
-  const machine = pickMachine(catalog, recipe)
+  const machine = pickMachine(catalog, recipe, {}, {})
   if (!machine) return undefined
   const product = recipe.products.find((p) => p.item === item)
   if (!product || product.amount === 0 || recipe.time === 0) return undefined
-  return n * (product.amount / recipe.time) * machine.craftingSpeed
+  // Match expand.ts: effective per-craft output = amount × (1 + prodBonus).
+  // Without this, EM-plant / foundry recipes under-report items/sec by 1.5×.
+  const prodMult = 1 + (machine.prodBonus ?? 0)
+  return n * ((product.amount * prodMult) / recipe.time) * machine.craftingSpeed
 }
 
 interface Props {
@@ -89,10 +83,9 @@ export function OutputRow({
   // excluded (they're the inverse of a normal recipe and would create a
   // loop in the solver if picked).
   const recipeOptions = useMemo(() => {
-    const candidates = (catalog.recipesByProduct.get(item) ?? []).filter(
-      (r) => r.category !== "recycling" && !r.key.endsWith("-recycling"),
+    return (catalog.recipesByProduct.get(item) ?? []).filter(
+      (r) => !isRecyclingRecipe(r),
     )
-    return candidates
   }, [catalog, item])
 
   // Reconcile the canonical rate when the item changes in machines mode.
@@ -114,12 +107,13 @@ export function OutputRow({
       // rate → machines: derive a sensible initial machine count from current
       // rate. Round up to the nearest whole machine (factories don't run
       // fractional builders). Fall back to 1 if recipe/machine missing.
-      const recipe = pickRecipe(catalog, item)
-      const machine = recipe ? pickMachine(catalog, recipe) : undefined
+      const recipe = pickRecipe(catalog, item, {})
+      const machine = recipe ? pickMachine(catalog, recipe, {}, {}) : undefined
       const product = recipe?.products.find((p) => p.item === item)
       let count = 1
       if (recipe && machine && product && product.amount > 0) {
-        const perMachine = (product.amount / recipe.time) * machine.craftingSpeed
+        const prodMult = 1 + (machine.prodBonus ?? 0)
+        const perMachine = ((product.amount * prodMult) / recipe.time) * machine.craftingSpeed
         count = Math.max(1, Math.ceil(rate / perMachine))
       }
       const nextRate = machinesToRate(catalog, item, count) ?? rate
