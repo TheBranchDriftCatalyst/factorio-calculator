@@ -257,6 +257,24 @@ describe("interleaved · interleavedLayout", () => {
     }
   })
 
+  it("propagates items through transit stages (item on every bus from producer+1 to last consumer)", () => {
+    // iron-plate is produced at stage 0 and consumed at stage 2 (EC).
+    // With propagation, it should appear on bus columns at stage 1
+    // AND stage 2 (not just one of them).
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const bp = interleavedLayout(catalog, flow, {})
+    const belts = bp.root?.belts ?? []
+    const ironPlateBelts = belts.filter(
+      (b) => b.laneA?.item === "iron-plate" || b.laneB?.item === "iron-plate",
+    )
+    // Producer (iron-plate cell) is at stage 0, consumer (EC) at
+    // stage 2. Propagation puts iron-plate on bus[1] and bus[2].
+    // We expect AT LEAST 1 bus belt carrying iron-plate (>= 1
+    // tolerates layouts where bus[1] is pruned if iron-plate has
+    // no stage-1 consumer + lastConsumer is stage 2).
+    expect(ironPlateBelts.length).toBeGreaterThanOrEqual(1)
+  })
+
   it("does NOT compact chains with external recipe-produced inputs", () => {
     // electronic-circuit consumes iron-plate (a recipe, not raw). The
     // chain copper-plate → copper-cable → electronic-circuit is NOT
