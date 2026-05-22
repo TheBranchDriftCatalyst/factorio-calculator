@@ -18,13 +18,14 @@ import type { LayoutConfig } from "../../views/schematic/SchematicConfig"
 import type { Blueprint } from "../types"
 import { busLayout } from "./busLayout"
 import { autoBusLayout } from "./autoBus"
+import { cspLayout } from "./csp"
 
 /**
  * Stable string id for a layout algorithm. New impls get a new id added
  * to this union — keep them kebab-case + short. Persisted in
  * RenderConfig.layoutAlgorithm and round-trips through localStorage.
  */
-export type LayoutAlgorithmId = "bus-tree" | "auto-bus"
+export type LayoutAlgorithmId = "bus-tree" | "auto-bus" | "csp"
 
 export interface LayoutAlgorithm {
   id: LayoutAlgorithmId
@@ -79,10 +80,27 @@ const autoBusAlgorithm: LayoutAlgorithm = {
   run: (catalog, flow, opts) => autoBusLayout(catalog, flow, opts),
 }
 
+/**
+ * CSP solver: backtracks over per-cell template choices (single-block,
+ * manifold-6, manifold-12) with anneal as the inner loop over bus
+ * assignments. Joint optimization of templates + bus assignments;
+ * extends scoreBlueprint with width + waste penalties so the solver
+ * naturally trades column count against tap distance.
+ */
+const cspAlgorithm: LayoutAlgorithm = {
+  id: "csp",
+  label: "CSP (preview)",
+  description:
+    "Joint backtrack over factory templates (single-block / manifold-6 / manifold-12) with simulated annealing inner loop. Slowest but finds the tightest layouts.",
+  experimental: true,
+  run: (catalog, flow, opts) => cspLayout(catalog, flow, opts),
+}
+
 /** Registry keyed by id. Add new algorithms here. */
 export const LAYOUT_ALGORITHMS: Record<LayoutAlgorithmId, LayoutAlgorithm> = {
   "bus-tree": busTreeAlgorithm,
   "auto-bus": autoBusAlgorithm,
+  csp: cspAlgorithm,
 }
 
 /**
@@ -92,6 +110,7 @@ export const LAYOUT_ALGORITHMS: Record<LayoutAlgorithmId, LayoutAlgorithm> = {
 export const LAYOUT_ALGORITHM_LIST: ReadonlyArray<LayoutAlgorithm> = [
   busTreeAlgorithm,
   autoBusAlgorithm,
+  cspAlgorithm,
 ]
 
 export const DEFAULT_LAYOUT_ALGORITHM: LayoutAlgorithmId = "bus-tree"
