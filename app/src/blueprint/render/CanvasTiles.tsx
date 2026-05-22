@@ -966,10 +966,15 @@ export function CanvasTiles({
       const x0 = cell.x
       const x1 = cell.x + cell.w
       const yPx = px(head.dropY)
-      const alphaBg = focused ? 0.7 : dim ? 0.16 : 0.5
+      // Match drawSideBelt's alpha (0.9 / 0.18 / 0.62) so the side-belt
+      // entering the cell and the interior rail render at IDENTICAL
+      // brightness — they read as one continuous belt across the cell.x
+      // seam. Earlier this was 0.5 which made the rail dimmer than the
+      // side-belt, creating a visual break where the user expected
+      // "the bus continues into the factory."
+      const alphaBg = focused ? 0.9 : dim ? 0.18 : 0.62
       const alphaArrow = focused ? 0.95 : dim ? 0.3 : 0.7
-      // Match drawSideBelt's 2-px inset so the side-belt and the rail
-      // read as one continuous belt at the cell.x seam.
+      // Match drawSideBelt's 2-px inset.
       const railTop = yPx + 2
       const railH = TILE_PX - 4
       const railWidthPx = px(x1) - px(x0)

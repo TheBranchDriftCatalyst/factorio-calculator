@@ -384,15 +384,15 @@ export function App() {
           </h1>
         </div>
         {catalog && (
-          <div className="grid grid-cols-2 gap-6">
-            <section data-testid="inputs-section">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-w-0">
+            <section data-testid="inputs-section" className="min-w-0">
               <InputPicker
                 catalog={catalog}
                 inputs={inputs}
                 onChange={setInputs}
               />
             </section>
-            <section data-testid="outputs-section">
+            <section data-testid="outputs-section" className="min-w-0">
               <TargetPicker
                 catalog={catalog}
                 targets={targets}
@@ -433,7 +433,7 @@ export function App() {
         <Tabs
           value={tab}
           onValueChange={(v) => setTab(v as Tab)}
-          className="flex-1 min-h-0 flex flex-col"
+          className="flex-1 min-h-0 min-w-0 flex flex-col"
         >
           <div className="flex items-center mb-3 flex-shrink-0">
             <TabsList>
@@ -472,9 +472,9 @@ export function App() {
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="schematic" className="flex-1 min-h-0 mt-0 data-[state=active]:flex">
-            <Card interactive={false} className="flex-1 min-h-0 flex flex-col">
-              <CardContent className="p-3 flex-1 min-h-0 flex flex-col">
+          <TabsContent value="schematic" className="flex-1 min-h-0 min-w-0 mt-0 data-[state=active]:flex">
+            <Card interactive={false} className="flex-1 min-h-0 min-w-0 flex flex-col">
+              <CardContent className="p-3 flex-1 min-h-0 min-w-0 flex flex-col">
                 <Suspense fallback={<TabFallback />}>
                   <SchematicView
                     catalog={catalog}

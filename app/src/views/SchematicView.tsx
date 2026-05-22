@@ -262,8 +262,8 @@ export function SchematicView({
   // Sidebar resize handle + width state live in App now (rail is page-level).
 
   return (
-    <div className="flex flex-col gap-2 flex-1 min-h-0" data-testid="schematic-view">
-      <div className="flex items-center gap-3 text-xs flex-wrap flex-shrink-0">
+    <div className="flex flex-col gap-2 flex-1 min-h-0 min-w-0" data-testid="schematic-view">
+      <div className="flex items-center gap-3 text-xs flex-wrap flex-shrink-0 min-w-0">
         <span
           className="font-mono uppercase tracking-wider opacity-75"
           style={{ color: "rgba(186, 230, 253, 0.85)" }}
@@ -284,10 +284,10 @@ export function SchematicView({
         )}
         <Legend />
       </div>
-      <div className="flex gap-3 flex-1 min-h-0">
+      <div className="flex gap-3 flex-1 min-h-0 min-w-0">
         <div
           ref={viewportRef}
-          className="flex-1 overflow-hidden bg-card rounded border border-border relative"
+          className="flex-1 min-w-0 overflow-hidden bg-card rounded border border-border relative"
           style={(() => {
             // CSS-painted background grid: matches the canvas grid (same color
             // & tile size) and tracks the camera transform via modulo offset,
@@ -506,7 +506,7 @@ function BottleneckLegend() {
 
 function Legend() {
   return (
-    <div className="flex items-center gap-3 opacity-80">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 opacity-80 min-w-0">
       <LegendItem
         label="trunk belt"
         swatch={

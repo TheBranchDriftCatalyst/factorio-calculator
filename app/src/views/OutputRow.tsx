@@ -136,7 +136,7 @@ export function OutputRow({
 
   return (
     <li
-      className="flex items-center gap-2"
+      className="flex flex-wrap items-center gap-2 min-w-0"
       data-testid={`target-row-${index}`}
     >
       <ItemCombobox
