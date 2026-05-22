@@ -54,7 +54,11 @@ import { tileStrip } from "./manifold"
 import { packBeltsAt } from "./packing"
 
 const DEFAULT_OPTS: LayoutConfig = {
-  cellGapY: 2,
+  // Interleaved cells get a bigger gap than bus-tree's default (2) —
+  // each cell here is a manifold strip with feed/collect rails, so
+  // visually they need more breathing room to read cleanly. Bumped
+  // from 2 → 4 alongside the wider STAGE_GUTTER_TILES.
+  cellGapY: 4,
   beltGroupSize: 4,
   beltSpacing: 1,
   beltWidth: 2,
@@ -66,7 +70,11 @@ const DEFAULT_OPTS: LayoutConfig = {
   layoutEffort: 0,
 }
 
-const STAGE_GUTTER_TILES = 2
+// Inter-stage gutter — wider than bus-tree's 1-tile gutter because
+// it has to fit BOTH direct-connection mini-buses AND the next
+// stage's bus column. 5 tiles = 1 for direct routing margin + 2 for
+// direct mini-bus belts + 1 spacing + 1 buffer before bus.
+const STAGE_GUTTER_TILES = 5
 const TOP_MARGIN = 1
 const LEFT_MARGIN = 1
 
@@ -424,9 +432,14 @@ export function interleavedLayout(
   let maxY = TOP_MARGIN
   let totalMachines = 0
   let totalPowerW = 0
+  // Track each stage's bus origin so the direct-connection pass can
+  // route connectors through the PRE-BUS gutter (not through the bus
+  // belts themselves). Indexed by stage number.
+  const stageBusOriginX: number[] = []
 
   for (const plan of plans) {
     // 1. Pack this stage's input bus column with items first appearing here.
+    stageBusOriginX[plan.index] = cursorX
     const packed = packBeltsAt(
       plan.inputs,
       o.beltGroupSize,
@@ -507,17 +520,19 @@ export function interleavedLayout(
     if (resolved != null) ins.beltX = resolved
   }
 
-  // 5. Emit DirectConnection entries for the producer→consumer links.
-  // Each link gets a vertical segment between the producer (right
-  // side, E perimeter) and consumer (left side, W perimeter). We
-  // pick the connector's x as halfway between producer.x+w and
-  // consumer.x so it sits in the inter-stage gutter.
+  // 5. Emit DirectConnection entries — chains' producer→consumer links
+  // become a short vertical mini-bus in the inter-stage gutter BEFORE
+  // the consumer's bus column. Previously segX landed midway between
+  // producer right-edge and consumer left-edge, which often put the
+  // vertical segment ON TOP of the consumer stage's bus belts. Now we
+  // anchor segX to one tile before the consumer's bus origin so the
+  // connector lives in the pre-bus gutter, well clear of any belt
+  // column.
   const cellByKey = new Map(cells.map((c) => [c.recipeKey, c]))
   for (const [item, link] of directLinks) {
     const from = cellByKey.get(link.from)
     const to = cellByKey.get(link.to)
     if (!from || !to) continue
-    // Producer's E-edge slot: find the matching output port.
     const prodPort = from.outputs.find(
       (p) => p.item === item && p.scope.kind === "direct",
     )
@@ -525,8 +540,16 @@ export function interleavedLayout(
       (p) => p.item === item && p.scope.kind === "direct",
     )
     if (!prodPort || !consPort) continue
-    const segX = Math.max(from.x + from.w, Math.floor((from.x + from.w + to.x) / 2))
-    // Patch the port beltX values to the connector x.
+    // Consumer stage = producer stage + 1 (the only stage gap allowed).
+    const toStage = stages.get(link.to)
+    const consumerBusX = toStage != null ? stageBusOriginX[toStage] : undefined
+    // Slot the connector 2 tiles before the consumer's bus column
+    // (leaving the bus 2 clear tiles for its own gutter). Clamp to
+    // > from.x + from.w so we never run BEHIND the producer.
+    const segX =
+      consumerBusX != null
+        ? Math.max(from.x + from.w + 1, consumerBusX - 2)
+        : Math.max(from.x + from.w, Math.floor((from.x + from.w + to.x) / 2))
     prodPort.beltX = segX
     consPort.beltX = segX
     directConnections.push({
