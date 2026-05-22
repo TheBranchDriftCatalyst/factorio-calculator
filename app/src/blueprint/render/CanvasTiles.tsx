@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef } from "react"
 import * as d3 from "d3"
 import type { Catalog } from "../../factorio"
 import type { Blueprint, Cell } from "../types"
+import { flattenGroups } from "../types"
 import { fmt, fmtRateUnit, type RateUnit } from "../../util/format"
 import { laneUtilization, type BeltTier } from "../util/utilization"
 import { useSpriteAtlas } from "./SpriteAtlas"
@@ -308,8 +309,10 @@ export function CanvasTiles({
 
     // --- Belts: beltWidth tiles wide vertical columns.
     //     drawBeltColumn() handles solid (2-lane) vs pipe (single-fluid)
-    //     styling.
-    for (const belt of blueprint.belts) {
+    //     styling. Iterate ROOT belts only — group-local belts are drawn
+    //     inside `drawGroupsAndLocalBuses()`.
+    const rootBelts = blueprint.root?.belts ?? []
+    for (const belt of rootBelts) {
       const yStart = belt.y0 != null ? px(belt.y0) : 0
       const yEnd = belt.y1 != null ? px(belt.y1) : H
       drawBeltColumn(belt, yStart, yEnd)
@@ -413,7 +416,7 @@ export function CanvasTiles({
     }
 
     // --- Belt labels (per-lane, vertical, repeated down the belt). ---
-    for (const belt of blueprint.belts) {
+    for (const belt of rootBelts) {
       drawBeltLaneLabels(belt, belt.y0 ?? 0, belt.y1 ?? blueprint.height)
     }
 
@@ -689,7 +692,7 @@ export function CanvasTiles({
       ctx.imageSmoothingEnabled = false
     }
     function drawGroupsAndLocalBuses() {
-      for (const g of blueprint.groups) {
+      for (const g of flattenGroups(blueprint.root)) {
         // Group frame
         ctx.strokeStyle = "rgba(168, 85, 247, 0.6)"
         ctx.fillStyle = "rgba(168, 85, 247, 0.04)"

@@ -10,9 +10,10 @@
 //     producer is ALWAYS rendered above its consumers (fixes the
 //     "items at end appear used at upper levels" bug).
 //
-// The tree is the source of truth. Flat `cells[]` / `inserters[]` /
-// `groups[]` arrays are derived from it so existing flat-data consumers
-// (renderer, tests, etc.) keep working without modification.
+// The BusNode tree is the SINGLE source of truth for belts and groups.
+// `Blueprint.cells[]` / `inserters[]` / `directConnections[]` remain flat
+// because they're naturally flat (no nesting); for a flat belt / group view
+// callers use the `walkBelts` / `flattenGroups` helpers from `../types`.
 
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
@@ -22,7 +23,6 @@ import type {
   BusLane,
   BusNode,
   Cell,
-  CellGroup,
   CellPort,
   DirectConnection,
   Edge,
@@ -256,8 +256,6 @@ export function busLayout(catalog: Catalog, flow: FlowGraph, opts: Opts = {}): B
       beltWidth: o.beltWidth,
       busWidth: 0,
       gutterX: -1,
-      belts: [],
-      groups: [],
       root: null,
       cells: [],
       inserters: [],
@@ -352,9 +350,6 @@ export function busLayout(catalog: Catalog, flow: FlowGraph, opts: Opts = {}): B
   // space and makes the schematic look messier than it is.
   truncateBelts(root, ctx, finalOutputItems)
 
-  // Derive backwards-compat flat arrays from the tree.
-  const flatGroups: CellGroup[] = root.children.map(busNodeToCellGroup)
-
   // Blueprint width must include EVERYTHING — cell extents, direct
   // connection columns, AND the right-bus columns packed after cells.
   // Without this, right-bus belts at x > contentRight get clipped by the
@@ -372,8 +367,6 @@ export function busLayout(catalog: Catalog, flow: FlowGraph, opts: Opts = {}): B
     beltWidth: o.beltWidth,
     busWidth: root.gutterX >= 0 ? root.gutterX + 1 : 0,
     gutterX: root.gutterX,
-    belts: root.belts,
-    groups: flatGroups,
     root,
     cells: ctx.cells,
     inserters: ctx.inserters,
@@ -1023,29 +1016,6 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
     }
   }
   return cell
-}
-
-/** Flatten a depth-1 BusNode child into the legacy CellGroup shape. */
-function busNodeToCellGroup(n: BusNode): CellGroup {
-  return {
-    id: n.id,
-    x: n.x,
-    y: n.y,
-    w: n.w,
-    h: n.h,
-    cellKeys: collectCellKeys(n),
-    localBelts: n.belts,
-    localGutterX: n.gutterX,
-    localItems: n.scopeItems,
-    totalMachines: n.totalMachines,
-    totalPowerW: n.totalPowerW,
-  }
-}
-
-function collectCellKeys(n: BusNode): string[] {
-  const out: string[] = [...n.cellKeys]
-  for (const child of n.children) out.push(...collectCellKeys(child))
-  return out
 }
 
 /**

@@ -2,7 +2,14 @@ import { describe, it, expect } from "vitest"
 import { loadCatalog } from "../../src/factorio"
 import { expand } from "../../src/solver/expand"
 import { busLayout } from "../../src/blueprint/layout/busLayout"
+import { flattenGroups } from "../../src/blueprint/types"
 import { miniDataset } from "../fixtures/mini-dataset"
+
+// Local helpers — the Blueprint shape no longer exposes flat `belts[]` /
+// `groups[]` arrays (single source of truth is the BusNode tree). Tests
+// derive flat views via these helpers so assertions stay readable.
+const trunkBelts = (bp: ReturnType<typeof busLayout>) => bp.root?.belts ?? []
+const groups = (bp: ReturnType<typeof busLayout>) => flattenGroups(bp.root)
 
 const catalog = loadCatalog(miniDataset)
 
@@ -36,7 +43,7 @@ describe("busLayout (Phase 1.A)", () => {
   })
 
   it("cells in the same group never overlap on the y-axis", () => {
-    for (const g of blueprint.groups) {
+    for (const g of groups(blueprint)) {
       const members = blueprint.cells.filter((c) => g.cellKeys.includes(c.recipeKey))
       const sorted = [...members].sort((a, b) => a.y - b.y)
       for (let i = 1; i < sorted.length; i++) {
@@ -53,12 +60,12 @@ describe("busLayout (Phase 1.A)", () => {
     )
     const flowItems = new Set(interiorEdges.map((e) => e.item))
     const trunkItems = new Set<string>()
-    for (const b of blueprint.belts) {
+    for (const b of trunkBelts(blueprint)) {
       if (b.laneA) trunkItems.add(b.laneA.item)
       if (b.laneB) trunkItems.add(b.laneB.item)
     }
     const localItems = new Set<string>()
-    for (const g of blueprint.groups) {
+    for (const g of groups(blueprint)) {
       for (const b of g.localBelts) {
         if (b.laneA) localItems.add(b.laneA.item)
         if (b.laneB) localItems.add(b.laneB.item)
@@ -71,9 +78,9 @@ describe("busLayout (Phase 1.A)", () => {
   })
 
   it("ports reference real belt columns (trunk, local, or direct-connection)", () => {
-    const trunkX = new Set(blueprint.belts.map((b) => b.x))
+    const trunkX = new Set(trunkBelts(blueprint).map((b) => b.x))
     const localX = new Set<number>()
-    for (const g of blueprint.groups) for (const b of g.localBelts) localX.add(b.x)
+    for (const g of groups(blueprint)) for (const b of g.localBelts) localX.add(b.x)
     const directX = new Set(blueprint.directConnections.map((dc) => dc.x))
     for (const c of blueprint.cells) {
       for (const p of c.inputs) {
@@ -119,7 +126,7 @@ describe("busLayout (Phase 1.A)", () => {
   })
 
   it("pairs up to two items per belt", () => {
-    for (const b of blueprint.belts) {
+    for (const b of trunkBelts(blueprint)) {
       expect(b.laneA).toBeDefined() // every belt must have at least one item
       // laneB optional (odd item counts leave the last belt half-empty)
     }
@@ -161,9 +168,9 @@ describe("busLayout — empty input", () => {
     const flow = expand({ catalog, targets: [] })
     const blueprint = busLayout(catalog, flow)
     expect(blueprint.cells.length).toBe(0)
-    expect(blueprint.belts.length).toBe(0)
+    expect(trunkBelts(blueprint).length).toBe(0)
     expect(blueprint.inserters.length).toBe(0)
-    expect(blueprint.groups.length).toBe(0)
+    expect(groups(blueprint).length).toBe(0)
   })
 })
 
@@ -172,7 +179,7 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
     const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const blueprint = busLayout(catalog, flow)
     const trunkItems = new Set<string>()
-    for (const b of blueprint.belts) {
+    for (const b of trunkBelts(blueprint)) {
       if (b.laneA) trunkItems.add(b.laneA.item)
       if (b.laneB) trunkItems.add(b.laneB.item)
     }
@@ -181,15 +188,16 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
     expect(trunkItems.has("copper-cable")).toBe(false)
     // 1-producer + 1-consumer intermediates now become DIRECT connections,
     // not full local-bus belt columns. We expect at least one direct link.
-    expect(blueprint.groups.length).toBe(1)
+    expect(groups(blueprint).length).toBe(1)
     expect(blueprint.directConnections.length).toBeGreaterThan(0)
   })
 
   it("clusters chained recipes into a single group", () => {
     const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const blueprint = busLayout(catalog, flow)
-    expect(blueprint.groups.length).toBe(1)
-    expect(blueprint.groups[0].cellKeys.length).toBe(blueprint.cells.length)
+    const gs = groups(blueprint)
+    expect(gs.length).toBe(1)
+    expect(gs[0].cellKeys.length).toBe(blueprint.cells.length)
   })
 
   it("trunk belts only carry items with multiple downstream consumers", () => {
@@ -201,7 +209,7 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
       ],
     })
     const blueprint = busLayout(catalog, flow)
-    for (const b of blueprint.belts) {
+    for (const b of trunkBelts(blueprint)) {
       const items = [b.laneA?.item, b.laneB?.item].filter(Boolean) as string[]
       // Every trunk item must have at least one CellPort marked "trunk".
       for (const item of items) {
@@ -216,7 +224,7 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
   it("group bounding boxes contain all member cells", () => {
     const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const blueprint = busLayout(catalog, flow)
-    for (const g of blueprint.groups) {
+    for (const g of groups(blueprint)) {
       const members = blueprint.cells.filter((c) => g.cellKeys.includes(c.recipeKey))
       for (const c of members) {
         expect(c.x).toBeGreaterThanOrEqual(g.x)
@@ -247,8 +255,9 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
       ],
     })
     const blueprint = busLayout(catalog, flow)
-    if (blueprint.groups.length < 2) return
-    const sorted = [...blueprint.groups].sort((a, b) => a.y - b.y)
+    const gs = groups(blueprint)
+    if (gs.length < 2) return
+    const sorted = [...gs].sort((a, b) => a.y - b.y)
     for (let i = 1; i < sorted.length; i++) {
       // Strictly below the previous group's bottom edge
       expect(sorted[i].y).toBeGreaterThanOrEqual(sorted[i - 1].y + sorted[i - 1].h - 1)

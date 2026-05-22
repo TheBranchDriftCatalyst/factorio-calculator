@@ -5,6 +5,7 @@ import type { FlowGraph } from "../solver/expand"
 import { busLayout } from "../blueprint/layout/busLayout"
 import { CanvasTiles } from "../blueprint/render/CanvasTiles"
 import type { Cell } from "../blueprint/types"
+import { flattenGroups, walkBusNodes } from "../blueprint/types"
 import { useCamera } from "../hooks/useCamera"
 import { useSelection } from "../hooks/useSelection"
 import { useKeymap } from "../hooks/useKeymap"
@@ -137,6 +138,11 @@ export function SchematicView({
     return m
   }, [blueprint])
 
+  // Top-of-view counters: groups (root-children) + trunk belts (root.belts).
+  // Derived from the bus tree since the flat mirrors are gone.
+  const groupCount = useMemo(() => flattenGroups(blueprint.root).length, [blueprint])
+  const trunkBeltCount = useMemo(() => blueprint.root?.belts.length ?? 0, [blueprint])
+
   // Test hook (dev + test builds only). Lets E2E specs ask
   // window.__schematic.cellAt("electronic-circuit") for the page-space
   // center of a known cell, eliminating canvas-fuzz from selection tests.
@@ -164,52 +170,15 @@ export function SchematicView({
         return computeCenter(c.x, c.y, c.w, c.h)
       },
       beltAt(item: string) {
-        // Walk EVERY belt across the whole bus tree (trunk + sub-buses)
-        // — items used by only one consumer end up in a sub-bus, not on
-        // the top-level `blueprint.belts`. Without this, tests for those
-        // items always returned null.
-        const candidates: Array<{
-          x: number
-          y0: number
-          y1: number
-          laneA?: { item: string }
-          laneB?: { item: string }
-        }> = []
-        const visit = (
-          belts:
-            | Array<{
-                x: number
-                y0?: number
-                y1?: number
-                laneA?: { item: string }
-                laneB?: { item: string }
-              }>
-            | undefined,
-          fallbackY0: number,
-          fallbackY1: number,
-        ) => {
-          if (!belts) return
-          for (const b of belts) {
-            candidates.push({
-              x: b.x,
-              y0: b.y0 ?? fallbackY0,
-              y1: b.y1 ?? fallbackY1,
-              laneA: b.laneA,
-              laneB: b.laneB,
-            })
-          }
-        }
-        const walkNode = (n: { y: number; h: number; belts?: typeof blueprint.belts; children?: unknown[] } | null) => {
-          if (!n) return
-          visit(n.belts, n.y, n.y + n.h)
-          for (const child of (n.children ?? []) as Array<typeof n>) walkNode(child)
-        }
-        // Top-level flat list (legacy) + recursive tree.
-        visit(blueprint.belts, 0, blueprint.height)
-        walkNode(blueprint.root as never)
-        for (const b of candidates) {
-          if (b.laneA?.item === item || b.laneB?.item === item) {
-            return computeCenter(b.x, b.y0, blueprint.beltWidth, b.y1 - b.y0)
+        // Walk EVERY belt across the whole bus tree (trunk + sub-buses) —
+        // items used by only one consumer live in a sub-bus, so a single
+        // root-belts pass would miss them.
+        for (const n of walkBusNodes(blueprint.root)) {
+          for (const b of n.belts) {
+            if (b.laneA?.item !== item && b.laneB?.item !== item) continue
+            const y0 = b.y0 ?? n.y
+            const y1 = b.y1 ?? n.y + n.h
+            return computeCenter(b.x, y0, blueprint.beltWidth, y1 - y0)
           }
         }
         return null
@@ -289,8 +258,8 @@ export function SchematicView({
     <div className="flex flex-col gap-2 flex-1 min-h-0" data-testid="schematic-view">
       <div className="flex items-center gap-3 text-xs flex-wrap flex-shrink-0">
         <span className="opacity-60">
-          {blueprint.cells.length} cells · {blueprint.groups.length} group
-          {blueprint.groups.length === 1 ? "" : "s"} · {blueprint.belts.length} trunk belts ·{" "}
+          {blueprint.cells.length} cells · {groupCount} group
+          {groupCount === 1 ? "" : "s"} · {trunkBeltCount} trunk belts ·{" "}
           {blueprint.inserters.length} inserters · {blueprint.width}×{blueprint.height} tiles
         </span>
         {blueprint.unsupported.length > 0 && (

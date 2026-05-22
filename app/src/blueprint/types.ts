@@ -239,11 +239,11 @@ export interface Blueprint {
   busWidth: number
   /** trunk gutter absolute X. `-1` when there's no trunk bus. */
   gutterX: number
-  /** Main trunk-bus belts — only items with ≥2 downstream consumers. */
-  belts: BusBelt[]
-  /** Legacy flat list of groups (mirror of root.children for backwards-compat with tests/renderer). */
-  groups: CellGroup[]
-  /** Recursive bus-tree root. New code should walk this tree; flat `groups[]`/`belts[]` is derived from it. */
+  /**
+   * The bus tree. Single source of truth — every BusBelt and CellGroup
+   * lives somewhere in this tree. Use `walkBelts(root)` / `walkBusNodes(root)`
+   * / `flattenGroups(root)` from `./types` when you need a flat view.
+   */
   root: BusNode | null
   cells: Cell[]
   /** All inserters (trunk-gutter AND group-local-gutter), differentiated by `scope`. */
@@ -251,4 +251,56 @@ export interface Blueprint {
   /** 1:1 producer→consumer links rendered as short segments rather than full bus columns. */
   directConnections: DirectConnection[]
   unsupported: Array<{ recipeKey: string; reason: string }>
+}
+
+/** Walk every BusNode in the tree in DFS pre-order (root first, then children). */
+export function* walkBusNodes(root: BusNode | null): IterableIterator<BusNode> {
+  if (!root) return
+  const stack: BusNode[] = [root]
+  while (stack.length > 0) {
+    const n = stack.pop()!
+    yield n
+    // Push children in reverse so left-most child is visited first.
+    for (let i = n.children.length - 1; i >= 0; i--) stack.push(n.children[i])
+  }
+}
+
+/** Walk every BusBelt across the recursive bus tree (root + nested children). */
+export function* walkBelts(root: BusNode | null): IterableIterator<BusBelt> {
+  for (const n of walkBusNodes(root)) {
+    for (const b of n.belts) yield b
+  }
+}
+
+/**
+ * Flatten the bus tree into CellGroup-equivalent records for the legacy
+ * top-level "groups" view (root.children mapped to CellGroup shape). Each
+ * direct child of the root becomes one group; the group's `cellKeys`
+ * recursively collect every leaf cell underneath it.
+ */
+export function flattenGroups(root: BusNode | null): CellGroup[] {
+  if (!root) return []
+  return root.children.map(busNodeToCellGroup)
+}
+
+function busNodeToCellGroup(n: BusNode): CellGroup {
+  return {
+    id: n.id,
+    x: n.x,
+    y: n.y,
+    w: n.w,
+    h: n.h,
+    cellKeys: collectCellKeys(n),
+    localBelts: n.belts,
+    localGutterX: n.gutterX,
+    localItems: n.scopeItems,
+    totalMachines: n.totalMachines,
+    totalPowerW: n.totalPowerW,
+  }
+}
+
+function collectCellKeys(n: BusNode): string[] {
+  const out: string[] = [...n.cellKeys]
+  for (const child of n.children) out.push(...collectCellKeys(child))
+  return out
 }

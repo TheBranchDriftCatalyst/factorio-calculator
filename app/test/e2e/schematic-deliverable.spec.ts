@@ -27,17 +27,25 @@ test.describe("Schematic — delivery quality", () => {
 
     // Assert SEMANTIC layout, not button color. Walk the blueprint via the
     // test hook and confirm there's at least one belt whose x is to the
-    // RIGHT of the rightmost cell — that's the "split" signature.
+    // RIGHT of the rightmost cell — that's the "split" signature. The
+    // blueprint exposes a recursive bus tree (`root`); trunk belts live
+    // on the root node.
     const layout = await page.evaluate(() => {
       const hook = (
         window as unknown as {
-          __schematic?: { blueprint?: { belts?: Array<{ x: number }>; cells?: Array<{ x: number; w: number }> } }
+          __schematic?: {
+            blueprint?: {
+              root?: { belts?: Array<{ x: number }> } | null
+              cells?: Array<{ x: number; w: number }>
+            }
+          }
         }
       ).__schematic
       const bp = hook?.blueprint
-      if (!bp?.belts || !bp.cells || bp.cells.length === 0) return null
+      const belts = bp?.root?.belts
+      if (!belts || !bp?.cells || bp.cells.length === 0) return null
       const maxCellRight = Math.max(...bp.cells.map((c) => c.x + c.w))
-      const beltsRightOfCells = bp.belts.filter((b) => b.x >= maxCellRight).length
+      const beltsRightOfCells = belts.filter((b) => b.x >= maxCellRight).length
       return { maxCellRight, beltsRightOfCells }
     })
     expect(layout).not.toBeNull()
