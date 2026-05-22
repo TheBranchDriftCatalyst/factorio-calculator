@@ -813,7 +813,10 @@ export function CanvasTiles({
       // ×N machine-count badge, bottom-right of the strip (skip when N=1).
       // Anchor to the last machine in the strip so the badge floats on
       // the visible right edge rather than overlapping a single sprite.
-      if (cell.demanded > 1) {
+      // Suppressed when the strip is tiled: the "+N more" pill below
+      // covers that anchor, and the cell label already shows the total.
+      const hiddenForBadge = cell.demanded - cell.machines.length
+      if (cell.demanded > 1 && hiddenForBadge <= 0) {
         const m = cell.machines[cell.machines.length - 1]
         ctx.font = '700 11px "JetBrains Mono", ui-monospace, monospace'
         ctx.textBaseline = "alphabetic"
@@ -859,14 +862,17 @@ export function CanvasTiles({
           ctx.arc(dotsX, midY + i * dotR * 4, dotR, 0, Math.PI * 2)
           ctx.fill()
         }
-        // "+N more" pill, top-right of the cell.
+        // "+N more" pill — anchored to the bottom-left of the strip's
+        // last visible machine so it overlays the fade-out edge rather
+        // than the top input rail. Reads as "this strip continues."
+        const lastM = cell.machines[cell.machines.length - 1]
         ctx.font = '700 10px "JetBrains Mono", ui-monospace, monospace'
         ctx.textBaseline = "alphabetic"
         const pill = `+${fmt(hidden)} more`
         const pw = ctx.measureText(pill).width + 6
         const ph = 13
-        const px0 = px(cell.x + cell.w) - pw - 2
-        const py0 = px(cell.y) + 16
+        const px0 = px(lastM.x + lastM.w) - pw - 2
+        const py0 = px(lastM.y + lastM.h) - ph - 2
         ctx.fillStyle = "rgba(125, 211, 252, 0.9)"
         ctx.fillRect(px0, py0, pw, ph)
         ctx.fillStyle = "rgba(15, 23, 42, 0.95)"
@@ -885,14 +891,18 @@ export function CanvasTiles({
       ctx.strokeText(txt, px(cell.x), labelY)
       ctx.fillText(txt, px(cell.x), labelY)
 
-      // Throughput badge: total output rate (if anything goes to the bus)
+      // Throughput badge: total output rate (if anything goes to the bus).
+      // Anchored to the strip's first machine top — that's just below
+      // the input rail row for manifold cells, so the badge never
+      // overlaps the colored feed lane.
       const outRate = cell.outputs.reduce((s, p) => s + p.rate, 0)
       if (outRate > 0) {
         const badge = fmtRateUnit(outRate, rateUnit)
         ctx.font = '600 11px "JetBrains Mono", ui-monospace, monospace'
         const tw = ctx.measureText(badge).width + 6
+        const firstM = cell.machines[0]
         const bx = px(cell.x + cell.w) - tw - 2
-        const by = px(cell.y) + 2
+        const by = px(firstM.y) + 2
         ctx.fillStyle = "rgba(0, 252, 214, 0.85)"
         ctx.fillRect(bx, by, tw, 12)
         ctx.fillStyle = "rgba(0,0,0,0.95)"
@@ -942,27 +952,34 @@ export function CanvasTiles({
       const yPx = px(port.dropY)
       const alphaBg = focused ? 0.7 : dim ? 0.16 : 0.5
       const alphaArrow = focused ? 0.95 : dim ? 0.3 : 0.7
-      // Item-colored rail strip — slightly thinner than a side-belt so
-      // the machine sprites stay legible underneath at the edges.
+      // Match drawSideBelt's 2-px inset so the side-belt and the rail
+      // read as one continuous belt at the cell.x seam.
+      const railTop = yPx + 2
+      const railH = TILE_PX - 4
       ctx.fillStyle = itemColorFor(port.item, alphaBg)
-      ctx.fillRect(px(x0), yPx + 3, px(x1) - px(x0), TILE_PX - 6)
-      // Top/bottom borders for the belt-style read.
+      ctx.fillRect(px(x0), railTop, px(x1) - px(x0), railH)
       ctx.strokeStyle = `rgba(0,0,0,${dim ? 0.4 : 0.75})`
       ctx.lineWidth = 1
       ctx.beginPath()
-      ctx.moveTo(px(x0), yPx + 3 + 0.5)
-      ctx.lineTo(px(x1), yPx + 3 + 0.5)
-      ctx.moveTo(px(x0), yPx + TILE_PX - 3 - 0.5)
-      ctx.lineTo(px(x1), yPx + TILE_PX - 3 - 0.5)
+      ctx.moveTo(px(x0), railTop + 0.5)
+      ctx.lineTo(px(x1), railTop + 0.5)
+      ctx.moveTo(px(x0), railTop + railH - 0.5)
+      ctx.lineTo(px(x1), railTop + railH - 0.5)
       ctx.stroke()
-      // Direction arrows interspersed at each machine column so the rail
-      // reads as "belt flowing east" rather than a static band.
+      // Direction arrows — sample at intervals along the rail rather
+      // than once per machine. For a 12-machine strip this drops from
+      // 12 arrows to ~3, keeping the rail readable as a belt without
+      // turning into a row of triangles.
       const arrowDir = role === "input" || port.edge === "E" ? 1 : -1
       ctx.fillStyle = `rgba(0,0,0,${alphaArrow})`
-      for (const m of cell.machines) {
-        const cx = (m.x + m.w / 2) * TILE_PX
-        const cy = yPx + TILE_PX / 2
-        const tip = TILE_PX * 0.18
+      const railWidthPx = px(x1) - px(x0)
+      // Aim for one arrow per ~3 tiles of rail.
+      const arrowSpacingPx = Math.max(TILE_PX * 3, 30)
+      const arrowCount = Math.max(1, Math.floor(railWidthPx / arrowSpacingPx))
+      const cy = yPx + TILE_PX / 2
+      const tip = TILE_PX * 0.18
+      for (let i = 0; i < arrowCount; i++) {
+        const cx = px(x0) + ((i + 0.5) * railWidthPx) / arrowCount
         ctx.beginPath()
         ctx.moveTo(cx + arrowDir * tip, cy)
         ctx.lineTo(cx - arrowDir * tip * 0.55, cy - tip * 0.6)
@@ -970,24 +987,49 @@ export function CanvasTiles({
         ctx.closePath()
         ctx.fill()
       }
-      // Inserter taps at each machine column (skip the column the belt
-      // physically enters/exits from, since the side-belt itself shows
-      // that connection).
+      // Inserter taps — drawn only at the FIRST row of machines under
+      // the rail (rather than every column on every row). Skip the
+      // column the belt enters/exits from, since the side-belt is the
+      // connection there.
       ctx.fillStyle = itemColorFor(port.item, focused ? 1 : dim ? 0.4 : 0.85)
       ctx.strokeStyle = `rgba(0,0,0,${dim ? 0.5 : 0.85})`
       ctx.lineWidth = 1
+      const tapRadius = Math.max(1.2, TILE_PX * 0.1)
+      // Use the first machine's row to define which Y is the "top
+      // row" so the taps line up under the rail.
+      const topRowY = cell.machines[0].y
       for (let i = 0; i < cell.machines.length; i++) {
+        const m = cell.machines[i]
+        if (m.y !== topRowY) continue // skip lower rows; one tap-row is enough
         if (role === "input" && i === 0) continue
         if (role === "output" && port.edge === "E" && i === cell.machines.length - 1) continue
         if (role === "output" && port.edge === "W" && i === 0) continue
-        const m = cell.machines[i]
         const cx = (m.x + m.w / 2) * TILE_PX
-        const cy = yPx + TILE_PX / 2
-        const r = Math.max(1.5, TILE_PX * 0.13)
         ctx.beginPath()
-        ctx.arc(cx, cy, r, 0, Math.PI * 2)
+        ctx.arc(cx, cy, tapRadius, 0, Math.PI * 2)
         ctx.fill()
         ctx.stroke()
+      }
+      // Item icon embedded on the rail (left-anchored) so the user
+      // doesn't have to trace back to the trunk bus to know what's
+      // flowing. Skipped when the rail is too short to fit an icon.
+      if (atlas && railWidthPx >= TILE_PX * 2) {
+        const iconSize = Math.max(8, Math.floor(TILE_PX * 0.7))
+        const iconX = px(x0) + Math.max(2, TILE_PX * 0.15)
+        const iconY = cy - iconSize / 2
+        const prevSmoothing = ctx.imageSmoothingEnabled
+        ctx.imageSmoothingEnabled = true
+        ctx.globalAlpha = focused ? 1 : dim ? 0.45 : 0.92
+        atlas.drawItem(
+          ctx,
+          catalog.items.get(port.item),
+          iconX,
+          iconY,
+          iconSize,
+          iconSize,
+        )
+        ctx.globalAlpha = 1
+        ctx.imageSmoothingEnabled = prevSmoothing
       }
     }
 
