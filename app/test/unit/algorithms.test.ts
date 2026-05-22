@@ -66,9 +66,20 @@ describe("layout algorithm registry", () => {
     expect(out.cells.length).toBeGreaterThan(0)
   })
 
-  it("auto-bus algorithm exists and is marked experimental until the real impl lands", () => {
+  it("auto-bus algorithm exists and is marked experimental", () => {
     const auto = LAYOUT_ALGORITHMS["auto-bus"]
     expect(auto).toBeDefined()
     expect(auto.experimental).toBe(true)
+  })
+
+  it("auto-bus produces a valid Blueprint on the default fixture", () => {
+    // Mini-dataset is small (no heavy items above threshold), so auto-bus
+    // behaves identically to bus-tree here. We just verify it doesn't
+    // crash and produces a shaped Blueprint — the real visual divergence
+    // shows on the larger space-age fixture covered in E2E.
+    const out = runLayout("auto-bus", catalog, flow, {})
+    expect(out.cells.length).toBeGreaterThan(0)
+    expect(out.width).toBeGreaterThan(0)
+    expect(out.height).toBeGreaterThan(0)
   })
 })

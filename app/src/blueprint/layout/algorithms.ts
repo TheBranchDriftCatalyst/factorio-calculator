@@ -17,6 +17,7 @@ import type { FlowGraph } from "../../solver/expand"
 import type { LayoutConfig } from "../../views/schematic/SchematicConfig"
 import type { Blueprint } from "../types"
 import { busLayout } from "./busLayout"
+import { autoBusLayout } from "./autoBus"
 
 /**
  * Stable string id for a layout algorithm. New impls get a new id added
@@ -60,20 +61,22 @@ const busTreeAlgorithm: LayoutAlgorithm = {
 }
 
 /**
- * Placeholder for the auto-bus-splitting layout. Until the new
- * implementation lands, falls back to the bus-tree algorithm so the
- * picker doesn't break when a user selects it. Will be replaced with a
- * real impl in a follow-up commit (fbp-haq Phase 2).
+ * Auto-bus layout: a v0 strangler-fig successor that overrides
+ * user-supplied beltAssignments with computed ones. Heavy-consumer items
+ * are spread across parallel left-bus columns ("left" + "L2") based on
+ * a deterministic heuristic. See blueprint/layout/autoBus.ts.
+ *
+ * Experimental until the heuristic is tuned across a wider set of
+ * factories — once stable, this becomes the default and 'bus-tree' is
+ * retired.
  */
 const autoBusAlgorithm: LayoutAlgorithm = {
   id: "auto-bus",
   label: "Auto-bus (preview)",
   description:
-    "Algorithm decides how many parallel trunk belts each item earns based on consumer spread. No manual L#/R# assignment.",
+    "Algorithm decides bus assignments from consumer spread. Heavy-consumer items get spread across parallel left-bus columns automatically. No manual L#/R# pinning required.",
   experimental: true,
-  // TEMP: until the new impl lands, run the legacy algorithm so the UI
-  // is wired end-to-end. Swap to the new impl in a follow-up.
-  run: (catalog, flow, opts) => busLayout(catalog, flow, opts),
+  run: (catalog, flow, opts) => autoBusLayout(catalog, flow, opts),
 }
 
 /** Registry keyed by id. Add new algorithms here. */
