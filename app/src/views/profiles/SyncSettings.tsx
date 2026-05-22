@@ -16,6 +16,31 @@ import { useState } from "react"
 import { GistKVStore } from "../../storage/gist"
 import { useStorage, type StorageSettings } from "../../storage"
 
+/**
+ * Accepts either:
+ *   • a raw gist id (20+ hex chars): "1a2b3c..."
+ *   • a gist URL: "https://gist.github.com/{user}/{id}" or
+ *                 "https://gist.github.com/{id}"
+ * Returns the normalized hex id, or null if the input doesn't look
+ * like either form (so we can show a friendly validation error
+ * BEFORE hitting the GitHub API and getting a 404).
+ */
+function normalizeGistId(raw: string): string | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  // URL form: pull the last path segment that looks like a hex id.
+  if (trimmed.includes("/")) {
+    const parts = trimmed.split(/[\/?#]/).filter(Boolean)
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (/^[0-9a-fA-F]{20,}$/.test(parts[i])) return parts[i].toLowerCase()
+    }
+    return null
+  }
+  // Raw form: must be hex.
+  if (/^[0-9a-fA-F]{20,}$/.test(trimmed)) return trimmed.toLowerCase()
+  return null
+}
+
 const AMBER = "#FFB000"
 const AMBER_DIM = "rgba(255,176,0,0.35)"
 const AMBER_FAINT = "rgba(255,176,0,0.18)"
@@ -61,6 +86,18 @@ export function SyncSettings() {
   const [status, setStatus] = useState<{ kind: "info" | "ok" | "err"; msg: string } | null>(null)
   const [testing, setTesting] = useState(false)
 
+  // Resolve the draft gist id. Returns:
+  //   { ok: true, id: undefined } — blank input (auto-create on save)
+  //   { ok: true, id: "abc..." }  — normalized to lowercase hex
+  //   { ok: false }               — non-empty but didn't parse
+  const resolveGistId = (): { ok: true; id: string | undefined } | { ok: false } => {
+    const raw = draftGistId.trim()
+    if (!raw) return { ok: true, id: undefined }
+    const norm = normalizeGistId(raw)
+    if (!norm) return { ok: false }
+    return { ok: true, id: norm }
+  }
+
   const onTest = async () => {
     if (draftBackend !== "gist") {
       setStatus({ kind: "info", msg: "Local backend needs no test." })
@@ -70,12 +107,20 @@ export function SyncSettings() {
       setStatus({ kind: "err", msg: "Enter a PAT first." })
       return
     }
+    const idResult = resolveGistId()
+    if (!idResult.ok) {
+      setStatus({
+        kind: "err",
+        msg: "Gist id looks invalid — paste the hex id or the gist URL (leave blank to auto-create).",
+      })
+      return
+    }
     setTesting(true)
     setStatus({ kind: "info", msg: "Testing…" })
     try {
       const store = new GistKVStore({
         token: draftToken.trim(),
-        gistId: draftGistId.trim() || undefined,
+        gistId: idResult.id,
       })
       const err = await store.testConnection()
       if (err) setStatus({ kind: "err", msg: err })
@@ -95,13 +140,25 @@ export function SyncSettings() {
       setStatus({ kind: "err", msg: "Token required for Gist sync." })
       return
     }
+    const idResult = resolveGistId()
+    if (!idResult.ok) {
+      setStatus({
+        kind: "err",
+        msg: "Gist id looks invalid — paste the hex id or the gist URL (leave blank to auto-create).",
+      })
+      return
+    }
     setSettings({
       backend: "gist",
       gist: {
         token: draftToken.trim(),
-        gistId: draftGistId.trim() || undefined,
+        gistId: idResult.id,
       },
     })
+    // Normalize the field display so a URL paste shows as the bare id.
+    if (idResult.id && idResult.id !== draftGistId.trim()) {
+      setDraftGistId(idResult.id)
+    }
     // Pull remote → local so existing remote profiles appear right away.
     await refreshFromRemote("fbp.profiles")
     setStatus({ kind: "ok", msg: "Saved. Synced from remote." })
@@ -115,8 +172,13 @@ export function SyncSettings() {
         : LABEL
 
   return (
-    <div
+    <form
       data-testid="sync-settings"
+      autoComplete="off"
+      onSubmit={(e) => {
+        e.preventDefault()
+        onSave()
+      }}
       style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 11 }}
     >
       <div
@@ -164,15 +226,22 @@ export function SyncSettings() {
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <span style={{ color: LABEL, fontSize: 10 }}>
-              Gist id (blank = auto-create)
+              Gist id or URL (blank = auto-create)
             </span>
             <input
               data-testid="sync-gistid-input"
+              autoComplete="off"
               value={draftGistId}
               onChange={(e) => setDraftGistId(e.target.value)}
-              placeholder="optional"
+              placeholder="leave blank — auto-created on first save"
               style={FIELD_STYLE}
             />
+            <span style={{ color: LABEL, fontSize: 9, lineHeight: 1.4 }}>
+              Gist ids are hex hashes (e.g. <code>1a2b3c4d…</code>), not
+              names. Paste the gist URL and we'll extract the id; or
+              just leave it blank — we'll create a private gist for you
+              on first save and remember the id automatically.
+            </span>
           </label>
           <div style={{ color: LABEL, fontSize: 10, lineHeight: 1.4 }}>
             Token is stored in localStorage on this device. Create one at{" "}
@@ -200,8 +269,7 @@ export function SyncSettings() {
           Test
         </button>
         <button
-          type="button"
-          onClick={onSave}
+          type="submit"
           style={BUTTON_STYLE}
           data-testid="sync-save"
         >
@@ -217,6 +285,6 @@ export function SyncSettings() {
           {status.msg}
         </div>
       )}
-    </div>
+    </form>
   )
 }
