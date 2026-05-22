@@ -540,7 +540,6 @@ export function CanvasTiles({
       for (const port of cell.outputs) {
         if (port.scope.kind === "direct") continue
         if (port.edge === "E") {
-          // Right-bus output — side-belt flows east from cell to belt.
           drawSideBelt(port.dropY, cellRightCol, port.beltX, port.item, "east", focused)
         } else {
           const beltEntryX = port.beltX + BELT_W_TILES
@@ -811,9 +810,11 @@ export function CanvasTiles({
         }
       }
 
-      // ×N machine-count badge, bottom-right of the sprite (skip when N=1).
+      // ×N machine-count badge, bottom-right of the strip (skip when N=1).
+      // Anchor to the last machine in the strip so the badge floats on
+      // the visible right edge rather than overlapping a single sprite.
       if (cell.demanded > 1) {
-        const m = cell.machines[0]
+        const m = cell.machines[cell.machines.length - 1]
         ctx.font = '700 11px "JetBrains Mono", ui-monospace, monospace'
         ctx.textBaseline = "alphabetic"
         const txt = `×${fmt(cell.demanded)}`
@@ -828,6 +829,48 @@ export function CanvasTiles({
         ctx.strokeRect(bx + 0.5, by + 0.5, tw - 1, bh - 1)
         ctx.fillStyle = "rgba(0, 252, 214, 1)"
         ctx.fillText(txt, bx + 3, by + bh - 3)
+      }
+
+      // Tiled-strip indicator: when machines.length < demanded the strip
+      // is showing a representative sample (e.g. 12 machines for a 50-
+      // machine factory). Fade the rightmost column + add a "+N more"
+      // pill so the user reads "this strip repeats."
+      const hidden = cell.demanded - cell.machines.length
+      if (hidden > 0 && cell.machines.length > 0) {
+        const lastCol = cell.machines[cell.machines.length - 1]
+        // Vertical fade on the right edge of the last column — paint a
+        // half-transparent black gradient strip overlaying the sprite.
+        const fadeX = px(lastCol.x) + px(lastCol.w) * 0.55
+        const fadeW = px(lastCol.w) * 0.45
+        const fadeY = px(cell.y)
+        const fadeH = px(cell.h)
+        const grad = ctx.createLinearGradient(fadeX, 0, fadeX + fadeW, 0)
+        grad.addColorStop(0, "rgba(15, 23, 42, 0)")
+        grad.addColorStop(1, "rgba(15, 23, 42, 0.85)")
+        ctx.fillStyle = grad
+        ctx.fillRect(fadeX, fadeY, fadeW, fadeH)
+        // Dotted continuation marker on the right edge of the strip.
+        ctx.fillStyle = "rgba(125, 211, 252, 0.75)"
+        const dotR = Math.max(1, px(0.08))
+        const dotsX = px(cell.x + cell.w) - dotR * 2
+        const midY = px(cell.y) + px(cell.h) / 2
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath()
+          ctx.arc(dotsX, midY + i * dotR * 4, dotR, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        // "+N more" pill, top-right of the cell.
+        ctx.font = '700 10px "JetBrains Mono", ui-monospace, monospace'
+        ctx.textBaseline = "alphabetic"
+        const pill = `+${fmt(hidden)} more`
+        const pw = ctx.measureText(pill).width + 6
+        const ph = 13
+        const px0 = px(cell.x + cell.w) - pw - 2
+        const py0 = px(cell.y) + 16
+        ctx.fillStyle = "rgba(125, 211, 252, 0.9)"
+        ctx.fillRect(px0, py0, pw, ph)
+        ctx.fillStyle = "rgba(15, 23, 42, 0.95)"
+        ctx.fillText(pill, px0 + 3, py0 + ph - 3)
       }
 
       // Cell label
@@ -857,8 +900,96 @@ export function CanvasTiles({
       }
     }
 
+    // --- Manifold interior rails (drawn AFTER cells so they sit on top
+    //     of the machine sprites). For multi-machine cells, the side-belt
+    //     from the bus terminates at the cell's W edge; this pass paints
+    //     the continuation through the strip — the "feed lane" each
+    //     machine taps from. Without it, the manifold reads as a wall of
+    //     identical sprites with no visible routing.
+    for (const cell of blueprint.cells) {
+      if (cell.machines.length <= 1) continue
+      const focused =
+        highlightCellKey === cell.recipeKey ||
+        (highlightCellKeys?.has(cell.recipeKey) ?? false)
+      const dim = hasFocus && !focused
+      // Skip rails for direct ports — they have their own connector.
+      for (const port of cell.inputs) {
+        if (port.scope.kind === "direct") continue
+        drawManifoldRail(cell, port, "input", focused, dim)
+      }
+      for (const port of cell.outputs) {
+        if (port.scope.kind === "direct") continue
+        drawManifoldRail(cell, port, "output", focused, dim)
+      }
+    }
+
     // --- Inserters (in the gutter row) ---
     drawInserters()
+
+    function drawManifoldRail(
+      cell: Cell,
+      port: { item: string; dropY: number; edge: string; beltX: number },
+      role: "input" | "output",
+      focused: boolean,
+      dim: boolean,
+    ) {
+      // For E-edge output ports, the side-belt EXITS the strip's east
+      // side toward the right bus — the rail ends at cell.x + cell.w.
+      // For everything else (W-edge inputs/outputs), the rail starts at
+      // cell.x. We always paint left → right across the strip width.
+      const x0 = cell.x
+      const x1 = cell.x + cell.w
+      const yPx = px(port.dropY)
+      const alphaBg = focused ? 0.7 : dim ? 0.16 : 0.5
+      const alphaArrow = focused ? 0.95 : dim ? 0.3 : 0.7
+      // Item-colored rail strip — slightly thinner than a side-belt so
+      // the machine sprites stay legible underneath at the edges.
+      ctx.fillStyle = itemColorFor(port.item, alphaBg)
+      ctx.fillRect(px(x0), yPx + 3, px(x1) - px(x0), TILE_PX - 6)
+      // Top/bottom borders for the belt-style read.
+      ctx.strokeStyle = `rgba(0,0,0,${dim ? 0.4 : 0.75})`
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(px(x0), yPx + 3 + 0.5)
+      ctx.lineTo(px(x1), yPx + 3 + 0.5)
+      ctx.moveTo(px(x0), yPx + TILE_PX - 3 - 0.5)
+      ctx.lineTo(px(x1), yPx + TILE_PX - 3 - 0.5)
+      ctx.stroke()
+      // Direction arrows interspersed at each machine column so the rail
+      // reads as "belt flowing east" rather than a static band.
+      const arrowDir = role === "input" || port.edge === "E" ? 1 : -1
+      ctx.fillStyle = `rgba(0,0,0,${alphaArrow})`
+      for (const m of cell.machines) {
+        const cx = (m.x + m.w / 2) * TILE_PX
+        const cy = yPx + TILE_PX / 2
+        const tip = TILE_PX * 0.18
+        ctx.beginPath()
+        ctx.moveTo(cx + arrowDir * tip, cy)
+        ctx.lineTo(cx - arrowDir * tip * 0.55, cy - tip * 0.6)
+        ctx.lineTo(cx - arrowDir * tip * 0.55, cy + tip * 0.6)
+        ctx.closePath()
+        ctx.fill()
+      }
+      // Inserter taps at each machine column (skip the column the belt
+      // physically enters/exits from, since the side-belt itself shows
+      // that connection).
+      ctx.fillStyle = itemColorFor(port.item, focused ? 1 : dim ? 0.4 : 0.85)
+      ctx.strokeStyle = `rgba(0,0,0,${dim ? 0.5 : 0.85})`
+      ctx.lineWidth = 1
+      for (let i = 0; i < cell.machines.length; i++) {
+        if (role === "input" && i === 0) continue
+        if (role === "output" && port.edge === "E" && i === cell.machines.length - 1) continue
+        if (role === "output" && port.edge === "W" && i === 0) continue
+        const m = cell.machines[i]
+        const cx = (m.x + m.w / 2) * TILE_PX
+        const cy = yPx + TILE_PX / 2
+        const r = Math.max(1.5, TILE_PX * 0.13)
+        ctx.beginPath()
+        ctx.arc(cx, cy, r, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+      }
+    }
 
     function drawInserters() {
       // Two-tone ring: sky-blue = input (belt → cell, facing east ▶),

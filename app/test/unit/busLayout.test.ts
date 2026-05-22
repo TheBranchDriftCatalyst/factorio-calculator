@@ -32,12 +32,17 @@ describe("busLayout (Phase 1.A)", () => {
 
   it("machines within a cell never overlap", () => {
     for (const c of blueprint.cells) {
-      const sorted = [...c.machines].sort((a, b) => a.y - b.y)
-      for (let i = 1; i < sorted.length; i++) {
-        const prev = sorted[i - 1]
-        const cur = sorted[i]
-        // Vertical stacking: each machine's top is at or below the prev's bottom
-        expect(cur.y).toBeGreaterThanOrEqual(prev.y + prev.h)
+      // Manifold strips put machines side-by-side (same y, different x)
+      // for up to colsPerRow before wrapping to the next row, so the
+      // overlap check has to consider both axes.
+      for (let i = 0; i < c.machines.length; i++) {
+        for (let j = i + 1; j < c.machines.length; j++) {
+          const a = c.machines[i]
+          const b = c.machines[j]
+          const overlapX = a.x < b.x + b.w && b.x < a.x + a.w
+          const overlapY = a.y < b.y + b.h && b.y < a.y + a.h
+          expect(overlapX && overlapY).toBe(false)
+        }
       }
     }
   })

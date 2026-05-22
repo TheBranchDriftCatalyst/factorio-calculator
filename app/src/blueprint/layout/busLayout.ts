@@ -19,6 +19,7 @@ import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 import type { LayoutConfig } from "../../views/schematic/SchematicConfig"
 import { orderByTapDistance, type CostNode } from "./cost"
+import { tileStrip } from "./manifold"
 import type {
   Blueprint,
   BusBelt,
@@ -866,33 +867,70 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
   const westCount = inIngs.length + localOuts.length
   const eastCount = finalOuts.length
 
-  const cellW = mw
-  // Cell height grows to fit whichever edge has the most ports.
-  const cellH = Math.max(mh, Math.max(westCount, eastCount) + 1)
-
-  const machines: MachinePlacement[] = [
-    {
-      recipeKey: recipeId,
-      machineKey: machine?.key ?? "unknown",
-      x: xStart,
-      y: yStart + Math.floor((cellH - mh) / 2),
-      w: mw,
-      h: mh,
-      index: 0,
-    },
-  ]
-
-  // Per-edge slot rows. Each edge distributes its ports evenly along the
-  // cell's vertical extent.
-  const westSlots = Array.from({ length: westCount }, (_, i) =>
-    yStart + Math.floor(((i + 1) * cellH) / (westCount + 1)),
+  // Tile the cell as a factory-manifold strip. demanded=1 reduces to a
+  // single sprite (same as before); demanded>1 spreads machines into
+  // rows of up to colsPerRow, capping at maxRowsVisible (above which we
+  // render a representative 12-machine strip + "+N more" badge).
+  const strip = tileStrip(
+    recipeId,
+    machine?.key ?? "unknown",
+    demanded,
+    mw,
+    mh,
+    xStart,
+    yStart,
   )
+  // Multi-machine cells get DEDICATED feed/collect rail rows so the
+  // manifold reads as 'inputs land top → machines pull → outputs
+  // accumulate bottom'. The rails sit above (inputs) and below
+  // (intermediate outputs) the strip — never overlapping a machine
+  // sprite. Single-machine cells keep the legacy "distribute ports
+  // evenly down the W edge" layout since there's no strip to feed.
+  const isManifold = strip.machines.length > 1
+  const inputRails = isManifold ? inIngs.length : 0
+  const outputRails = isManifold ? localOuts.length : 0
+  const cellW = Math.max(strip.w, mw)
+  // Manifold layout: cellH = rails-top + strip + rails-bottom. Legacy
+  // layout: cellH grows to fit whichever edge has the most ports.
+  const cellH = isManifold
+    ? Math.max(strip.h + inputRails + outputRails, eastCount + 1)
+    : Math.max(strip.h, Math.max(westCount, eastCount) + 1)
+  // Strip vertical offset within the cell — manifolds push it down past
+  // the input rails; legacy centers it.
+  const stripDY = isManifold ? inputRails : Math.floor((cellH - strip.h) / 2)
+  const machines: MachinePlacement[] = strip.machines.map((m) => ({
+    ...m,
+    y: m.y + stripDY,
+  }))
+
+  // Per-edge slot rows.
+  //   • Manifold cells: inputs in dedicated rails at the TOP (rows
+  //     [0..inputRails-1]); intermediate outputs in dedicated rails at
+  //     the BOTTOM (rows [cellH-outputRails..cellH-1]).
+  //   • Legacy (single-machine): distribute all W ports evenly down
+  //     the cell's vertical extent.
+  let inputSlots: number[]
+  let outputSlots: number[]
+  if (isManifold) {
+    inputSlots = Array.from({ length: inIngs.length }, (_, i) => yStart + i)
+    outputSlots = Array.from(
+      { length: localOuts.length },
+      (_, i) => yStart + cellH - outputRails + i,
+    )
+  } else {
+    const westSlots = Array.from({ length: westCount }, (_, i) =>
+      yStart + Math.floor(((i + 1) * cellH) / (westCount + 1)),
+    )
+    inputSlots = westSlots.slice(0, inIngs.length)
+    outputSlots = westSlots.slice(inIngs.length)
+  }
   const eastSlots = Array.from({ length: eastCount }, (_, i) =>
     yStart + Math.floor(((i + 1) * cellH) / (eastCount + 1)),
   )
   const inputs: CellPort[] = []
   const outputs: CellPort[] = []
-  let wIdx = 0
+  let inIdx = 0
+  let outIdx = 0
   let eIdx = 0
 
   // A port is "trunk-scope" if its belt is an ancestor's belt — for now we
@@ -924,7 +962,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
   for (const ing of inIngs) {
     const direct = isDirectIn(ing.item)
     const beltX = direct ? directBeltXByItem.get(ing.item)! : ctx.beltXByItem.get(ing.item)!
-    const dropY = westSlots[wIdx++]
+    const dropY = inputSlots[inIdx++]
     const rate = ing.amount * node.rate
     const portScope = portScopeFor(ing.item)
     const partnerCellKey = direct ? ctx.directLinks.get(ing.item)!.from : undefined
@@ -959,7 +997,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
   for (const p of localOuts) {
     const direct = isDirectOut(p.item)
     const beltX = direct ? directBeltXByItem.get(p.item)! : ctx.beltXByItem.get(p.item)!
-    const dropY = westSlots[wIdx++]
+    const dropY = outputSlots[outIdx++]
     const rate = p.amount * node.rate
     const portScope = portScopeFor(p.item)
     const partnerCellKey = direct ? ctx.directLinks.get(p.item)!.to : undefined

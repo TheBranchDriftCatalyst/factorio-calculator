@@ -13,6 +13,7 @@
 // placements and inserter types fall out of the same pipeline.
 
 import type { Cell } from "../types"
+import { tileStrip } from "./manifold"
 
 /**
  * Stable id for a template. Add new templates to LAYOUT_TEMPLATES.
@@ -88,10 +89,23 @@ function manifold(machinesPerRow: number, id: TemplateId, label: string): Factor
     matches: (cell) => cell.demanded >= Math.ceil(machinesPerRow / 2),
     apply: (cell) => {
       const m = machineSize(cell)
-      const rows = Math.max(1, Math.ceil(cell.demanded / machinesPerRow))
-      const cols = Math.min(cell.demanded, machinesPerRow)
-      cell.w = cols * m.w
-      cell.h = rows * m.h
+      const machineKey = cell.machines[0]?.machineKey ?? "unknown"
+      // Reshape the strip at this template's preferred width. tileStrip
+      // handles the tiling cap — large factories still render as a
+      // representative 12-machine strip with hiddenCount > 0.
+      const strip = tileStrip(
+        cell.recipeKey,
+        machineKey,
+        cell.demanded,
+        m.w,
+        m.h,
+        cell.x,
+        cell.y,
+        { colsPerRow: machinesPerRow },
+      )
+      cell.w = strip.w
+      cell.h = strip.h
+      cell.machines = strip.machines
       // Port positions get re-distributed across the wider west edge so
       // the inputs visually feed each machine slot rather than all
       // bunching at the top.
@@ -99,7 +113,6 @@ function manifold(machinesPerRow: number, id: TemplateId, label: string): Factor
       if (westPorts > 0 && cell.h > 0) {
         const stride = Math.max(1, Math.floor(cell.h / Math.max(1, westPorts)))
         for (let i = 0; i < westPorts; i++) {
-          // The port's `slot` is its row offset along the cell's W edge.
           cell.inputs[i].slot = Math.min(cell.h - 1, i * stride)
         }
       }
