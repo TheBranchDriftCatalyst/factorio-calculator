@@ -72,6 +72,13 @@ export interface LayoutConfig {
    * Ignored by bus-tree (only auto-bus consumes it).
    */
   heavyConsumerThreshold: number
+  /**
+   * Auto-bus annealing budget. 0 = use the v0 static heuristic (fast,
+   * cheap). >0 = run N iterations of simulated annealing over bus
+   * assignments, returning the best-found. 50 is a good default for
+   * sci-pack-sized factories; ~200 for huge ones. Ignored by bus-tree.
+   */
+  layoutEffort: number
 }
 
 /**
@@ -122,6 +129,7 @@ export function layoutConfig(c: SchematicConfig): LayoutConfig {
     groupGapY: c.groupGapY,
     beltAssignments: c.beltAssignments,
     heavyConsumerThreshold: c.heavyConsumerThreshold,
+    layoutEffort: c.layoutEffort,
   }
 }
 
@@ -153,6 +161,7 @@ export const DEFAULT_CONFIG: SchematicConfig = {
   beltOverrides: {},
   beltAssignments: {},
   heavyConsumerThreshold: 6,
+  layoutEffort: 50,
   layoutAlgorithm: DEFAULT_LAYOUT_ALGORITHM,
 }
 

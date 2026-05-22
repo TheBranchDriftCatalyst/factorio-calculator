@@ -81,4 +81,13 @@ export const TOPOLOGY_FIELDS: ReadonlyArray<TopologyField> = [
     hint: "auto-bus only",
     field: { kind: "slider", min: 3, max: 12, step: 1 },
   },
+  // Annealing budget — 0 = use the cheap v0 heuristic; higher = run
+  // N perturbation iterations searching for a tighter assignment.
+  {
+    key: "layoutEffort",
+    label: "Layout effort",
+    group: "Belt",
+    hint: "auto-bus only — annealing iterations",
+    field: { kind: "slider", min: 0, max: 200, step: 10 },
+  },
 ]

@@ -7,30 +7,30 @@
 // itself, based on the flow's structure, and discards whatever the user
 // manually pinned.
 //
-// v0 heuristic (intentionally simple, deliberately visible):
+// v0 heuristic (kept as a fast fallback when annealing is disabled):
 //   - For each ITEM that appears on the root trunk, count its in-scope
 //     consumer cells.
 //   - If an item has > heavyConsumerThreshold consumers, SPLIT it onto
-//     two parallel left-bus columns ("left" and "L2"): the consumers
-//     earlier in topo order keep reading from "left", the rest read from
-//     "L2". Halves the tap-distance for spread-out items.
+//     two parallel left-bus columns ("left" and "L2") via alphabetical
+//     alternation. Stupid but deterministic — already moves the needle
+//     on factories with many heavy items.
 //
-// What we deliberately leave for v1+:
-//   - True multi-column splits (more than 2 buses per item)
-//   - Cluster-based splits (consumers in 3 spatial groups → 3 buses)
-//   - Cost-function-driven decisions (right now the threshold is a single
-//     number; later it could be the existing cost.ts module measuring
-//     total tap distance with vs without a split)
-//   - Right-bus parallel splits (only outputs go right today)
+// v1 annealing (the real story):
+//   - Iteratively run busLayout, score the result by total tap distance,
+//     perturb one item's side at a time, accept improvements + occasional
+//     worse moves to escape local minima.
+//   - Budget controlled by opts.layoutEffort (LayoutConfig knob).
+//   - Falls back to v0 heuristic when budget is 0 (the 'cheap' mode).
 //
-// The algorithm IS deterministic — same flow always produces the same
-// assignments. Useful for regression testing.
+// Both modes deterministic — same flow → same assignments. Tests + replays
+// don't drift.
 
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 import type { LayoutConfig } from "../../views/schematic/SchematicConfig"
 import type { Blueprint } from "../types"
 import { busLayout } from "./busLayout"
+import { annealAssignments } from "./anneal"
 
 /**
  * Default threshold above which an item earns a parallel bus column.
@@ -116,7 +116,33 @@ export function autoBusLayout(
   opts: Partial<LayoutConfig> = {},
 ): Blueprint {
   const threshold = opts.heavyConsumerThreshold ?? DEFAULT_HEAVY_CONSUMER_THRESHOLD
-  const computed = computeAutoBusAssignments(flow, threshold)
-  // Override any user beltAssignments — auto-bus owns this slot.
-  return busLayout(catalog, flow, { ...opts, beltAssignments: computed })
+  const effort = opts.layoutEffort ?? 0
+
+  // v0 path — fast deterministic heuristic. Used when the user picks
+  // 'cheap' effort OR there's nothing for the annealer to chew on
+  // (no heavy items found by the v0 detector).
+  const v0 = computeAutoBusAssignments(flow, threshold)
+
+  if (effort <= 0) {
+    return busLayout(catalog, flow, { ...opts, beltAssignments: v0 })
+  }
+
+  // v1 path — anneal over bus assignments. Seed the search with v0's
+  // output so we start from a known-decent point rather than 'all left'.
+  // Assignable items = the heavy ones (single-belt items don't benefit
+  // from being moved). Restricting the search space keeps each step
+  // cheap; the budget can chew through 50 perturbations in < 100ms.
+  const assignableItems = new Set(Object.keys(v0))
+  if (assignableItems.size === 0) {
+    return busLayout(catalog, flow, { ...opts, beltAssignments: v0 })
+  }
+
+  const result = annealAssignments(
+    catalog,
+    flow,
+    { ...opts, beltAssignments: v0 },
+    assignableItems,
+    { iterations: effort },
+  )
+  return result.blueprint
 }

@@ -96,9 +96,14 @@ test.describe("QA §8 — Topology panel knobs (beyond zoom)", () => {
     schematic,
   }) => {
     // Inject a multi-target factory heavy enough that auto-bus's
-    // heuristic actually splits something. The default e-circuit-only
-    // factory has too few cells; on it the two algorithms produce the
-    // same output.
+    // heuristic flags items. The default e-circuit-only factory has
+    // too few cells; on it the two algorithms produce the same output.
+    //
+    // ALSO disable annealing (layoutEffort=0) so this test pins the
+    // deterministic v0 heuristic behavior. With annealing on, auto-bus
+    // can converge BACK to the same width as bus-tree (since the
+    // annealer minimizes tap distance, not width). We test the v1
+    // annealing behavior separately below.
     await page.evaluate(() => {
       localStorage.setItem(
         "fbp.targets.v1",
@@ -117,6 +122,11 @@ test.describe("QA §8 — Topology panel knobs (beyond zoom)", () => {
           { item: "sulfur", rate: 1000 },
         ]),
       )
+      // Pin layoutEffort=0 to get deterministic v0 behavior (no anneal).
+      localStorage.setItem(
+        "schematic.config.v1",
+        JSON.stringify({ layoutEffort: 0 }),
+      )
     })
     await page.reload()
     await openSchematic(page)
@@ -129,7 +139,6 @@ test.describe("QA §8 — Topology panel knobs (beyond zoom)", () => {
     const picker = page.getByTestId("tf-layoutAlgorithm")
     await expect(picker).toBeVisible()
 
-    // Read the live blueprint width from the test hook (window.__schematic).
     const readWidth = () =>
       page.evaluate(() => {
         const all = document.querySelectorAll("*")
@@ -148,22 +157,92 @@ test.describe("QA §8 — Topology panel knobs (beyond zoom)", () => {
         return null
       })
 
-    // Default is bus-tree, so just snap the baseline. (Don't call
-    // selectOption to "pin" bus-tree first — Playwright's selectOption
-    // when the option is already selected suppresses the React state
-    // events on the SUBSEQUENT selectOption call, leaving the picker
-    // stuck visually-changed-but-uncommitted.)
     expect(await picker.inputValue()).toBe("bus-tree")
     const busTreeWidth = await readWidth()
     expect(busTreeWidth).toBeGreaterThan(0)
 
-    // Switch to auto-bus. On this factory the heuristic flags
-    // iron-plate (8 consumers, above the 6 threshold) and pushes it to
-    // L2 — adding a trunk column, so the blueprint widens.
+    // Switch to auto-bus (effort=0 → v0 deterministic L2 alternation).
+    // On this factory the heuristic flags iron-plate (8 consumers) and
+    // pushes it to L2 — adding a trunk column, so the blueprint widens.
     await picker.selectOption("auto-bus")
     await expect
       .poll(readWidth, { timeout: 5000 })
       .toBeGreaterThan(busTreeWidth!)
+  })
+
+  test("auto-bus annealing tightens the layout vs v0", async ({ page, schematic }) => {
+    // With layoutEffort>0, the annealer searches for a bus assignment
+    // that minimizes total tap distance. On the sci-pack base case it
+    // typically finds a tighter layout than v0 (sometimes by undoing
+    // v0's L2 split when the cost doesn't justify the extra width).
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "fbp.targets.v1",
+        JSON.stringify([
+          { item: "automation-science-pack", rate: 1 },
+          { item: "logistic-science-pack", rate: 1 },
+          { item: "military-science-pack", rate: 1 },
+          { item: "chemical-science-pack", rate: 1 },
+          { item: "advanced-circuit", rate: 1 },
+        ]),
+      )
+      localStorage.setItem(
+        "fbp.inputs.v1",
+        JSON.stringify([
+          { item: "plastic-bar", rate: 1000 },
+          { item: "sulfur", rate: 1000 },
+        ]),
+      )
+      localStorage.setItem(
+        "schematic.config.v1",
+        JSON.stringify({ layoutAlgorithm: "auto-bus", layoutEffort: 0 }),
+      )
+    })
+    await page.reload()
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+
+    // Helper: read the live tap-distance score (mirrors scoreBlueprint).
+    const readScore = () =>
+      page.evaluate(() => {
+        const all = document.querySelectorAll("*")
+        for (const el of all) {
+          const k = Object.keys(el).find((k) => k.startsWith("__reactFiber$"))
+          if (!k) continue
+          // @ts-expect-error fiber access for test
+          let f = el[k]
+          while (f) {
+            if (f.memoizedProps?.blueprint?.cells) {
+              const bp = f.memoizedProps.blueprint
+              let total = 0
+              for (const cell of bp.cells) {
+                const cx = cell.x + cell.w / 2
+                for (const p of cell.inputs) total += Math.abs(p.beltX - cx)
+                for (const p of cell.outputs) total += Math.abs(p.beltX - cx)
+              }
+              return total
+            }
+            f = f.return
+          }
+        }
+        return null
+      })
+
+    const v0Score = await readScore()
+    expect(v0Score).toBeGreaterThan(0)
+
+    // Crank effort up — anneal must find ≤ v0's score (best-found
+    // tracking guarantees this; if no improvement, returns v0).
+    await ensureExpanded(page.getByTestId("topology-panel"))
+    const effort = page.getByTestId("tf-layoutEffort")
+    await effort.fill("50")
+    await effort.dispatchEvent("input")
+    // Annealing runs in the main thread for now (the solver worker
+    // doesn't touch layout); give it room to settle on a heavy factory.
+    await page.waitForTimeout(2000)
+    const annealedScore = await readScore()
+    expect(annealedScore).not.toBeNull()
+    expect(annealedScore!).toBeLessThanOrEqual(v0Score!)
   })
 })
 

@@ -62,9 +62,10 @@ const LAYOUT_DEFAULTS: LayoutConfig = {
   maxNestingDepth: 4,
   outputBusSide: "split",
   beltAssignments: {},
-  // Auto-bus only — bus-tree ignores it but it has to be present to
-  // satisfy the LayoutConfig type.
+  // Auto-bus only — bus-tree ignores both but they have to be present
+  // to satisfy the LayoutConfig type.
   heavyConsumerThreshold: 6,
+  layoutEffort: 0,
 }
 
 type ResolvedOpts = LayoutConfig & InternalOpts
