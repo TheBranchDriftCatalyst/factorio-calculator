@@ -204,3 +204,260 @@ test.describe("QA §18 — Command palette", () => {
     await expect(palette).toHaveCount(0)
   })
 })
+
+test.describe("QA §7 — Cell inspector I/O shape line", () => {
+  test("pinned cell inspector exposes the I/O shape testid with N:N text", async ({
+    page,
+    schematic,
+  }) => {
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+    // Fit-to-content so the cell lands inside the viewport before we
+    // resolve its screen coordinates.
+    await page.locator("body").press("f")
+    // Wait for the test hook to be ready before grabbing coordinates.
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const h = (
+            window as unknown as { __schematic?: { cellAt?: (k: string) => unknown } }
+          ).__schematic
+          return h?.cellAt?.("electronic-circuit") ? "ready" : "pending"
+        }),
+      )
+      .toBe("ready")
+
+    const point = await schematic.cellAt("electronic-circuit")
+    await page.mouse.click(point.x, point.y)
+    const inspector = page.locator('[data-testid="cell-inspector"][data-state="pinned"]')
+    await expect(inspector).toBeVisible()
+
+    // The cell-io-shape line lives inside CellDetails. Text is e.g.
+    // "I/O 3:0 → 1:0" — assert at minimum a digit:digit pair appears.
+    const shape = inspector.getByTestId("cell-io-shape")
+    await expect(shape).toBeVisible()
+    await expect(shape).toHaveText(/I\/O\s+\d+:\d+/)
+  })
+})
+
+test.describe("QA §11 — IntermediatesPanel byproduct attribute", () => {
+  test("heavy-oil flagged as byproduct; petroleum-gas (the target) is NOT byproduct", async ({
+    page,
+    schematic,
+  }) => {
+    // Swap target 0 to petroleum-gas so the refinery is in scope.
+    await page.getByTestId("target-item-0").locator("button").first().click()
+    const dropdown = page.getByTestId("target-item-0-dropdown")
+    await expect(dropdown).toBeVisible()
+    await dropdown.locator("input").fill("petroleum")
+    await dropdown.locator("[cmdk-item]").first().click()
+
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+
+    const panel = page.getByTestId("intermediates-panel")
+    await expect(panel).toBeVisible()
+    // Expand if currently collapsed (panel header is the first button).
+    const header = panel.locator("button").first()
+    if ((await header.getAttribute("aria-expanded")) === "false") await header.click()
+
+    // Heavy oil — structurally a byproduct because the refinery is sized
+    // for petroleum demand and heavy oil falls out alongside.
+    const heavy = page.locator(
+      '[data-testid="intermediate-heavy-oil-status"][data-state="byproduct"]',
+    )
+    await expect(heavy).toBeVisible()
+
+    // Petroleum gas IS the user-target — even if it appears as an
+    // intermediate row, it must NOT be flagged byproduct. We assert that
+    // the byproduct-variant locator finds 0 rows; the plain status row
+    // may or may not exist depending on whether petroleum is internally
+    // consumed (it isn't in the default config) — either way is fine.
+    const petByproduct = page.locator(
+      '[data-testid="intermediate-petroleum-gas-status"][data-state="byproduct"]',
+    )
+    await expect(petByproduct).toHaveCount(0)
+  })
+})
+
+test.describe("QA §12 — Lane inspector belt-tier override flow", () => {
+  test("changing per-lane tier surfaces the override label + BOM tier split", async ({
+    page,
+    schematic,
+  }) => {
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+    await page.locator("body").press("f")
+
+    // Pin a known belt. iron-ore is on the leftmost trunk belt of the
+    // default electronic-circuit factory; copper-ore is the fallback.
+    const point =
+      (await schematic.beltAt("iron-ore")) ?? (await schematic.beltAt("copper-ore"))
+    expect(point).not.toBeNull()
+    if (!point) return
+    await page.mouse.click(point.x, point.y)
+
+    const inspector = page.getByTestId("lane-inspector")
+    await expect(inspector).toBeVisible()
+
+    // Change the per-lane belt tier to turbo via the native <select>.
+    const tierSelect = page.getByTestId("lane-belt-tier-override")
+    await expect(tierSelect).toBeVisible()
+    await tierSelect.selectOption("turbo")
+
+    // Re-resolve the inspector — selectOption triggers a state update
+    // that re-renders the LaneDetails subtree. The caption + "(override)"
+    // marker both flow from `overrideTier`.
+    const inspector2 = page.getByTestId("lane-inspector")
+    await expect(inspector2).toContainText("@ turbo belt")
+    await expect(inspector2).toContainText("(override)")
+
+    // BOM ties to the override — expand the BOM panel and confirm a row
+    // for the turbo belt tier shows up (data-testid=bom-belts-turbo).
+    const bom = page.getByTestId("bom-panel")
+    await expect(bom).toBeVisible()
+    const bomHeader = bom.locator("button").first()
+    if ((await bomHeader.getAttribute("aria-expanded")) === "false") await bomHeader.click()
+    await expect(page.getByTestId("bom-belts-turbo")).toBeVisible()
+  })
+})
+
+test.describe("QA §14 — Sidebar resize handle (mouse drag)", () => {
+  test("dragging the handle left widens the rail by ~drag distance", async ({
+    page,
+    schematic,
+  }) => {
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+
+    const handle = page.getByTestId("sidebar-resize-handle")
+    const rail = page.getByTestId("right-rail")
+    const handleBox = await handle.boundingBox()
+    expect(handleBox).not.toBeNull()
+    if (!handleBox) return
+    const before = await rail.evaluate((el) => el.getBoundingClientRect().width)
+
+    // Center of the handle, drag 100px to the LEFT (rail widens).
+    const startX = handleBox.x + handleBox.width / 2
+    const startY = handleBox.y + handleBox.height / 2
+    await page.mouse.move(startX, startY)
+    await page.mouse.down()
+    // Intermediate move helps Playwright deliver the mousemove sequence.
+    await page.mouse.move(startX - 50, startY, { steps: 5 })
+    await page.mouse.move(startX - 100, startY, { steps: 5 })
+    await page.mouse.up()
+
+    const after = await rail.evaluate((el) => el.getBoundingClientRect().width)
+    // ~100px wider. Tolerance is wide because the resize handler anchors
+    // to `rect.right - e.clientX` (not the mousedown position) and the
+    // intermediate `mouse.move` steps deliver several events — the net
+    // delta empirically lands in the 80-160px range depending on how
+    // the renderer batches mousemoves. We just need to confirm the drag
+    // moves the rail substantially.
+    expect(after - before).toBeGreaterThan(60)
+    expect(after - before).toBeLessThan(180)
+  })
+})
+
+test.describe("QA §19 — Profile delete + empty state", () => {
+  test("creating then deleting a profile removes the row + restores empty state", async ({
+    page,
+    schematic,
+  }) => {
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+
+    // Open the drawer.
+    await page.getByTestId("profile-sidebar-trigger").hover()
+    const drawer = page.getByTestId("profile-sidebar-drawer")
+    await expect
+      .poll(async () => drawer.evaluate((el) => Number(getComputedStyle(el).opacity)))
+      .toBeGreaterThan(0.9)
+
+    // Pre-condition: no profiles → drawer shows the "No saved profiles yet."
+    // empty message. ProfileSidebar renders this inline (no dedicated
+    // testid), so we match the literal text.
+    await expect(drawer).toContainText("No saved profiles yet.")
+
+    // Create "DeleteMe".
+    await page.getByTestId("profile-add-trigger").click()
+    const input = page.getByTestId("profile-add-input")
+    await expect(input).toBeVisible()
+    await input.fill("DeleteMe")
+    await input.press("Enter")
+
+    // Row appears.
+    await page.getByTestId("profile-sidebar-trigger").hover()
+    const row = page.locator("[data-testid^='profile-row-']", { hasText: "DeleteMe" })
+    await expect(row).toBeVisible()
+    await expect(drawer).not.toContainText("No saved profiles yet.")
+
+    // Delete.
+    const deleteBtn = row.locator("[data-testid^='profile-delete-']")
+    await deleteBtn.click()
+
+    // Row gone + empty state restored.
+    await expect(row).toHaveCount(0)
+    await expect(drawer).toContainText("No saved profiles yet.")
+  })
+})
+
+test.describe("QA §7 — Camera keybindings", () => {
+  test("pressing F (fit) and 0 (reset) keeps the canvas visible without error", async ({
+    page,
+    schematic,
+  }) => {
+    await openSchematic(page)
+    const canvas = await schematic.waitForCanvas()
+    await expect(canvas).toBeVisible()
+
+    // Capture console errors — the test hook doesn't expose camera state,
+    // but if the keymap throws (e.g. references a missing ref), it shows
+    // up here.
+    const errors: string[] = []
+    page.on("pageerror", (err) => errors.push(err.message))
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text())
+    })
+
+    await page.locator("body").press("f")
+    await expect(canvas).toBeVisible()
+    await page.locator("body").press("0")
+    await expect(canvas).toBeVisible()
+
+    expect(errors).toEqual([])
+  })
+})
+
+test.describe("QA — BOM panel mixed tier rows", () => {
+  test("global yellow + per-lane red override yields BOTH belt-tier rows in BOM", async ({
+    page,
+    schematic,
+  }) => {
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+    await page.locator("body").press("f")
+
+    // Pin iron-ore lane (default trunk belt) so we can override it to red.
+    const point =
+      (await schematic.beltAt("iron-ore")) ?? (await schematic.beltAt("copper-ore"))
+    expect(point).not.toBeNull()
+    if (!point) return
+    await page.mouse.click(point.x, point.y)
+
+    const inspector = page.getByTestId("lane-inspector")
+    await expect(inspector).toBeVisible()
+    await page.getByTestId("lane-belt-tier-override").selectOption("red")
+
+    // Expand the BOM panel.
+    const bom = page.getByTestId("bom-panel")
+    await expect(bom).toBeVisible()
+    const bomHeader = bom.locator("button").first()
+    if ((await bomHeader.getAttribute("aria-expanded")) === "false") await bomHeader.click()
+
+    // Global tier is yellow; one lane is now red → both rows should exist.
+    // (Other unhighlighted lanes still use the global yellow tier.)
+    await expect(page.getByTestId("bom-belts-red")).toBeVisible()
+    await expect(page.getByTestId("bom-belts-yellow")).toBeVisible()
+  })
+})
