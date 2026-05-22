@@ -97,15 +97,46 @@ describe("interleaved · interleavedLayout", () => {
     }
   })
 
-  it("emits at least one bus belt per stage", () => {
+  it("emits bus belts for items consumed by multiple cells; direct links for unique pairs", () => {
     const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const bp = interleavedLayout(catalog, flow, {})
     const belts = bp.root?.belts ?? []
-    // Min 3 stages worth of belts for electronic-circuit chain (raw bus + 1 intermediate + final).
-    expect(belts.length).toBeGreaterThanOrEqual(3)
-    // Belts at distinct x positions confirm interleaving.
-    const distinctX = new Set(belts.map((b) => b.x))
-    expect(distinctX.size).toBeGreaterThanOrEqual(2)
+    // The electronic-circuit chain has unique 1-producer-1-consumer
+    // pairs (iron-plate→EC, copper-plate→cable, cable→EC) so MOST
+    // intermediates become direct connections. We expect at least the
+    // raw input bus (iron-ore + copper-ore) and the final-output bus.
+    expect(belts.length).toBeGreaterThanOrEqual(2)
+    // Direct connections should be emitted for the single-pair items.
+    expect(bp.directConnections.length).toBeGreaterThan(0)
+  })
+
+  it("items consumed by multiple stages get ONE bus column, not one per stage", () => {
+    // copper-cable is needed by electronic-circuit only (1 consumer)
+    // so it becomes a direct link in the mini fixture. We need a
+    // multi-consumer item to test the multi-stage routing — force one
+    // by also requesting copper-cable directly.
+    const flow = expand({
+      catalog,
+      targets: [
+        { item: "electronic-circuit", rate: 1 },
+        { item: "copper-cable", rate: 5 },
+      ],
+    })
+    const bp = interleavedLayout(catalog, flow, {})
+    // copper-cable now has 2 "consumers": the EC cell AND the output:
+    // sink. Direct logic skips it (because of the output sink). It
+    // should appear on EXACTLY ONE bus column. Walk all belts and
+    // collect x positions for copper-cable.
+    const belts = bp.root?.belts ?? []
+    const copperCableBeltXs = new Set<number>()
+    for (const b of belts) {
+      if (b.laneA?.item === "copper-cable") copperCableBeltXs.add(b.x)
+      if (b.laneB?.item === "copper-cable") copperCableBeltXs.add(b.x)
+    }
+    // ≤ 2: at most one on the intermediate bus + one on the final
+    // bus (it's also a final output target). Crucially, NOT one per
+    // consuming stage.
+    expect(copperCableBeltXs.size).toBeLessThanOrEqual(2)
   })
 
   it("final-output belt sits to the right of the rightmost cell", () => {

@@ -44,9 +44,11 @@ import type {
   BusNode,
   Cell,
   CellPort,
+  DirectConnection,
   Edge,
   InserterPlacement,
   MachinePlacement,
+  PortScope,
 } from "../types"
 import { tileStrip } from "./manifold"
 import { packBeltsAt } from "./packing"
@@ -117,58 +119,127 @@ function resolveOpts(opts: Partial<LayoutConfig>): ResolvedOpts {
 
 interface StagePlan {
   index: number
-  /** Items entering this stage's left bus (from prior stages + raw). */
+  /** Items first appearing on this stage's left bus (from prior stages + raw). */
   inputs: Array<[item: string, rate: number]>
   /** Recipe nodes living in this stage. */
   cells: FlowNode[]
 }
 
-/**
- * Build per-stage plans: which items feed each stage and which
- * recipes live there. Items going to output: sinks are deferred —
- * they get their own final bus column to the right of the last
- * stage.
- */
-function planStages(flow: FlowGraph, stages: Map<string, number>): {
+interface StagePlanning {
   plans: StagePlan[]
   finalOutputs: Array<[item: string, rate: number]>
-} {
+  /**
+   * Items with exactly ONE producer and ONE consumer (across all stages)
+   * get a direct producer → consumer link instead of joining the bus.
+   * Reduces visual clutter on the main bus for tightly-coupled chains.
+   */
+  directLinks: Map<string, { from: string; to: string; rate: number }>
+}
+
+/**
+ * Build per-stage plans. Key invariant for fbp-tj6 Phase 2:
+ *   Every bus item appears in EXACTLY ONE stage column — the EARLIEST
+ *   stage that consumes it. Cells in later stages tap that same column
+ *   via long horizontal side-belts. This avoids the prior bug where
+ *   an item used by stages 1 AND 3 got TWO disconnected belt columns
+ *   and the producer dropped on the wrong one.
+ *
+ * Items going to output: sinks become final-bus items (rightmost column).
+ *
+ * Items with exactly one (producer, consumer) pair become direct links
+ * instead of bus belts — see fbp-tj6 sub-task 2.
+ */
+function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning {
   const maxStage = stages.size === 0 ? -1 : Math.max(...stages.values())
   const plans: StagePlan[] = []
   for (let s = 0; s <= maxStage; s++) {
     plans.push({ index: s, inputs: [], cells: [] })
   }
-  // Assign cells to their stage.
   for (const n of flow.nodes) {
     if (!n.recipe) continue
     const s = stages.get(n.id) ?? 0
     plans[s]?.cells.push(n)
   }
-  // Compute input bus content per stage by inspecting incoming edges.
-  // Per-stage rate aggregation lets two consumers of iron-plate share
-  // one bus belt without double-counting.
-  const stageInputRates: Array<Map<string, number>> = plans.map(
-    () => new Map<string, number>(),
-  )
-  const finalRates = new Map<string, number>()
+
+  // Per-item analysis: producers, consumers, earliest consumer stage,
+  // total rate, final-sink rate.
+  type ItemStats = {
+    producers: Set<string>
+    consumers: Set<string>
+    earliestConsumerStage: number
+    rate: number
+    finalRate: number
+  }
+  const items = new Map<string, ItemStats>()
+  const upsert = (item: string): ItemStats => {
+    let s = items.get(item)
+    if (!s) {
+      s = {
+        producers: new Set(),
+        consumers: new Set(),
+        earliestConsumerStage: Number.POSITIVE_INFINITY,
+        rate: 0,
+        finalRate: 0,
+      }
+      items.set(item, s)
+    }
+    return s
+  }
   for (const e of flow.edges) {
-    const item = e.item
-    const rate = e.rate
+    const s = upsert(e.item)
+    s.rate += e.rate
+    if (e.source && !e.source.startsWith("source:") && !e.source.startsWith("input:")) {
+      s.producers.add(e.source)
+    }
     if (e.target.startsWith("output:")) {
-      finalRates.set(item, (finalRates.get(item) ?? 0) + rate)
+      s.finalRate += e.rate
       continue
     }
-    const tStage = stages.get(e.target)
-    if (tStage == null) continue
-    const m = stageInputRates[tStage]
-    if (!m) continue
-    m.set(item, (m.get(item) ?? 0) + rate)
+    s.consumers.add(e.target)
+    const stage = stages.get(e.target)
+    if (stage != null && stage < s.earliestConsumerStage) {
+      s.earliestConsumerStage = stage
+    }
   }
-  for (let s = 0; s < plans.length; s++) {
-    plans[s].inputs = [...stageInputRates[s].entries()].sort((a, b) => b[1] - a[1])
+
+  // Direct links: exactly one producer + one consumer, both recipes.
+  // Skip items also going to output: sinks (those need bus visibility).
+  const directLinks = new Map<string, { from: string; to: string; rate: number }>()
+  for (const [item, stat] of items) {
+    if (stat.finalRate > 0) continue
+    if (stat.producers.size !== 1 || stat.consumers.size !== 1) continue
+    const from = [...stat.producers][0]
+    const to = [...stat.consumers][0]
+    // Skip self-loops (shouldn't happen, but defensive).
+    if (from === to) continue
+    directLinks.set(item, { from, to, rate: stat.rate })
   }
-  const finalOutputs = [...finalRates.entries()].sort((a, b) => b[1] - a[1])
-  return { plans, finalOutputs }
+
+  // Bus items per stage: each item appears once, in its earliest
+  // consumer's stage column.
+  for (const [item, stat] of items) {
+    if (directLinks.has(item)) continue
+    // Items going only to output: sinks aren't bus items — they go on
+    // the final bus.
+    if (stat.consumers.size === 0) continue
+    const stage = stat.earliestConsumerStage
+    if (!Number.isFinite(stage)) continue
+    const plan = plans[stage]
+    if (!plan) continue
+    plan.inputs.push([item, stat.rate - stat.finalRate])
+  }
+  for (const plan of plans) {
+    plan.inputs.sort((a, b) => b[1] - a[1])
+  }
+
+  // Final outputs = items with finalRate > 0.
+  const finalOutputs: Array<[string, number]> = []
+  for (const [item, stat] of items) {
+    if (stat.finalRate > 0) finalOutputs.push([item, stat.finalRate])
+  }
+  finalOutputs.sort((a, b) => b[1] - a[1])
+
+  return { plans, finalOutputs, directLinks }
 }
 
 /**
@@ -182,23 +253,26 @@ export function interleavedLayout(
 ): Blueprint {
   const o = resolveOpts(opts)
   const stages = computeStages(flow)
-  const { plans, finalOutputs } = planStages(flow, stages)
+  const { plans, finalOutputs, directLinks } = planStages(flow, stages)
 
   const isFluid = (item: string) => catalog.fluidItems.has(item)
 
   const allBelts: BusBelt[] = []
+  // ONE bus column per item, placed at its first-consuming stage.
+  // Late-stage cells tap from this same column via long horizontal
+  // side-belts. No overwrites — beltXByItem is set exactly once per
+  // item during the stage-packing loop.
   const beltXByItem = new Map<string, number>()
   const cells: Cell[] = []
   const inserters: InserterPlacement[] = []
   const unsupported: Blueprint["unsupported"] = []
 
-  // The "next bus" lookup: for an output item from stage s, the bus
-  // it lands on is the LEFT-input bus of the EARLIEST stage that
-  // consumes it (typically s+1, but a stage-3 input from stage-1
-  // would still appear in stage-2's bus if any stage-2 cell needs it.
-  // To keep things simple, we route every output to its primary
-  // consumer stage's bus — already encoded in beltXByItem after we
-  // pack each stage).
+  // Direct link bookkeeping. For each item flagged as direct, we
+  // need the producer's cellKey + consumer's cellKey + their cell
+  // anchor points so the renderer can draw the connector. We can't
+  // emit DirectConnection entries until cells are placed (we need
+  // their final coordinates), so we accumulate the pairs here.
+  const directConnections: DirectConnection[] = []
 
   let cursorX = LEFT_MARGIN
   let maxY = TOP_MARGIN
@@ -206,7 +280,7 @@ export function interleavedLayout(
   let totalPowerW = 0
 
   for (const plan of plans) {
-    // 1. Pack this stage's input bus column.
+    // 1. Pack this stage's input bus column with items first appearing here.
     const packed = packBeltsAt(
       plan.inputs,
       o.beltGroupSize,
@@ -217,11 +291,7 @@ export function interleavedLayout(
     )
     allBelts.push(...packed.belts)
     for (const [item, x] of packed.beltXByItem) {
-      // Don't overwrite: earlier stages own their bus belts. A later
-      // stage that ALSO needs the same item will get its own belt
-      // (since we re-pack per stage), but cells in stage s should tap
-      // the stage-s bus closest to them. Update the lookup so each
-      // cell uses ITS stage's belt.
+      // Set once — every item appears in exactly one stage.
       beltXByItem.set(item, x)
     }
     const stageCellX = packed.gutterX + 1
@@ -237,6 +307,7 @@ export function interleavedLayout(
         beltXByItem,
         inserters,
         unsupported,
+        directLinks,
         o,
       )
       cells.push(cell)
@@ -247,7 +318,6 @@ export function interleavedLayout(
     }
     maxY = Math.max(maxY, cursorY)
 
-    // Next stage starts past this stage's rightmost cell + gutter.
     cursorX = stageRightEdge + STAGE_GUTTER_TILES
   }
 
@@ -269,31 +339,67 @@ export function interleavedLayout(
     cursorX = packed.gutterX + 1
   }
 
-  // 4. Patch every cell's output ports now that all stage buses +
-  // the final bus are packed. Output items either land in a later
-  // stage's input bus (intermediates) or in the final bus (sinks).
-  // beltXByItem holds the latest stage that consumed each item, so
-  // intermediates resolve there; finals come from finalBeltXByItem.
+  // 4. Patch every cell's E-edge output ports now that all bus columns
+  // are settled. Direct ports were already emitted with the right
+  // beltX (their producer→consumer connector x).
   for (const cell of cells) {
     for (const port of cell.outputs) {
       if (port.edge !== "E") continue
+      if (port.scope.kind === "direct") continue
       const finalX = finalBeltXByItem.get(port.item)
       const intermediateX = beltXByItem.get(port.item)
       const resolved = finalX ?? intermediateX
-      if (resolved != null) {
-        port.beltX = resolved
-      }
+      if (resolved != null) port.beltX = resolved
     }
   }
-  // Inserters also reference beltX. Patch those that target output
-  // items so the renderer can draw the side-belt going east.
   for (const ins of inserters) {
     if (ins.direction !== "output") continue
+    if (ins.scope === "direct") continue
     const finalX = finalBeltXByItem.get(ins.item)
     const intermediateX = beltXByItem.get(ins.item)
     const resolved = finalX ?? intermediateX
-    if (resolved != null) {
-      ins.beltX = resolved
+    if (resolved != null) ins.beltX = resolved
+  }
+
+  // 5. Emit DirectConnection entries for the producer→consumer links.
+  // Each link gets a vertical segment between the producer (right
+  // side, E perimeter) and consumer (left side, W perimeter). We
+  // pick the connector's x as halfway between producer.x+w and
+  // consumer.x so it sits in the inter-stage gutter.
+  const cellByKey = new Map(cells.map((c) => [c.recipeKey, c]))
+  for (const [item, link] of directLinks) {
+    const from = cellByKey.get(link.from)
+    const to = cellByKey.get(link.to)
+    if (!from || !to) continue
+    // Producer's E-edge slot: find the matching output port.
+    const prodPort = from.outputs.find(
+      (p) => p.item === item && p.scope.kind === "direct",
+    )
+    const consPort = to.inputs.find(
+      (p) => p.item === item && p.scope.kind === "direct",
+    )
+    if (!prodPort || !consPort) continue
+    const segX = Math.max(from.x + from.w, Math.floor((from.x + from.w + to.x) / 2))
+    // Patch the port beltX values to the connector x.
+    prodPort.beltX = segX
+    consPort.beltX = segX
+    directConnections.push({
+      item,
+      rate: link.rate,
+      fromCellKey: link.from,
+      toCellKey: link.to,
+      x: segX,
+      y0: prodPort.dropY,
+      y1: consPort.dropY,
+      isFluid: isFluid(item),
+    })
+    // Patch the inserter beltX values too so the renderer doesn't
+    // dangle a side-belt off to -1.
+    for (const ins of inserters) {
+      if (ins.scope !== "direct") continue
+      if (ins.item !== item) continue
+      if (ins.cellKey !== link.from && ins.cellKey !== link.to) continue
+      ins.beltX = segX
     }
   }
 
@@ -326,7 +432,7 @@ export function interleavedLayout(
     root,
     cells,
     inserters,
-    directConnections: [],
+    directConnections,
     unsupported,
   }
 }
@@ -343,6 +449,7 @@ function emitCell(
   beltXByItem: Map<string, number>,
   inserters: InserterPlacement[],
   unsupported: Blueprint["unsupported"],
+  directLinks: Map<string, { from: string; to: string; rate: number }>,
   _o: ResolvedOpts,
 ): Cell {
   const recipe = node.recipe!
@@ -357,9 +464,24 @@ function emitCell(
   }
   const [mw, mh] = size
 
-  // Only ingredients with a belt entering this stage count. Outputs
-  // always go E (next stage's bus or final bus).
-  const inIngs = recipe.ingredients.filter((ing) => beltXByItem.has(ing.item))
+  // Direct vs bus classification per ingredient/product:
+  //   • direct  → ingredient where this cell is the unique consumer
+  //               of a single-producer item. Renderer draws a
+  //               connector instead of a bus side-belt.
+  //   • bus     → ingredient with a belt entering this stage.
+  // Outputs are always E-edge unless directLinks says the item is
+  // produced HERE for a unique downstream consumer.
+  const isDirectIn = (item: string) => {
+    const dl = directLinks.get(item)
+    return !!dl && dl.to === node.id
+  }
+  const isDirectOut = (item: string) => {
+    const dl = directLinks.get(item)
+    return !!dl && dl.from === node.id
+  }
+  const inIngs = recipe.ingredients.filter(
+    (ing) => beltXByItem.has(ing.item) || isDirectIn(ing.item),
+  )
   const outs = recipe.products
 
   const strip = tileStrip(node.id, machine?.key ?? "unknown", demanded, mw, mh, xStart, yStart)
@@ -410,9 +532,17 @@ function emitCell(
 
   for (let i = 0; i < inIngs.length; i++) {
     const ing = inIngs[i]
-    const beltX = beltXByItem.get(ing.item)!
+    const direct = isDirectIn(ing.item)
+    const dl = direct ? directLinks.get(ing.item)! : null
+    // Direct ports: beltX will get patched after producer cell is
+    // placed (interleavedLayout's directConnection pass). Set to
+    // sentinel for now.
+    const beltX = direct ? -1 : beltXByItem.get(ing.item)!
     const dropY = inputSlots[i]
     const rate = ing.amount * node.rate
+    const scope: PortScope = direct
+      ? { kind: "direct", partnerCellKey: dl!.from }
+      : { kind: "trunk" }
     inserters.push({
       x: wPerimeterX,
       y: dropY,
@@ -422,7 +552,7 @@ function emitCell(
       cellKey: node.id,
       item: ing.item,
       rate,
-      scope: "trunk",
+      scope: direct ? "direct" : "trunk",
     })
     inputs.push({
       item: ing.item,
@@ -430,7 +560,7 @@ function emitCell(
       beltX,
       dropY,
       direction: "input",
-      scope: { kind: "trunk" },
+      scope,
       edge: "W",
       slot: dropY - yStart,
       lane: inputLanes[i],
@@ -439,22 +569,25 @@ function emitCell(
 
   for (let i = 0; i < outs.length; i++) {
     const p = outs[i]
+    const direct = isDirectOut(p.item)
+    const dl = direct ? directLinks.get(p.item)! : null
     const dropY = outputSlots[i]
     const rate = p.amount * node.rate
-    // beltX gets PATCHED after all stages are packed (we don't know
-    // the final bus x yet when emitting). Set to sentinel for now;
-    // interleavedLayout's final-output pass updates it.
-    const provisionalBeltX = beltXByItem.get(`__final:${p.item}`) ?? -1
+    // beltX is provisional — patched after all stage buses are packed.
+    const provisionalBeltX = direct ? -1 : beltXByItem.get(p.item) ?? -1
+    const scope: PortScope = direct
+      ? { kind: "direct", partnerCellKey: dl!.to }
+      : { kind: "trunk" }
     inserters.push({
       x: ePerimeterX,
       y: dropY,
-      facing: "east", // E-edge output: cell → belt to its right
+      facing: "east",
       direction: "output",
       beltX: provisionalBeltX,
       cellKey: node.id,
       item: p.item,
       rate,
-      scope: "trunk",
+      scope: direct ? "direct" : "trunk",
     })
     outputsArr.push({
       item: p.item,
@@ -462,7 +595,7 @@ function emitCell(
       beltX: provisionalBeltX,
       dropY,
       direction: "output",
-      scope: { kind: "trunk" },
+      scope,
       edge: "E",
       slot: dropY - yStart,
     })
