@@ -7,7 +7,7 @@ import { miniDataset } from "../fixtures/mini-dataset"
 const catalog = loadCatalog(miniDataset)
 
 describe("busLayout (Phase 1.A)", () => {
-  const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
+  const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
   const blueprint = busLayout(catalog, flow)
 
   it("produces one cell per recipe node", () => {
@@ -142,10 +142,13 @@ describe("busLayout (Phase 1.A)", () => {
 
 describe("busLayout — multi-target merge", () => {
   it("merges shared intermediates into one cell each", () => {
-    const flow = expand(catalog, [
-      { item: "electronic-circuit", rate: 1 },
-      { item: "copper-cable", rate: 6 },
-    ])
+    const flow = expand({
+      catalog,
+      targets: [
+        { item: "electronic-circuit", rate: 1 },
+        { item: "copper-cable", rate: 6 },
+      ],
+    })
     const blueprint = busLayout(catalog, flow)
     // copper-cable is required by both targets — one cell, with rate summed
     const cableCells = blueprint.cells.filter((c) => c.recipeKey === "copper-cable")
@@ -155,7 +158,7 @@ describe("busLayout — multi-target merge", () => {
 
 describe("busLayout — empty input", () => {
   it("returns a blueprint with no cells when flow is empty", () => {
-    const flow = expand(catalog, [])
+    const flow = expand({ catalog, targets: [] })
     const blueprint = busLayout(catalog, flow)
     expect(blueprint.cells.length).toBe(0)
     expect(blueprint.belts.length).toBe(0)
@@ -166,7 +169,7 @@ describe("busLayout — empty input", () => {
 
 describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
   it("classifies single-consumer items as direct connections (1 producer + 1 consumer), not on the trunk", () => {
-    const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const blueprint = busLayout(catalog, flow)
     const trunkItems = new Set<string>()
     for (const b of blueprint.belts) {
@@ -183,17 +186,20 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
   })
 
   it("clusters chained recipes into a single group", () => {
-    const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const blueprint = busLayout(catalog, flow)
     expect(blueprint.groups.length).toBe(1)
     expect(blueprint.groups[0].cellKeys.length).toBe(blueprint.cells.length)
   })
 
   it("trunk belts only carry items with multiple downstream consumers", () => {
-    const flow = expand(catalog, [
-      { item: "electronic-circuit", rate: 1 },
-      { item: "copper-cable", rate: 6 },
-    ])
+    const flow = expand({
+      catalog,
+      targets: [
+        { item: "electronic-circuit", rate: 1 },
+        { item: "copper-cable", rate: 6 },
+      ],
+    })
     const blueprint = busLayout(catalog, flow)
     for (const b of blueprint.belts) {
       const items = [b.laneA?.item, b.laneB?.item].filter(Boolean) as string[]
@@ -208,7 +214,7 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
   })
 
   it("group bounding boxes contain all member cells", () => {
-    const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const blueprint = busLayout(catalog, flow)
     for (const g of blueprint.groups) {
       const members = blueprint.cells.filter((c) => g.cellKeys.includes(c.recipeKey))
@@ -222,7 +228,7 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
   })
 
   it("direct inserters tap a direct-connection column inside their owning group", () => {
-    const flow = expand(catalog, [{ item: "electronic-circuit", rate: 1 }])
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const blueprint = busLayout(catalog, flow)
     const directInserters = blueprint.inserters.filter((i) => i.scope === "direct")
     expect(directInserters.length).toBeGreaterThan(0)
@@ -233,10 +239,13 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
   })
 
   it("groups stack vertically (each below the previous)", () => {
-    const flow = expand(catalog, [
-      { item: "electronic-circuit", rate: 1 },
-      { item: "copper-cable", rate: 6 },
-    ])
+    const flow = expand({
+      catalog,
+      targets: [
+        { item: "electronic-circuit", rate: 1 },
+        { item: "copper-cable", rate: 6 },
+      ],
+    })
     const blueprint = busLayout(catalog, flow)
     if (blueprint.groups.length < 2) return
     const sorted = [...blueprint.groups].sort((a, b) => a.y - b.y)

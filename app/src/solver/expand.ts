@@ -22,6 +22,20 @@ export interface Input {
   rate: number // items/sec available
 }
 
+/**
+ * Bundle of all inputs to `expand()`. Collapses the prior 6-positional
+ * signature into one object so call sites are self-documenting and adding
+ * new knobs doesn't break callers.
+ */
+export interface SolveRequest {
+  catalog: Catalog
+  targets: ReadonlyArray<Target>
+  inputs?: ReadonlyArray<Input>
+  machineOverrides?: Record<string, string>
+  recipeChoices?: Record<string, string>
+  machineCategoryDefaults?: Record<string, string>
+}
+
 export interface FlowNode {
   id: string // recipe key (or "source:<item>" for un-craftable inputs)
   recipe?: Recipe
@@ -50,24 +64,6 @@ export interface FlowGraph {
   /** Sum of node powerW. */
   totalPowerW: number
 }
-
-const RAW_ITEMS = new Set([
-  "iron-ore",
-  "copper-ore",
-  "coal",
-  "stone",
-  "uranium-ore",
-  "crude-oil",
-  "water",
-  "wood",
-  "raw-fish",
-  "calcite",
-  "tungsten-ore",
-  "lithium-brine",
-  "fluorine",
-  "scrap",
-  "holmium-ore",
-])
 
 /**
  * Recycling recipes (Space Age) destroy items for partial component
@@ -159,14 +155,15 @@ export function pickMachineCandidates(
   return result
 }
 
-export function expand(
-  catalog: Catalog,
-  targets: Target[],
-  inputs: Input[] = [],
-  machineOverrides: Record<string, string> = {},
-  recipeChoices: Record<string, string> = {},
-  machineCategoryDefaults: Record<string, string> = {},
-): FlowGraph {
+export function expand(req: SolveRequest): FlowGraph {
+  const {
+    catalog,
+    targets,
+    inputs = [],
+    machineOverrides = {},
+    recipeChoices = {},
+    machineCategoryDefaults = {},
+  } = req
   const nodes = new Map<string, FlowNode>()
   const edges: FlowEdge[] = []
   // Each unique (source, target, item) triple maps to ONE edge in `edges`.
@@ -249,7 +246,7 @@ export function expand(
     // `d.rate` as the unmet portion. We don't mutate `d` directly — keep
     // the original safe in case we ever need it for debugging.
     const residualRate = remaining
-    const recipe = RAW_ITEMS.has(d.item) ? undefined : pickRecipe(catalog, d.item, recipeChoices)
+    const recipe = catalog.rawItems.has(d.item) ? undefined : pickRecipe(catalog, d.item, recipeChoices)
 
     if (!recipe) {
       const id = `source:${d.item}`
