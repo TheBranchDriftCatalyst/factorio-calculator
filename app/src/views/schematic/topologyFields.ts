@@ -71,4 +71,14 @@ export const TOPOLOGY_FIELDS: ReadonlyArray<TopologyField> = [
       options: LAYOUT_ALGORITHM_LIST.map((a) => a.id) satisfies LayoutAlgorithmId[],
     },
   },
+  // Auto-bus's tunable. Ignored by bus-tree, but lives in LayoutConfig
+  // because it's a layout-pipeline parameter. Higher → fewer items
+  // earn extra buses (tighter); lower → more aggressive splitting.
+  {
+    key: "heavyConsumerThreshold",
+    label: "Heavy item threshold",
+    group: "Belt",
+    hint: "auto-bus only",
+    field: { kind: "slider", min: 3, max: 12, step: 1 },
+  },
 ]

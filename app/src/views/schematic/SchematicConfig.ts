@@ -64,6 +64,14 @@ export interface LayoutConfig {
    * Unassigned items fall through to the default bus for their role.
    */
   beltAssignments: Record<string, string>
+  /**
+   * Auto-bus algorithm tunable: minimum unique consumer count an item
+   * must have to be flagged "heavy" and pushed onto a parallel bus
+   * column. Higher → fewer items earn extra buses → tighter layout but
+   * potentially more crowded trunk. Lower → more aggressive splitting.
+   * Ignored by bus-tree (only auto-bus consumes it).
+   */
+  heavyConsumerThreshold: number
 }
 
 /**
@@ -113,6 +121,7 @@ export function layoutConfig(c: SchematicConfig): LayoutConfig {
     cellGapY: c.cellGapY,
     groupGapY: c.groupGapY,
     beltAssignments: c.beltAssignments,
+    heavyConsumerThreshold: c.heavyConsumerThreshold,
   }
 }
 
@@ -143,6 +152,7 @@ export const DEFAULT_CONFIG: SchematicConfig = {
   bottleneckMode: false,
   beltOverrides: {},
   beltAssignments: {},
+  heavyConsumerThreshold: 6,
   layoutAlgorithm: DEFAULT_LAYOUT_ALGORITHM,
 }
 

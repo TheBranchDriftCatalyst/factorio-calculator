@@ -33,13 +33,14 @@ import type { Blueprint } from "../types"
 import { busLayout } from "./busLayout"
 
 /**
- * Threshold above which an item earns a parallel bus column. Tuned for
- * the typical sci-pack factory (~6 chip consumers). Below this, items
- * stay single-bus and the layout is the bus-tree default.
+ * Default threshold above which an item earns a parallel bus column.
+ * Tuned for the typical sci-pack factory (~6 chip consumers). Below
+ * this, items stay single-bus and the layout is the bus-tree default.
  *
- * v1+: surface as a configurable knob in TopologyPanel.
+ * Now overridable via LayoutConfig.heavyConsumerThreshold (the
+ * TopologyPanel slider).
  */
-const HEAVY_CONSUMER_THRESHOLD = 6
+export const DEFAULT_HEAVY_CONSUMER_THRESHOLD = 6
 
 /**
  * Build the `beltAssignments` map auto-bus should hand to busLayout.
@@ -50,9 +51,13 @@ const HEAVY_CONSUMER_THRESHOLD = 6
  *
  * Items omitted from the result use the layout's defaults (single left
  * bus, or right bus for final-output items in split mode).
+ *
+ * `threshold` is the minimum consumer count for an item to be flagged
+ * heavy. Defaults to DEFAULT_HEAVY_CONSUMER_THRESHOLD when omitted.
  */
 export function computeAutoBusAssignments(
   flow: FlowGraph,
+  threshold: number = DEFAULT_HEAVY_CONSUMER_THRESHOLD,
 ): Record<string, string> {
   // 1. Count consumers per item across the WHOLE flow (root scope only —
   //    sub-clustered items can stay on the parent's local bus and aren't
@@ -73,7 +78,7 @@ export function computeAutoBusAssignments(
   // 2. Identify heavy items.
   const heavyItems: string[] = []
   for (const [item, consumers] of consumersByItem) {
-    if (consumers.size > HEAVY_CONSUMER_THRESHOLD) {
+    if (consumers.size > threshold) {
       heavyItems.push(item)
     }
   }
@@ -110,7 +115,8 @@ export function autoBusLayout(
   flow: FlowGraph,
   opts: Partial<LayoutConfig> = {},
 ): Blueprint {
-  const computed = computeAutoBusAssignments(flow)
+  const threshold = opts.heavyConsumerThreshold ?? DEFAULT_HEAVY_CONSUMER_THRESHOLD
+  const computed = computeAutoBusAssignments(flow, threshold)
   // Override any user beltAssignments — auto-bus owns this slot.
   return busLayout(catalog, flow, { ...opts, beltAssignments: computed })
 }
