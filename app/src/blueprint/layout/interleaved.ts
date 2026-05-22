@@ -708,19 +708,27 @@ export function interleavedLayout(
     }
   }
 
-  // 6. Sub-bus groups via chain detection.
+  // 6. RECURSIVE NESTING: chains gain a nested BusNode with their
+  //    internal direct-link items represented as proper BusBelts.
   //
-  // A "sub-bus group" in the interleaved model is a chain of cells
-  // linked by direct connections across adjacent stages: A → B → C.
-  // Each pair (A, B), (B, C) is a directLink, so the items in the
-  // chain never appear on the main bus — they're a self-contained
-  // mini-factory. Visually framing the chain as a CellGroup lets the
-  // user read "these N cells together produce X" at a glance.
+  // The chain's BusNode (added under root.children) holds belts for
+  // every item connecting adjacent chain members. Cells' direct
+  // port.beltX values are re-pointed to these nested belts so the
+  // renderer treats them like any other bus tap. The point-to-point
+  // DirectConnection entries are dropped — the nested belts subsume
+  // them.
   //
-  // Single-cell groups (no chain) aren't framed — they're just leaf
-  // cells like any other.
+  // Belt positioning: nested belts sit JUST WEST of the chain's
+  // leftmost cell so chain members' W-edge direct ports still satisfy
+  // the universal "input belt < cell.x" invariant. Width: one belt
+  // per direct link, packed using the same beltWidth + beltSpacing.
   const chains = buildChains(cells, directLinks)
   const groupNodes: BusNode[] = []
+  const linkItemByPair = new Map<string, string>() // "from|to" → item
+  for (const [item, link] of directLinks) {
+    linkItemByPair.set(`${link.from}|${link.to}`, item)
+  }
+  const absorbedDirectItems = new Set<string>()
   for (let i = 0; i < chains.length; i++) {
     const chain = chains[i]
     if (chain.length < 2) continue
@@ -739,33 +747,74 @@ export function interleavedLayout(
         cPowerW += node.powerW
       }
     }
+    // Allocate nested belts WEST of the chain. The first belt sits
+    // 1 tile west of minX; each subsequent belt further west.
+    const nestedBelts: BusBelt[] = []
+    const nestedItems: string[] = []
+    const beltStride = o.beltWidth + o.beltSpacing
+    let beltIdx = 0
+    for (let j = 0; j < chain.length - 1; j++) {
+      const fromId = chain[j]
+      const toId = chain[j + 1]
+      const item = linkItemByPair.get(`${fromId}|${toId}`)
+      if (!item) continue
+      const fromCell = cellByKey.get(fromId)
+      const toCell = cellByKey.get(toId)
+      if (!fromCell || !toCell) continue
+      const prodPort = fromCell.outputs.find(
+        (p) => p.item === item && p.scope.kind === "direct",
+      )
+      const consPort = toCell.inputs.find(
+        (p) => p.item === item && p.scope.kind === "direct",
+      )
+      if (!prodPort || !consPort) continue
+      const beltX = minX - 1 - beltIdx * beltStride - o.beltWidth
+      beltIdx++
+      const beltY0 = Math.min(prodPort.dropY, consPort.dropY)
+      const beltY1 = Math.max(prodPort.dropY, consPort.dropY) + 1
+      nestedBelts.push({
+        x: beltX,
+        laneA: { item, rate: directLinks.get(item)?.rate ?? 0 },
+        y0: beltY0,
+        y1: beltY1,
+      })
+      nestedItems.push(item)
+      prodPort.beltX = beltX
+      consPort.beltX = beltX
+      for (const ins of inserters) {
+        if (ins.item !== item) continue
+        if (ins.cellKey !== fromId && ins.cellKey !== toId) continue
+        ins.beltX = beltX
+      }
+      absorbedDirectItems.add(item)
+    }
+    // Frame extends to cover the leftmost nested belt.
+    const effectiveMinX = nestedBelts.length > 0
+      ? Math.min(minX - 1, minX - 1 - (beltIdx) * beltStride)
+      : minX
     groupNodes.push({
       id: `chain-${i}`,
       depth: 1,
-      x: minX - 1,
+      x: effectiveMinX - 1,
       y: minY - 1,
-      w: maxX - minX + 2,
+      w: maxX - effectiveMinX + 2,
       h: maxYY - minY + 2,
-      belts: [],
+      belts: nestedBelts,
       gutterX: -1,
-      scopeItems: chain
-        .map((_, idx) => chain[idx + 1])
-        .filter((nextId): nextId is string => !!nextId)
-        .map((nextId) => {
-          // Pull the linked item from directLinks for whichever entry's
-          // `to` === nextId. We just need a representative label.
-          for (const [item, link] of directLinks) {
-            if (link.to === nextId) return item
-          }
-          return ""
-        })
-        .filter(Boolean),
+      scopeItems: nestedItems,
       children: [],
       cellKeys: chain,
       totalMachines: cMachines,
       totalPowerW: cPowerW,
     })
   }
+  // Drop the absorbed point-to-point connectors — the nested belts
+  // visually replace them.
+  const filteredDirectConnections = directConnections.filter(
+    (dc) => !absorbedDirectItems.has(dc.item),
+  )
+  directConnections.length = 0
+  directConnections.push(...filteredDirectConnections)
 
   // 7. Wrap everything in a single root BusNode so the renderer can
   // walk belts via its existing tree walkers. Chains land in
@@ -946,10 +995,14 @@ function emitCell(
     const scope: PortScope = direct
       ? { kind: "direct", partnerCellKey: dl!.to }
       : { kind: "trunk" }
+    // DIRECT outputs land on a chain-nested belt that sits WEST of
+    // the chain block, so the producer's perimeter inserter must
+    // face WEST and the port must live on the W edge. Non-direct
+    // outputs go E to the next-stage main bus as usual.
     inserters.push({
-      x: ePerimeterX,
+      x: direct ? wPerimeterX : ePerimeterX,
       y: dropY,
-      facing: "east",
+      facing: direct ? "west" : "east",
       direction: "output",
       beltX: provisionalBeltX,
       cellKey: node.id,
@@ -964,7 +1017,7 @@ function emitCell(
       dropY,
       direction: "output",
       scope,
-      edge: "E",
+      edge: direct ? "W" : "E",
       slot: dropY - yStart,
     })
   }

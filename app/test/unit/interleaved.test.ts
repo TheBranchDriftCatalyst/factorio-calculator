@@ -88,28 +88,37 @@ describe("interleaved · interleavedLayout", () => {
     }
   })
 
-  it("outputs go EAST (E edge), targeting a belt to the right of the cell", () => {
+  it("non-direct outputs go EAST (E edge), targeting a belt to the right of the cell", () => {
+    // After Phase 5 recursive nesting, chain-internal direct outputs
+    // live on the W edge (drop onto the chain's nested mini-bus to
+    // the west). Only NON-direct outputs hit the next-stage main bus
+    // to the east. We narrow the assertion accordingly.
     const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const bp = interleavedLayout(catalog, flow, {})
     for (const cell of bp.cells) {
       for (const port of cell.outputs) {
+        if (port.scope.kind === "direct") continue
         expect(port.edge).toBe("E")
         expect(port.beltX).toBeGreaterThan(cell.x)
       }
     }
   })
 
-  it("emits bus belts for items consumed by multiple cells; direct links for unique pairs", () => {
+  it("emits bus belts for items consumed by multiple cells; chain mini-bus for unique pairs", () => {
     const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
     const bp = interleavedLayout(catalog, flow, {})
-    const belts = bp.root?.belts ?? []
+    const trunkBelts = bp.root?.belts ?? []
     // The electronic-circuit chain has unique 1-producer-1-consumer
-    // pairs (iron-plate→EC, copper-plate→cable, cable→EC) so MOST
-    // intermediates become direct connections. We expect at least the
-    // raw input bus (iron-ore + copper-ore) and the final-output bus.
-    expect(belts.length).toBeGreaterThanOrEqual(2)
-    // Direct connections should be emitted for the single-pair items.
-    expect(bp.directConnections.length).toBeGreaterThan(0)
+    // pairs. Raw input bus + final output bus give us trunk belts.
+    expect(trunkBelts.length).toBeGreaterThanOrEqual(2)
+    // After Phase 5 recursive nesting, unique-pair items are now
+    // BUS BELTS inside nested chain BusNodes (root.children), not
+    // flat directConnections. We count the union.
+    const chainBeltCount = (bp.root?.children ?? []).reduce(
+      (sum, child) => sum + child.belts.length,
+      0,
+    )
+    expect(chainBeltCount + bp.directConnections.length).toBeGreaterThan(0)
   })
 
   it("items consumed by multiple stages get ONE bus column, not one per stage", () => {
@@ -289,6 +298,45 @@ describe("interleaved · interleavedLayout", () => {
       // NOT compacted — copper-plate (stage 0) and EC (stage 2) at
       // different x positions.
       expect(cp.x).toBeLessThan(ec.x)
+    }
+  })
+
+  it("recursive nesting: chain BusNodes carry the chain's internal belts", () => {
+    // Recursive nesting (Phase 5): each multi-cell chain becomes a
+    // nested BusNode under root.children with proper BusBelt entries
+    // representing the chain's internal item flow. Adjacent-member
+    // direct links are subsumed into these nested belts; the flat
+    // directConnections list is correspondingly smaller.
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const bp = interleavedLayout(catalog, flow, {})
+    const chainNodes = (bp.root?.children ?? []).filter((c) => c.id.startsWith("chain-"))
+    if (chainNodes.length === 0) return // no chains in this fixture
+    for (const ch of chainNodes) {
+      // Multi-cell chain → at least N-1 nested belts (one per link).
+      const links = ch.cellKeys.length - 1
+      expect(ch.belts.length).toBeGreaterThanOrEqual(links)
+      // Nested belts are properly bounded vertically.
+      for (const b of ch.belts) {
+        expect(b.y0).toBeDefined()
+        expect(b.y1).toBeDefined()
+        expect(b.y1!).toBeGreaterThan(b.y0!)
+      }
+    }
+  })
+
+  it("recursive nesting: direct-link items don't dual-render", () => {
+    // After nesting, items that became chain bus belts must NOT also
+    // appear as flat DirectConnection entries.
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const bp = interleavedLayout(catalog, flow, {})
+    const chainBeltItems = new Set<string>()
+    for (const ch of bp.root?.children ?? []) {
+      for (const b of ch.belts) {
+        if (b.laneA?.item) chainBeltItems.add(b.laneA.item)
+      }
+    }
+    for (const dc of bp.directConnections) {
+      expect(chainBeltItems.has(dc.item)).toBe(false)
     }
   })
 
