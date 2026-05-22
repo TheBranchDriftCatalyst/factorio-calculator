@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
 import type { Catalog } from "../factorio"
 import type { FlowGraph } from "../solver/expand"
-import { busLayout } from "../blueprint/layout/busLayout"
+import { runLayout } from "../blueprint/layout/algorithms"
 import { CanvasTiles } from "../blueprint/render/CanvasTiles"
 import type { Cell } from "../blueprint/types"
 import { flattenGroups, walkBusNodes } from "../blueprint/types"
@@ -75,12 +75,15 @@ export function SchematicView({
   const { zoom, bottleneckMode, beltTier } = config
 
   const blueprint = useMemo(
-    () => busLayout(catalog, flow, layoutConfig(config)),
+    () => runLayout(config.layoutAlgorithm, catalog, flow, layoutConfig(config)),
     [
       catalog,
       flow,
       // Depend on the LayoutConfig fields explicitly so render-only knobs
-      // (zoom, bottleneckMode, etc.) don't trigger a re-layout.
+      // (zoom, bottleneckMode, etc.) don't trigger a re-layout. The
+      // algorithm id is on RenderConfig but DOES trigger a re-layout
+      // because it picks the whole pipeline.
+      config.layoutAlgorithm,
       config.beltSpacing,
       config.beltGroupSize,
       config.beltWidth,

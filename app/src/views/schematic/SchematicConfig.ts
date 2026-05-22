@@ -12,6 +12,11 @@
 // Consumers that want everything just use the SchematicConfig intersection.
 
 import type { BeltTier } from "../../blueprint/util/utilization"
+import {
+  DEFAULT_LAYOUT_ALGORITHM,
+  LAYOUT_ALGORITHMS,
+  type LayoutAlgorithmId,
+} from "../../blueprint/layout/algorithms"
 
 /** Where final-output belts live relative to cells. */
 export type OutputBusSide = "left" | "right" | "split"
@@ -64,6 +69,10 @@ export interface LayoutConfig {
 /**
  * RENDER controls — feed CanvasTiles. Pure visual: change them and the
  * blueprint stays the same, only the pixels change.
+ *
+ * `layoutAlgorithm` is here (not in LayoutConfig) because changing it
+ * swaps the entire layout PIPELINE, not a knob within one — semantically
+ * a "view choice" the user makes, like zoom or belt tier.
  */
 export interface RenderConfig {
   beltTier: BeltTier
@@ -76,6 +85,12 @@ export interface RenderConfig {
   zoom: number
   bottleneckMode: boolean
   showCrossings: boolean
+  /**
+   * Which layout algorithm to run. Strangler-fig setup: the legacy
+   * "bus-tree" lives alongside any successor (e.g. "auto-bus") so we
+   * can A/B them before retiring either. See blueprint/layout/algorithms.ts.
+   */
+  layoutAlgorithm: LayoutAlgorithmId
 }
 
 /**
@@ -109,6 +124,7 @@ export function renderConfig(c: SchematicConfig): RenderConfig {
     zoom: c.zoom,
     bottleneckMode: c.bottleneckMode,
     showCrossings: c.showCrossings,
+    layoutAlgorithm: c.layoutAlgorithm,
   }
 }
 
@@ -127,6 +143,7 @@ export const DEFAULT_CONFIG: SchematicConfig = {
   bottleneckMode: false,
   beltOverrides: {},
   beltAssignments: {},
+  layoutAlgorithm: DEFAULT_LAYOUT_ALGORITHM,
 }
 
 export const STORAGE_KEY = "schematic.config.v1"
@@ -148,6 +165,12 @@ export function loadConfig(): SchematicConfig {
     if (!raw) return DEFAULT_CONFIG
     const parsed = JSON.parse(raw) as Partial<SchematicConfig>
     // Merge with defaults so missing fields get filled in if we add new ones.
+    // Unknown layoutAlgorithm (e.g. an old id we removed) falls back to the
+    // current default rather than passing through and crashing the renderer.
+    const layoutAlgorithm =
+      parsed.layoutAlgorithm && parsed.layoutAlgorithm in LAYOUT_ALGORITHMS
+        ? parsed.layoutAlgorithm
+        : DEFAULT_LAYOUT_ALGORITHM
     return {
       ...DEFAULT_CONFIG,
       ...parsed,
@@ -155,6 +178,7 @@ export function loadConfig(): SchematicConfig {
       // stale persisted blobs from before these fields existed).
       beltOverrides: parsed.beltOverrides ?? {},
       beltAssignments: parsed.beltAssignments ?? {},
+      layoutAlgorithm,
     }
   } catch {
     return DEFAULT_CONFIG

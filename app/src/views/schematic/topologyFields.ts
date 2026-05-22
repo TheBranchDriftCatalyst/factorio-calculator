@@ -4,6 +4,10 @@
 
 import type { SchematicConfig } from "./SchematicConfig"
 import type { BeltTier } from "../../blueprint/util/utilization"
+import {
+  LAYOUT_ALGORITHM_LIST,
+  type LayoutAlgorithmId,
+} from "../../blueprint/layout/algorithms"
 
 export type FieldKind =
   | { kind: "toggle" }
@@ -56,4 +60,15 @@ export const TOPOLOGY_FIELDS: ReadonlyArray<TopologyField> = [
     field: { kind: "slider", min: 8, max: 36, step: 2 } },
   { key: "bottleneckMode", label: "Bottleneck mode", group: "Display", hint: "B",
     field: { kind: "toggle" } },
+  // Strangler-fig picker. Options pulled from the algorithm registry so
+  // adding a new layout impl is a one-liner there (no panel change).
+  {
+    key: "layoutAlgorithm",
+    label: "Layout algorithm",
+    group: "Display",
+    field: {
+      kind: "select",
+      options: LAYOUT_ALGORITHM_LIST.map((a) => a.id) satisfies LayoutAlgorithmId[],
+    },
+  },
 ]
