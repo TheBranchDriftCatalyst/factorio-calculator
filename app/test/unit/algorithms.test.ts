@@ -82,4 +82,21 @@ describe("layout algorithm registry", () => {
     expect(out.width).toBeGreaterThan(0)
     expect(out.height).toBeGreaterThan(0)
   })
+
+  it("interleaved algorithm exists and is marked experimental", () => {
+    const algo = LAYOUT_ALGORITHMS.interleaved
+    expect(algo).toBeDefined()
+    expect(algo.experimental).toBe(true)
+  })
+
+  it("interleaved produces a valid Blueprint with stages laid out horizontally", () => {
+    const out = runLayout("interleaved", catalog, flow, {})
+    expect(out.cells.length).toBeGreaterThan(0)
+    expect(out.width).toBeGreaterThan(0)
+    // Interleaved spreads cells across multiple X columns (one per stage),
+    // so its width should be NOTICEABLY larger than the bus-tree layout's
+    // single-column packing on the same flow.
+    const busTree = runLayout("bus-tree", catalog, flow, {})
+    expect(out.width).toBeGreaterThan(busTree.width)
+  })
 })

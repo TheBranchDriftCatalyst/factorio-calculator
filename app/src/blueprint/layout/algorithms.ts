@@ -19,13 +19,14 @@ import type { Blueprint } from "../types"
 import { busLayout } from "./busLayout"
 import { autoBusLayout } from "./autoBus"
 import { cspLayout } from "./csp"
+import { interleavedLayout } from "./interleaved"
 
 /**
  * Stable string id for a layout algorithm. New impls get a new id added
  * to this union — keep them kebab-case + short. Persisted in
  * RenderConfig.layoutAlgorithm and round-trips through localStorage.
  */
-export type LayoutAlgorithmId = "bus-tree" | "auto-bus" | "csp"
+export type LayoutAlgorithmId = "bus-tree" | "auto-bus" | "csp" | "interleaved"
 
 export interface LayoutAlgorithm {
   id: LayoutAlgorithmId
@@ -96,11 +97,28 @@ const cspAlgorithm: LayoutAlgorithm = {
   run: (catalog, flow, opts) => cspLayout(catalog, flow, opts),
 }
 
+/**
+ * Interleaved bus columns: real Factorio main-bus stages. Cells are
+ * grouped by recipe-DAG depth into "stages"; each stage gets its own
+ * input bus on the LEFT and feeds the next stage's bus on the RIGHT.
+ * The bus grows wider as you move through the factory (new items
+ * appear at each stage). Matches how players actually design bases.
+ */
+const interleavedAlgorithm: LayoutAlgorithm = {
+  id: "interleaved",
+  label: "Interleaved (preview)",
+  description:
+    "Stages cells by recipe-DAG depth. Each stage has its own input bus on its left; outputs feed the next stage's bus. The bus widens left → right as new intermediates appear — the canonical 'main bus' factory pattern.",
+  experimental: true,
+  run: (catalog, flow, opts) => interleavedLayout(catalog, flow, opts),
+}
+
 /** Registry keyed by id. Add new algorithms here. */
 export const LAYOUT_ALGORITHMS: Record<LayoutAlgorithmId, LayoutAlgorithm> = {
   "bus-tree": busTreeAlgorithm,
   "auto-bus": autoBusAlgorithm,
   csp: cspAlgorithm,
+  interleaved: interleavedAlgorithm,
 }
 
 /**
@@ -111,6 +129,7 @@ export const LAYOUT_ALGORITHM_LIST: ReadonlyArray<LayoutAlgorithm> = [
   busTreeAlgorithm,
   autoBusAlgorithm,
   cspAlgorithm,
+  interleavedAlgorithm,
 ]
 
 export const DEFAULT_LAYOUT_ALGORITHM: LayoutAlgorithmId = "bus-tree"

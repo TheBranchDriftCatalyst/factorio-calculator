@@ -20,10 +20,10 @@ import type { FlowGraph } from "../../solver/expand"
 import type { LayoutConfig } from "../../views/schematic/SchematicConfig"
 import { orderByTapDistance, type CostNode } from "./cost"
 import { tileStrip } from "./manifold"
+import { packBeltsAt } from "./packing"
 import type {
   Blueprint,
   BusBelt,
-  BusLane,
   BusNode,
   Cell,
   CellPort,
@@ -69,50 +69,6 @@ const LAYOUT_DEFAULTS: LayoutConfig = {
 }
 
 type ResolvedOpts = LayoutConfig & InternalOpts
-
-/** Pack items into 2-lane vertical belt columns starting at `startX`. */
-function packBeltsAt(
-  items: Array<[string, number]>,
-  beltGroupSize: number,
-  beltSpacing: number,
-  beltWidth: number,
-  startX: number,
-  isFluid: (item: string) => boolean = () => false,
-): { belts: BusBelt[]; gutterX: number; beltXByItem: Map<string, number> } {
-  const belts: BusBelt[] = []
-  const beltXByItem = new Map<string, number>()
-  let cursorX = startX
-  let beltsInGroup = 0
-  // Sort: solid items first (they can pair up), then fluids (single-lane).
-  // Within each group, preserve rate-descending order.
-  const solids: Array<[string, number]> = []
-  const fluids: Array<[string, number]> = []
-  for (const it of items) (isFluid(it[0]) ? fluids : solids).push(it)
-  const placeBelt = (laneA: BusLane, laneB?: BusLane) => {
-    if (beltsInGroup > 0 && beltsInGroup % beltGroupSize === 0) {
-      cursorX += 1
-      beltsInGroup = 0
-    }
-    belts.push({ x: cursorX, laneA, laneB })
-    beltXByItem.set(laneA.item, cursorX)
-    if (laneB) beltXByItem.set(laneB.item, cursorX)
-    cursorX += beltWidth + beltSpacing
-    beltsInGroup += 1
-  }
-  // Solid items: pair up 2 per belt.
-  for (let i = 0; i < solids.length; ) {
-    const laneA: BusLane = { item: solids[i][0], rate: solids[i][1] }
-    const laneB: BusLane | undefined =
-      i + 1 < solids.length ? { item: solids[i + 1][0], rate: solids[i + 1][1] } : undefined
-    placeBelt(laneA, laneB)
-    i += laneB ? 2 : 1
-  }
-  // Fluids: one per "pipe" (no pairing — fluids can't share a pipe).
-  for (const f of fluids) {
-    placeBelt({ item: f[0], rate: f[1], isFluid: true })
-  }
-  return { belts, gutterX: cursorX, beltXByItem }
-}
 
 /** Topological sort over arbitrary string-keyed nodes given a directed edge list. */
 function topoSort<T extends string>(
