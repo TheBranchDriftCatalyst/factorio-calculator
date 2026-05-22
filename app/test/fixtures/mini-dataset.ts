@@ -13,6 +13,11 @@ export const miniDataset: KirkRawDataset = {
     { key: "copper-plate", localized_name: { en: "Copper plate" } },
     { key: "copper-cable", localized_name: { en: "Copper cable" } },
     { key: "electronic-circuit", localized_name: { en: "Electronic circuit" } },
+    // For the multi-product crude-oil-cracking recipe used by
+    // intermediates-panel tests.
+    { key: "crude-oil", localized_name: { en: "Crude oil" } },
+    { key: "light-oil", localized_name: { en: "Light oil" } },
+    { key: "heavy-oil", localized_name: { en: "Heavy oil" } },
   ],
   recipes: [
     {
@@ -50,6 +55,22 @@ export const miniDataset: KirkRawDataset = {
       ],
       results: [{ name: "electronic-circuit", amount: 1 }],
     },
+    // Multi-product recipe used by intermediates-panel tests. Cracking
+    // turns crude-oil into BOTH light-oil and heavy-oil — whichever the
+    // user demands, the other is structurally forced as a byproduct. Lives
+    // in its own "chemistry" category with its own machine (chemical-plant)
+    // so it doesn't shift the solver's machine pick for existing recipes.
+    {
+      key: "crude-oil-cracking",
+      localized_name: { en: "Crude oil cracking" },
+      category: "chemistry",
+      energy_required: 1,
+      ingredients: [{ name: "crude-oil", amount: 10 }],
+      results: [
+        { name: "light-oil", amount: 3 },
+        { name: "heavy-oil", amount: 1 },
+      ],
+    },
   ],
   crafting_machines: [
     {
@@ -82,6 +103,17 @@ export const miniDataset: KirkRawDataset = {
       module_slots: 0,
       prod_bonus: 0.5,
       energy_usage: 2_000_000,
+      energy_source: { type: "electric" },
+    },
+    // Machine that crafts crude-oil-cracking. Distinct category so the
+    // solver still picks furnace/EM-plant/assembler for other recipes.
+    {
+      key: "chemical-plant",
+      localized_name: { en: "Chemical plant" },
+      crafting_categories: ["chemistry"],
+      crafting_speed: 1,
+      module_slots: 0,
+      energy_usage: 210_000,
       energy_source: { type: "electric" },
     },
   ],

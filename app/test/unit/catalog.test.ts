@@ -7,7 +7,7 @@ describe("loadCatalog", () => {
 
   it("indexes items by key with localized names", () => {
     expect(catalog.items.get("iron-plate")?.name).toBe("Iron plate")
-    expect(catalog.items.size).toBe(6)
+    expect(catalog.items.size).toBe(9)
   })
 
   it("translates ingredients/results to normalized shape", () => {
