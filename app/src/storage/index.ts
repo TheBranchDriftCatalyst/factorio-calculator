@@ -4,7 +4,13 @@ export type { KVStore, KVStoreId } from "./types"
 export { getJson, setJson } from "./types"
 export { LocalStorageKVStore } from "./local"
 export { MemoryKVStore } from "./memory"
-export { GistKVStore, type GistConfig } from "./gist"
+export {
+  GistKVStore,
+  type GistConfig,
+  runGistDiagnostics,
+  type DiagnosticResult,
+  type DiagnosticStep,
+} from "./gist"
 export { CachingKVStore } from "./caching"
 export {
   StorageProvider,

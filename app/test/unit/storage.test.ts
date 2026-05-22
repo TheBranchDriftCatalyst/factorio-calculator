@@ -195,4 +195,98 @@ describe("storage · GistKVStore", () => {
     const store = new GistKVStore({ token: "ok" })
     expect(await store.testConnection()).toBeNull()
   })
+
+  it("writeFiles populates lastWriteError on failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: () => Promise.resolve('{"message":"Resource not accessible by personal access token"}'),
+      } as Response),
+    )
+    const store = new GistKVStore({ token: "bad-scope" })
+    await store.set("foo", "bar")
+    expect(store.lastWriteError).toBeDefined()
+    expect(store.lastWriteError?.status).toBe(403)
+    expect(store.lastWriteError?.message).toContain("403")
+  })
+})
+
+describe("storage · runGistDiagnostics", () => {
+  it("reports auth failure on /user 401", async () => {
+    const { runGistDiagnostics } = await import("../../src/storage/gist")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        headers: { get: () => null },
+        text: () => Promise.resolve(""),
+      } as unknown as Response),
+    )
+    const result = await runGistDiagnostics("bad")
+    expect(result.ok).toBe(false)
+    expect(result.steps).toHaveLength(1)
+    expect(result.steps[0].ok).toBe(false)
+    expect(result.steps[0].status).toBe(401)
+    expect(result.steps[0].message).toMatch(/rejected/i)
+  })
+
+  it("flags missing 'gist' scope when scopes header excludes it", async () => {
+    const { runGistDiagnostics } = await import("../../src/storage/gist")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: { get: (k: string) => (k === "x-oauth-scopes" ? "repo,user" : null) },
+        text: () => Promise.resolve(""),
+      } as unknown as Response),
+    )
+    const result = await runGistDiagnostics("ok-but-wrong-scope")
+    expect(result.ok).toBe(false)
+    expect(result.tokenScopes).toEqual(["repo", "user"])
+    // Step 1 succeeded, step 2 (scope check) failed.
+    expect(result.steps[0].ok).toBe(true)
+    expect(result.steps[1].ok).toBe(false)
+    expect(result.steps[1].message).toMatch(/lacks 'gist' scope/i)
+  })
+
+  it("runs full create+delete probe when scope check passes", async () => {
+    const { runGistDiagnostics } = await import("../../src/storage/gist")
+    const probeId = "abc123def456"
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        // 1. /user with gist scope
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: { get: (k: string) => (k === "x-oauth-scopes" ? "gist" : null) },
+          text: () => Promise.resolve(""),
+        } as unknown as Response)
+        // 2. POST /gists probe
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 201,
+          headers: { get: () => null },
+          json: () => Promise.resolve({ id: probeId }),
+          text: () => Promise.resolve(""),
+        } as unknown as Response)
+        // 3. DELETE /gists/{probeId}
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 204,
+          headers: { get: () => null },
+          text: () => Promise.resolve(""),
+        } as unknown as Response),
+    )
+    const result = await runGistDiagnostics("good")
+    expect(result.ok).toBe(true)
+    expect(result.steps.length).toBeGreaterThanOrEqual(3)
+    // Last step should be the cleanup.
+    expect(result.steps[result.steps.length - 1].name).toMatch(/cleanup/i)
+  })
 })

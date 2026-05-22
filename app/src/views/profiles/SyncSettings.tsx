@@ -13,7 +13,7 @@
 // in the UI so users with sensitive PATs can opt out by clearing.
 
 import { useState } from "react"
-import { GistKVStore } from "../../storage/gist"
+import { GistKVStore, runGistDiagnostics, type DiagnosticResult } from "../../storage/gist"
 import { LocalStorageKVStore } from "../../storage/local"
 import { useStorage, type StorageSettings } from "../../storage"
 
@@ -86,6 +86,7 @@ export function SyncSettings() {
   const [draftGistId, setDraftGistId] = useState(settings.gist?.gistId ?? "")
   const [status, setStatus] = useState<{ kind: "info" | "ok" | "err"; msg: string } | null>(null)
   const [testing, setTesting] = useState(false)
+  const [diagnostics, setDiagnostics] = useState<DiagnosticResult | null>(null)
 
   // Resolve the draft gist id. Returns:
   //   { ok: true, id: undefined } — blank input (auto-create on save)
@@ -126,6 +127,40 @@ export function SyncSettings() {
       const err = await store.testConnection()
       if (err) setStatus({ kind: "err", msg: err })
       else setStatus({ kind: "ok", msg: "Auth OK." })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const onDiagnose = async () => {
+    if (draftBackend !== "gist") {
+      setStatus({ kind: "info", msg: "Diagnose is for the Gist backend only." })
+      return
+    }
+    const token = draftToken.trim()
+    if (!token) {
+      setStatus({ kind: "err", msg: "Enter a PAT first." })
+      return
+    }
+    const idResult = resolveGistId()
+    if (!idResult.ok) {
+      setStatus({
+        kind: "err",
+        msg: "Gist id looks invalid — paste the hex id or the gist URL (leave blank to skip the read-gist step).",
+      })
+      return
+    }
+    setTesting(true)
+    setStatus({ kind: "info", msg: "Running diagnostics — this calls GitHub a few times…" })
+    setDiagnostics(null)
+    try {
+      const result = await runGistDiagnostics(token, idResult.id)
+      setDiagnostics(result)
+      setStatus(
+        result.ok
+          ? { kind: "ok", msg: "Diagnostics passed — sync should work. Click Save." }
+          : { kind: "err", msg: "Diagnostics found problems — see the steps below." },
+      )
     } finally {
       setTesting(false)
     }
@@ -185,9 +220,12 @@ export function SyncSettings() {
       if (v != null) await remote.set(k, v)
     }
     if (!gistId) {
+      const err = remote.lastWriteError
       setStatus({
         kind: "err",
-        msg: "Couldn't create gist — check that the token has the 'gist' scope.",
+        msg: err
+          ? `Couldn't create gist — ${err.message}. Run Diagnose for a step-by-step check.`
+          : "Couldn't create gist — check that the token has the 'gist' scope. Run Diagnose for details.",
       })
       return
     }
@@ -314,7 +352,7 @@ export function SyncSettings() {
         </>
       )}
 
-      <div style={{ display: "flex", gap: 4 }}>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
         <button
           type="button"
           onClick={onTest}
@@ -323,6 +361,16 @@ export function SyncSettings() {
           data-testid="sync-test"
         >
           Test
+        </button>
+        <button
+          type="button"
+          onClick={onDiagnose}
+          disabled={testing}
+          style={GHOST_BUTTON}
+          data-testid="sync-diagnose"
+          title="Step-by-step health check: authenticate, scope check, write probe, cleanup"
+        >
+          Diagnose
         </button>
         <button
           type="submit"
@@ -339,6 +387,78 @@ export function SyncSettings() {
           style={{ color: statusColor, fontSize: 10, paddingTop: 2 }}
         >
           {status.msg}
+        </div>
+      )}
+
+      {diagnostics && (
+        <div
+          data-testid="sync-diagnostics"
+          style={{
+            border: `1px solid ${AMBER_FAINT}`,
+            padding: "6px 8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            fontSize: 10,
+            lineHeight: 1.4,
+          }}
+        >
+          <div
+            style={{
+              color: LABEL,
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              fontSize: 9,
+              paddingBottom: 2,
+            }}
+          >
+            Diagnostic steps
+          </div>
+          {diagnostics.steps.map((step, i) => (
+            <div
+              key={i}
+              data-testid={`sync-diagnostic-step-${i}`}
+              style={{ display: "flex", flexDirection: "column", gap: 1 }}
+            >
+              <div style={{ display: "flex", gap: 4 }}>
+                <span
+                  style={{
+                    color: step.ok
+                      ? "rgba(125, 211, 252, 0.95)"
+                      : "rgba(255, 107, 139, 0.95)",
+                    fontWeight: 700,
+                    minWidth: 12,
+                  }}
+                >
+                  {step.ok ? "✓" : "✗"}
+                </span>
+                <span style={{ flex: 1, color: "rgba(255,255,255,0.85)" }}>
+                  {step.name}
+                  {step.status != null && (
+                    <span style={{ color: LABEL, marginLeft: 4 }}>
+                      [{step.status}]
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div style={{ color: LABEL, paddingLeft: 16 }}>{step.message}</div>
+              {step.bodyPreview && (
+                <pre
+                  style={{
+                    color: "rgba(255, 107, 139, 0.8)",
+                    fontSize: 9,
+                    paddingLeft: 16,
+                    margin: 0,
+                    overflow: "auto",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {step.bodyPreview}
+                </pre>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </form>
