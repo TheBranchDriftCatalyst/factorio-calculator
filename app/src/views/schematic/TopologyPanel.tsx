@@ -3,8 +3,9 @@
 // All edits flow through a single `update` callback so consumers don't
 // have to wire one handler per field.
 
-import { useId, useMemo, useState } from "react"
+import { useMemo } from "react"
 import type { SchematicConfig } from "./SchematicConfig"
+import { CollapsiblePanel } from "../../components/CollapsiblePanel"
 import { TOPOLOGY_FIELDS, type TopologyField } from "./topologyFields"
 
 interface Props {
@@ -15,9 +16,6 @@ interface Props {
 }
 
 export function TopologyPanel({ config, update, defaultCollapsed = false }: Props) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed)
-  const panelId = useId()
-
   const fieldsByGroup = useMemo(() => {
     const m = new Map<string, TopologyField[]>()
     for (const f of TOPOLOGY_FIELDS) {
@@ -28,41 +26,25 @@ export function TopologyPanel({ config, update, defaultCollapsed = false }: Prop
   }, [])
 
   return (
-    <div
-      data-testid="topology-panel"
-      className="text-xs bg-card border border-border rounded"
+    <CollapsiblePanel
+      testId="topology-panel"
+      title="⚙ Topology"
+      defaultCollapsed={defaultCollapsed}
+      contentClassName="space-y-3"
     >
-      <button
-        type="button"
-        onClick={() => setCollapsed((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
-        aria-expanded={!collapsed}
-        aria-controls={panelId}
-      >
-        <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
-          ⚙ Topology
-        </span>
-        <span className="opacity-60" aria-hidden="true">
-          {collapsed ? "▸" : "▾"}
-        </span>
-      </button>
-      {!collapsed && (
-        <div id={panelId} className="px-3 py-2 space-y-3 border-t border-border">
-          {[...fieldsByGroup.entries()].map(([group, fields]) => (
-            <section key={group}>
-              <div className="uppercase tracking-wide text-[10px] opacity-50 mb-1.5">
-                {group}
-              </div>
-              <div className="space-y-1.5">
-                {fields.map((f) => (
-                  <FieldRow key={f.key as string} field={f} config={config} update={update} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
-    </div>
+      {[...fieldsByGroup.entries()].map(([group, fields]) => (
+        <section key={group}>
+          <div className="uppercase tracking-wide text-[10px] opacity-50 mb-1.5">
+            {group}
+          </div>
+          <div className="space-y-1.5">
+            {fields.map((f) => (
+              <FieldRow key={f.key as string} field={f} config={config} update={update} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </CollapsiblePanel>
   )
 }
 

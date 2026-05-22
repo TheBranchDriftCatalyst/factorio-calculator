@@ -3,9 +3,10 @@
 // haven't unlocked Assembler 2 yet) without having to pin each recipe
 // individually. Per-recipe `machineOverrides` still wins over these.
 
-import { useId, useMemo, useState } from "react"
+import { useMemo } from "react"
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
+import { CollapsiblePanel } from "../../components/CollapsiblePanel"
 
 interface Props {
   catalog: Catalog
@@ -32,8 +33,6 @@ export function MachineCategoryPicker({
   onChange,
   defaultCollapsed = true,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed)
-
   // Categories that appear in the current flow.
   const categoriesInFlow = useMemo(() => {
     const s = new Set<string>()
@@ -69,56 +68,39 @@ export function MachineCategoryPicker({
   }
 
   const activeCount = entries.filter((e) => defaults[e.category]).length
-  const panelId = useId()
+
+  const badge = activeCount > 0 ? (
+    <span
+      className="font-mono"
+      style={{
+        background: "rgba(255,201,64,0.85)",
+        color: "rgba(0,0,0,0.9)",
+        padding: "1px 6px",
+        fontSize: 9,
+        letterSpacing: "0.06em",
+      }}
+    >
+      {activeCount} PINNED
+    </span>
+  ) : undefined
 
   return (
-    <div
-      data-testid="machine-category-picker"
-      className="text-xs bg-card border border-border rounded"
+    <CollapsiblePanel
+      testId="machine-category-picker"
+      title="⚙ Default Machines"
+      badge={badge}
+      defaultCollapsed={defaultCollapsed}
+      contentClassName="space-y-1.5"
     >
-      <button
-        type="button"
-        onClick={() => setCollapsed((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
-        aria-expanded={!collapsed}
-        aria-controls={panelId}
-      >
-        <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
-          ⚙ Default Machines
-        </span>
-        <span className="flex items-center gap-2">
-          {activeCount > 0 && (
-            <span
-              className="font-mono"
-              style={{
-                background: "rgba(255,201,64,0.85)",
-                color: "rgba(0,0,0,0.9)",
-                padding: "1px 6px",
-                fontSize: 9,
-                letterSpacing: "0.06em",
-              }}
-            >
-              {activeCount} PINNED
-            </span>
-          )}
-          <span className="opacity-60" aria-hidden="true">
-            {collapsed ? "▸" : "▾"}
-          </span>
-        </span>
-      </button>
-      {!collapsed && (
-        <div id={panelId} className="px-3 py-2 space-y-1.5 border-t border-border">
-          {entries.map((e) => (
-            <CategoryRow
-              key={e.category}
-              entry={e}
-              chosen={defaults[e.category] ?? null}
-              onChange={(k) => setDefault(e.category, k)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      {entries.map((e) => (
+        <CategoryRow
+          key={e.category}
+          entry={e}
+          chosen={defaults[e.category] ?? null}
+          onChange={(k) => setDefault(e.category, k)}
+        />
+      ))}
+    </CollapsiblePanel>
   )
 }
 

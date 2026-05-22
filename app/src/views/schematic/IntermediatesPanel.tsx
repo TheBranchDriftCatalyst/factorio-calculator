@@ -4,11 +4,12 @@
 // leftover is zero; non-zero indicates excess that must be sunk somewhere
 // (chest, waste, or another consumer the user hasn't added).
 
-import { useId, useMemo, useState } from "react"
+import { useMemo } from "react"
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 import { fmtRateUnit, type RateUnit } from "../../util/format"
 import { ItemIcon } from "../../components/Icon"
+import { CollapsiblePanel } from "../../components/CollapsiblePanel"
 
 interface Props {
   catalog: Catalog
@@ -52,8 +53,6 @@ export function IntermediatesPanel({
   highlightedItem,
   onItemClick,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed)
-
   const rows: Row[] = useMemo(() => {
     if (!flow) return []
     const produced = new Map<string, number>()
@@ -141,72 +140,55 @@ export function IntermediatesPanel({
 
   // Don't render when there's nothing to show — keeps the panel tight on
   // simple factories (e.g. just an iron-plate target with no intermediates).
-  // Stable id pairs the toggle button with its panel for assistive tech.
-  const panelId = useId()
   if (rows.length === 0) return null
 
-  return (
-    <div
-      data-testid="intermediates-panel"
-      className="text-xs bg-card border border-border rounded"
+  const badge = (
+    <span
+      className="font-mono"
+      style={{
+        background: "rgba(255,201,64,0.85)",
+        color: "rgba(0,0,0,0.9)",
+        padding: "1px 6px",
+        fontSize: 9,
+        letterSpacing: "0.06em",
+      }}
     >
-      <button
-        type="button"
-        onClick={() => setCollapsed((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
-        aria-expanded={!collapsed}
-        aria-controls={panelId}
+      {rows.length}
+    </span>
+  )
+
+  return (
+    <CollapsiblePanel
+      testId="intermediates-panel"
+      title="⚙ Intermediates"
+      badge={badge}
+      defaultCollapsed={defaultCollapsed}
+    >
+      <div
+        className="flex items-center gap-2 px-1 pb-1 mb-1 border-b border-border/60"
+        style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase" }}
       >
-        <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
-          ⚙ Intermediates
-        </span>
-        <span className="flex items-center gap-2">
-          <span
-            className="font-mono"
-            style={{
-              background: "rgba(255,201,64,0.85)",
-              color: "rgba(0,0,0,0.9)",
-              padding: "1px 6px",
-              fontSize: 9,
-              letterSpacing: "0.06em",
-            }}
-          >
-            {rows.length}
-          </span>
-          <span className="opacity-60" aria-hidden="true">
-            {collapsed ? "▸" : "▾"}
-          </span>
-        </span>
-      </button>
-      {!collapsed && (
-        <div id={panelId} className="px-3 py-2 border-t border-border">
-          <div
-            className="flex items-center gap-2 px-1 pb-1 mb-1 border-b border-border/60"
-            style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase" }}
-          >
-            <span style={{ width: 18 }} />
-            <span className="flex-1 opacity-60">Item</span>
-            <span className="w-14 text-right opacity-60">Prod</span>
-            <span className="w-14 text-right opacity-60">Cons</span>
-            <span className="w-24 text-right opacity-60">Status</span>
-          </div>
-          {rows.map((r) => (
-            <IntermediateRow
-              key={r.item}
-              row={r}
-              rateUnit={rateUnit}
-              catalog={catalog}
-              active={highlightedItem === r.item}
-              onClick={
-                onItemClick
-                  ? () => onItemClick(highlightedItem === r.item ? null : r.item)
-                  : undefined
-              }
-            />
-          ))}
-        </div>
-      )}
-    </div>
+        <span style={{ width: 18 }} />
+        <span className="flex-1 opacity-60">Item</span>
+        <span className="w-14 text-right opacity-60">Prod</span>
+        <span className="w-14 text-right opacity-60">Cons</span>
+        <span className="w-24 text-right opacity-60">Status</span>
+      </div>
+      {rows.map((r) => (
+        <IntermediateRow
+          key={r.item}
+          row={r}
+          rateUnit={rateUnit}
+          catalog={catalog}
+          active={highlightedItem === r.item}
+          onClick={
+            onItemClick
+              ? () => onItemClick(highlightedItem === r.item ? null : r.item)
+              : undefined
+          }
+        />
+      ))}
+    </CollapsiblePanel>
   )
 }
 

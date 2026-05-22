@@ -9,11 +9,12 @@
 // grouped by fuel category, mirroring how Factorio's burner inserter
 // would actually consume.
 
-import { useId, useMemo, useState } from "react"
+import { useMemo } from "react"
 import type { Catalog, Item } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 import { fmt, fmtRateUnit, type RateUnit } from "../../util/format"
 import { ItemIcon } from "../../components/Icon"
+import { CollapsiblePanel } from "../../components/CollapsiblePanel"
 
 interface Props {
   catalog: Catalog
@@ -33,8 +34,6 @@ interface Row {
 }
 
 export function FuelsPanel({ catalog, flow, rateUnit, defaultCollapsed = true }: Props) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed)
-
   const rows: Row[] = useMemo(() => {
     // 1. Collect every fuel item from the catalog (anything with both a
     //    positive fuelValue and a fuelCategory).
@@ -95,60 +94,47 @@ export function FuelsPanel({ catalog, flow, rateUnit, defaultCollapsed = true }:
   // Mirror IntermediatesPanel: hide the panel entirely when there's
   // nothing relevant to show (e.g. a flow that contains zero burners AND
   // a catalog with no fuel items defined — e.g. mini test datasets).
-  const panelId = useId()
   if (rows.length === 0) return null
 
   const usedCount = rows.reduce((n, r) => n + (r.used ? 1 : 0), 0)
 
+  const badge = (
+    <span
+      className="font-mono"
+      style={{
+        background: "rgba(255,201,64,0.85)",
+        color: "rgba(0,0,0,0.9)",
+        padding: "1px 6px",
+        fontSize: 9,
+        letterSpacing: "0.06em",
+      }}
+      title={`${usedCount} in use · ${rows.length} known`}
+    >
+      {usedCount}/{rows.length}
+    </span>
+  )
+
   return (
-    <div data-testid="fuels-panel" className="text-xs bg-card border border-border rounded">
-      <button
-        type="button"
-        onClick={() => setCollapsed((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/30"
-        aria-expanded={!collapsed}
-        aria-controls={panelId}
+    <CollapsiblePanel
+      testId="fuels-panel"
+      title="⚙ Fuels"
+      badge={badge}
+      defaultCollapsed={defaultCollapsed}
+    >
+      <div
+        className="flex items-center gap-2 px-1 pb-1 mb-1 border-b border-border/60"
+        style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase" }}
       >
-        <span className="font-medium uppercase tracking-wide text-[10px] opacity-80">
-          ⚙ Fuels
-        </span>
-        <span className="flex items-center gap-2">
-          <span
-            className="font-mono"
-            style={{
-              background: "rgba(255,201,64,0.85)",
-              color: "rgba(0,0,0,0.9)",
-              padding: "1px 6px",
-              fontSize: 9,
-              letterSpacing: "0.06em",
-            }}
-            title={`${usedCount} in use · ${rows.length} known`}
-          >
-            {usedCount}/{rows.length}
-          </span>
-          <span className="opacity-60" aria-hidden="true">
-            {collapsed ? "▸" : "▾"}
-          </span>
-        </span>
-      </button>
-      {!collapsed && (
-        <div id={panelId} className="px-3 py-2 border-t border-border">
-          <div
-            className="flex items-center gap-2 px-1 pb-1 mb-1 border-b border-border/60"
-            style={{ fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase" }}
-          >
-            <span style={{ width: 18 }} />
-            <span className="flex-1 opacity-60">Fuel</span>
-            <span className="w-14 text-right opacity-60">Energy</span>
-            <span className="w-16 text-right opacity-60">Burn rate</span>
-            <span className="w-12 text-right opacity-60">Burners</span>
-          </div>
-          {rows.map((r) => (
-            <FuelRow key={r.item} row={r} rateUnit={rateUnit} catalog={catalog} />
-          ))}
-        </div>
-      )}
-    </div>
+        <span style={{ width: 18 }} />
+        <span className="flex-1 opacity-60">Fuel</span>
+        <span className="w-14 text-right opacity-60">Energy</span>
+        <span className="w-16 text-right opacity-60">Burn rate</span>
+        <span className="w-12 text-right opacity-60">Burners</span>
+      </div>
+      {rows.map((r) => (
+        <FuelRow key={r.item} row={r} rateUnit={rateUnit} catalog={catalog} />
+      ))}
+    </CollapsiblePanel>
   )
 }
 
