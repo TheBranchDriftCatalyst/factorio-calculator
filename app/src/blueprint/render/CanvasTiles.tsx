@@ -13,6 +13,7 @@ import type { Catalog } from "../../factorio"
 import type { Blueprint, Cell } from "../types"
 import { fmt, fmtRateUnit, type RateUnit } from "../../util/format"
 import { laneUtilization, type BeltTier } from "../util/utilization"
+import { useSpriteAtlas } from "./SpriteAtlas"
 
 const DEFAULT_TILE_PX = 18
 
@@ -92,7 +93,7 @@ export function CanvasTiles({
   showCrossings = true,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const spriteRef = useRef<HTMLImageElement | null>(null)
+  const { atlas } = useSpriteAtlas(catalog)
   const TILE_PX = tilePx ?? DEFAULT_TILE_PX
   // Built once per blueprint and shared between draw() and hitTest(). Cuts
   // both linear scans down to O(1) lookups; with ~30 cells per factory the
@@ -104,28 +105,12 @@ export function CanvasTiles({
   }, [blueprint])
 
   useEffect(() => {
-    const hash = catalog.sprites.hash
-    if (!hash) return
-    const base = import.meta.env.DEV ? import.meta.env.BASE_URL : "/"
-    const url = `${base}images/sprite-sheet-${hash}.png`
-    const img = new Image()
-    img.src = url
-    img.onload = () => {
-      spriteRef.current = img
-      draw()
-    }
-    return () => {
-      spriteRef.current = null
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalog.sprites.hash])
-
-  useEffect(() => {
     draw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     catalog,
     blueprint,
+    atlas,
     highlightCellKey,
     highlightCellKeys,
     highlightLane,
@@ -333,7 +318,6 @@ export function CanvasTiles({
 
     // (Lane icons drawn LATER, after group frames + sub-bus belts are
     // filled — otherwise the local belt fill overwrites the icons.)
-    const sprite = spriteRef.current
 
     // --- Lane highlight overlay — drawn over the belt fill so the user
     //     can see which lane the inspector is showing details for. ---
@@ -545,13 +529,13 @@ export function CanvasTiles({
       const cellRightCol = cell.x + cell.w
       for (const port of cell.inputs) {
         // Direct ports are handled by the direct-connection pass below.
-        if (port.scope === "direct") continue
+        if (port.scope.kind === "direct") continue
         const beltExitX = port.beltX + BELT_W_TILES
         drawSideBelt(port.dropY, beltExitX, cellLeftCol, port.item, "east", focused)
         if (showCrossings) drawCrossings(port.dropY, port.crossings, focused)
       }
       for (const port of cell.outputs) {
-        if (port.scope === "direct") continue
+        if (port.scope.kind === "direct") continue
         if (port.edge === "E") {
           // Right-bus output — side-belt flows east from cell to belt.
           drawSideBelt(port.dropY, cellRightCol, port.beltX, port.item, "east", focused)
@@ -635,24 +619,17 @@ export function CanvasTiles({
         ctx.lineWidth = 1
         ctx.stroke()
         // Item icon (left of text)
-        if (sprite) {
-          const it = catalog.items.get(dc.item)
-          if (it) {
-            const c = catalog.sprites.cell
-            ctx.imageSmoothingEnabled = true
-            ctx.drawImage(
-              sprite,
-              it.iconCol * c,
-              it.iconRow * c,
-              c,
-              c,
-              pillX + pillPad,
-              labelCy - iconSize / 2,
-              iconSize,
-              iconSize,
-            )
-            ctx.imageSmoothingEnabled = false
-          }
+        if (atlas) {
+          ctx.imageSmoothingEnabled = true
+          atlas.drawItem(
+            ctx,
+            catalog.items.get(dc.item),
+            pillX + pillPad,
+            labelCy - iconSize / 2,
+            iconSize,
+            iconSize,
+          )
+          ctx.imageSmoothingEnabled = false
         }
         // Rate text
         ctx.fillStyle = focused ? "rgb(255, 255, 255)" : "rgba(255, 255, 255, 0.85)"
@@ -668,14 +645,13 @@ export function CanvasTiles({
     // --- Lane icons: render the item sprite at intervals down EVERY belt
     //     (root + nested). Drawn LAST among belt visuals so the local
     //     sub-bus belt fill (rendered just above) doesn't cover them.
-    if (sprite) {
+    if (atlas) {
       const ICON_EVERY = 6 // tiles between repeats down the belt
       ctx.imageSmoothingEnabled = true
       ctx.imageSmoothingQuality = "high"
       const drawLaneIcon = (item: string, cx: number, cy: number, size: number) => {
         const it = catalog.items.get(item)
         if (!it) return
-        const c = catalog.sprites.cell
         // Dark circular backdrop so the icon reads against any belt color.
         const bgR = size * 0.6
         ctx.fillStyle = "rgba(10, 10, 15, 0.85)"
@@ -685,17 +661,7 @@ export function CanvasTiles({
         ctx.strokeStyle = "rgba(255, 255, 255, 0.25)"
         ctx.lineWidth = 1
         ctx.stroke()
-        ctx.drawImage(
-          sprite,
-          it.iconCol * c,
-          it.iconRow * c,
-          c,
-          c,
-          cx - size / 2,
-          cy - size / 2,
-          size,
-          size,
-        )
+        atlas.drawItem(ctx, it, cx - size / 2, cy - size / 2, size, size)
       }
       const drawBeltLanesIn = (
         belts: ReadonlyArray<import("../types").BusBelt>,
@@ -829,23 +795,16 @@ export function CanvasTiles({
         ctx.lineWidth = 1
         ctx.strokeRect(px(m.x) + 0.5, px(m.y) + 0.5, px(m.w) - 1, px(m.h) - 1)
 
-        const sprite = spriteRef.current
-        if (sprite) {
-          const item = catalog.items.get(m.machineKey)
-          if (item) {
-            const c = catalog.sprites.cell
-            ctx.drawImage(
-              sprite,
-              item.iconCol * c,
-              item.iconRow * c,
-              c,
-              c,
-              px(m.x) + 2,
-              px(m.y) + 2,
-              px(m.w) - 4,
-              px(m.h) - 4,
-            )
-          }
+        if (atlas) {
+          atlas.drawMachine(
+            ctx,
+            catalog.machines.get(m.machineKey),
+            catalog,
+            px(m.x) + 2,
+            px(m.y) + 2,
+            px(m.w) - 4,
+            px(m.h) - 4,
+          )
         }
       }
 

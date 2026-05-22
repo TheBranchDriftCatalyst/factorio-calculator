@@ -77,13 +77,13 @@ describe("busLayout (Phase 1.A)", () => {
     const directX = new Set(blueprint.directConnections.map((dc) => dc.x))
     for (const c of blueprint.cells) {
       for (const p of c.inputs) {
-        if (p.scope === "trunk") expect(trunkX.has(p.beltX)).toBe(true)
-        else if (p.scope === "direct") expect(directX.has(p.beltX)).toBe(true)
+        if (p.scope.kind === "trunk") expect(trunkX.has(p.beltX)).toBe(true)
+        else if (p.scope.kind === "direct") expect(directX.has(p.beltX)).toBe(true)
         else expect(localX.has(p.beltX)).toBe(true)
       }
       for (const p of c.outputs) {
-        if (p.scope === "trunk") expect(trunkX.has(p.beltX)).toBe(true)
-        else if (p.scope === "direct") expect(directX.has(p.beltX)).toBe(true)
+        if (p.scope.kind === "trunk") expect(trunkX.has(p.beltX)).toBe(true)
+        else if (p.scope.kind === "direct") expect(directX.has(p.beltX)).toBe(true)
         else expect(localX.has(p.beltX)).toBe(true)
       }
     }
@@ -206,7 +206,7 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
       // Every trunk item must have at least one CellPort marked "trunk".
       for (const item of items) {
         const used = blueprint.cells.some((c) =>
-          [...c.inputs, ...c.outputs].some((p) => p.item === item && p.scope === "trunk"),
+          [...c.inputs, ...c.outputs].some((p) => p.item === item && p.scope.kind === "trunk"),
         )
         expect(used).toBe(true)
       }

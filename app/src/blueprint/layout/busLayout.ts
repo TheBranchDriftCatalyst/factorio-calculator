@@ -28,6 +28,7 @@ import type {
   Edge,
   InserterPlacement,
   MachinePlacement,
+  PortScope,
 } from "../types"
 
 interface Opts {
@@ -891,6 +892,16 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
     }
     return ctx.rootBeltItems.has(item) ? "trunk" : "local"
   }
+  const buildPortScope = (
+    kind: "trunk" | "local" | "direct",
+    partnerCellKey: string | undefined,
+  ): PortScope => {
+    if (kind === "direct") {
+      // partnerCellKey is guaranteed by the caller whenever kind === "direct".
+      return { kind: "direct", partnerCellKey: partnerCellKey! }
+    }
+    return { kind }
+  }
   for (const ing of inIngs) {
     const direct = isDirectIn(ing.item)
     const beltX = direct ? directBeltXByItem.get(ing.item)! : ctx.beltXByItem.get(ing.item)!
@@ -915,10 +926,9 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
       beltX,
       dropY,
       direction: "input",
-      scope: portScope,
+      scope: buildPortScope(portScope, partnerCellKey),
       edge: "W",
       slot: dropY - yStart,
-      ...(partnerCellKey ? { partnerCellKey } : {}),
     })
     if (direct) {
       const ep = ctx.directEndpoints.get(ing.item) ?? {}
@@ -951,10 +961,9 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
       beltX,
       dropY,
       direction: "output",
-      scope: portScope,
+      scope: buildPortScope(portScope, partnerCellKey),
       edge: "W",
       slot: dropY - yStart,
-      ...(partnerCellKey ? { partnerCellKey } : {}),
     })
     if (direct) {
       const ep = ctx.directEndpoints.get(p.item) ?? {}
@@ -977,7 +986,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
       beltX: -1, // patched after right bus is packed
       dropY,
       direction: "output",
-      scope: "trunk",
+      scope: { kind: "trunk" },
       edge: "E",
       slot: dropY - yStart,
     }

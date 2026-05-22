@@ -63,6 +63,21 @@ export interface MachinePlacement {
   index: number
 }
 
+/**
+ * Discriminated union describing the bus context a CellPort taps:
+ *   • "trunk"  = main bus tap.
+ *   • "local"  = sub-bus inside the cell's own group.
+ *   • "direct" = 1:1 link straight to the partner cell, no shared bus column.
+ *
+ * The "direct" variant carries `partnerCellKey`, the recipeKey of the cell at
+ * the other end of the connection — TypeScript enforces its presence so the
+ * renderer can safely pair ports without nullable checks.
+ */
+export type PortScope =
+  | { kind: "trunk" }
+  | { kind: "local" }
+  | { kind: "direct"; partnerCellKey: string }
+
 /** A single tap from a (trunk or local) bus to/from a cell. */
 export interface CellPort {
   item: string
@@ -72,17 +87,8 @@ export interface CellPort {
   /** absolute tile row of the inserter / where the drop line enters the cell */
   dropY: number
   direction: "input" | "output"
-  /**
-   * "trunk" = main bus tap.
-   * "local" = sub-bus inside the cell's own group.
-   * "direct" = 1:1 link straight to the partner cell, no shared bus column.
-   */
-  scope: "trunk" | "local" | "direct"
-  /**
-   * When `scope === "direct"`, the recipeKey of the partner cell at the
-   * other end of the connection. Lets the renderer pair the two ports.
-   */
-  partnerCellKey?: string
+  /** Bus context for this port; see {@link PortScope}. */
+  scope: PortScope
   /**
    * Which cell edge this port sits on. Drives perimeter inserter
    * placement: a W-edge port has its inserter at (cell.x - 1, cell.y + slot),
