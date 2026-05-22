@@ -31,8 +31,11 @@
       "Bash(yarn dev *)",
       "mcp__playwright__browser_resize",
       "Bash(npx skills *)",
-      "Bash(grep -E '\\\\.\\(png|jpg|jpeg\\)$')",
-      "Bash(grep -E '^[^/]+\\\\.png$')"
+      "Bash(git stash *)",
+      "Bash(./node_modules/.bin/playwright test *)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node *)",
+      "Bash(yarn build *)"
     ]
   }
 }
