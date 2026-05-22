@@ -156,6 +156,11 @@ export function SyncSettings() {
     try {
       const result = await runGistDiagnostics(token, idResult.id)
       setDiagnostics(result)
+      // Also log to console so the user can grab it from devtools even
+      // if the clipboard copy fails.
+      if (typeof console !== "undefined") {
+        console.log("[fbp-sync] diagnostic result:", result)
+      }
       setStatus(
         result.ok
           ? { kind: "ok", msg: "Diagnostics passed — sync should work. Click Save." }
@@ -164,6 +169,65 @@ export function SyncSettings() {
     } finally {
       setTesting(false)
     }
+  }
+
+  /**
+   * Format the latest diagnostic as a pretty JSON blob with redacted
+   * sensitive fields. Used by Copy / Download. Token + gistId stay
+   * out of the export so the user can safely paste the result.
+   */
+  const formatDiagnosticForExport = (): string => {
+    if (!diagnostics) return ""
+    const payload = {
+      timestamp: new Date().toISOString(),
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "(unknown)",
+      backend: draftBackend,
+      tokenScopes: diagnostics.tokenScopes ?? null,
+      ok: diagnostics.ok,
+      // Redact the actual token + gist id from the export — only the
+      // STRUCTURAL details ship out. Length hint helps verify the
+      // user pasted SOMETHING.
+      token: draftToken ? `<redacted, length=${draftToken.length}>` : null,
+      gistId: draftGistId
+        ? `<redacted, length=${draftGistId.length}>`
+        : null,
+      steps: diagnostics.steps.map((s) => ({
+        name: s.name,
+        ok: s.ok,
+        status: s.status ?? null,
+        message: s.message,
+        bodyPreview: s.bodyPreview ?? null,
+      })),
+    }
+    return JSON.stringify(payload, null, 2)
+  }
+
+  const onCopyDiagnostic = async () => {
+    if (!diagnostics) return
+    const blob = formatDiagnosticForExport()
+    try {
+      await navigator.clipboard.writeText(blob)
+      setStatus({ kind: "ok", msg: "Copied diagnostic to clipboard (token/id redacted)." })
+    } catch {
+      setStatus({
+        kind: "err",
+        msg: "Couldn't write to clipboard — the diagnostic is also in the browser console.",
+      })
+    }
+  }
+
+  const onDownloadDiagnostic = () => {
+    if (!diagnostics) return
+    const blob = new Blob([formatDiagnosticForExport()], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `fbp-sync-diagnostic-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    setStatus({ kind: "ok", msg: "Downloaded diagnostic JSON (token/id redacted)." })
   }
 
   const onSave = async () => {
@@ -405,14 +469,50 @@ export function SyncSettings() {
         >
           <div
             style={{
-              color: LABEL,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              fontSize: 9,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
               paddingBottom: 2,
             }}
           >
-            Diagnostic steps
+            <span
+              style={{
+                color: LABEL,
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                fontSize: 9,
+              }}
+            >
+              Diagnostic steps
+            </span>
+            <span style={{ display: "flex", gap: 4 }}>
+              <button
+                type="button"
+                onClick={onCopyDiagnostic}
+                data-testid="sync-diagnostic-copy"
+                title="Copy the diagnostic as pretty JSON (token + gist id redacted)"
+                style={{
+                  ...GHOST_BUTTON,
+                  fontSize: 9,
+                  padding: "2px 6px",
+                }}
+              >
+                Copy
+              </button>
+              <button
+                type="button"
+                onClick={onDownloadDiagnostic}
+                data-testid="sync-diagnostic-download"
+                title="Download the diagnostic as a .json file"
+                style={{
+                  ...GHOST_BUTTON,
+                  fontSize: 9,
+                  padding: "2px 6px",
+                }}
+              >
+                Download
+              </button>
+            </span>
           </div>
           {diagnostics.steps.map((step, i) => (
             <div
