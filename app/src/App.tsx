@@ -5,8 +5,8 @@ import { loadDataset } from "./data/loader"
 import { loadCatalog, type Catalog } from "./factorio"
 import { CatalogProvider } from "./factorio/CatalogContext"
 import { RateUnitProvider } from "./util/RateUnitContext"
-import { type FlowGraph, type Input, type Target } from "./solver/expand"
-import { solveExpand } from "./solver/expandClient"
+import { type Input, type Target } from "./solver/expand"
+import { useSolver } from "./solver/useSolver"
 import { TargetPicker } from "./views/TargetPicker"
 import { InputPicker } from "./views/InputPicker"
 // Tab views are code-split — only the active view's bundle loads, so the
@@ -340,39 +340,20 @@ export function App() {
       .catch((e) => setError(String(e)))
   }, [])
 
-  // The solver now runs in a Web Worker so big factories don't block
-  // input / paint. We keep the LAST computed flow around so consumers
+  // The solver runs in a Web Worker so big factories don't block input /
+  // paint. `useSolver` keeps the LAST computed flow around so consumers
   // (Sankey, Schematic) never see `null` after the first solve — a stale
   // render is far less disruptive than flicker-to-empty-then-flicker-back.
-  // Request IDs prevent a stale response (e.g. user typed quickly and the
-  // older solve finished after the newer one) from clobbering the result.
-  const [flow, setFlow] = useState<FlowGraph | null>(null)
-  const latestRequestRef = useRef(0)
-  useEffect(() => {
-    if (!catalog) {
-      setFlow(null)
-      return
-    }
-    const requestId = ++latestRequestRef.current
-    let cancelled = false
-    void solveExpand({
-      catalog,
-      targets,
-      inputs,
-      machineOverrides,
-      recipeChoices,
-      machineCategoryDefaults,
-    }).then((next) => {
-      // Bail if a newer solve has already been requested OR the effect
-      // was torn down (catalog swap, unmount).
-      if (cancelled) return
-      if (latestRequestRef.current !== requestId) return
-      setFlow(next)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [catalog, targets, inputs, machineOverrides, recipeChoices, machineCategoryDefaults])
+  // Request IDs inside the hook prevent a stale response from clobbering
+  // a newer result.
+  const { flow } = useSolver({
+    catalog,
+    targets,
+    inputs,
+    machineOverrides,
+    recipeChoices,
+    machineCategoryDefaults,
+  })
 
   // Render the main UI tree. Wrapped in CatalogProvider + RateUnitProvider
   // only when the catalog is loaded — descendants that call useCatalog()
