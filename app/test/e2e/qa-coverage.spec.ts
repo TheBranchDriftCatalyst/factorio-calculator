@@ -90,6 +90,81 @@ test.describe("QA §8 — Topology panel knobs (beyond zoom)", () => {
     await toggle.click()
     await expect.poll(async () => toggle.getAttribute("aria-checked")).not.toBe(before)
   })
+
+  test("layout-algorithm picker swaps the active layout on a heavy factory", async ({
+    page,
+    schematic,
+  }) => {
+    // Inject a multi-target factory heavy enough that auto-bus's
+    // heuristic actually splits something. The default e-circuit-only
+    // factory has too few cells; on it the two algorithms produce the
+    // same output.
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "fbp.targets.v1",
+        JSON.stringify([
+          { item: "automation-science-pack", rate: 1 },
+          { item: "logistic-science-pack", rate: 1 },
+          { item: "military-science-pack", rate: 1 },
+          { item: "chemical-science-pack", rate: 1 },
+          { item: "advanced-circuit", rate: 1 },
+        ]),
+      )
+      localStorage.setItem(
+        "fbp.inputs.v1",
+        JSON.stringify([
+          { item: "plastic-bar", rate: 1000 },
+          { item: "sulfur", rate: 1000 },
+        ]),
+      )
+    })
+    await page.reload()
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+    // TopologyPanel defaults to expanded so ensureExpanded is a no-op
+    // here — but using it instead of an unconditional click is the
+    // safe pattern (avoids accidentally TOGGLING the panel closed).
+    await ensureExpanded(page.getByTestId("topology-panel"))
+
+    const picker = page.getByTestId("tf-layoutAlgorithm")
+    await expect(picker).toBeVisible()
+
+    // Read the live blueprint width from the test hook (window.__schematic).
+    const readWidth = () =>
+      page.evaluate(() => {
+        const all = document.querySelectorAll("*")
+        for (const el of all) {
+          const k = Object.keys(el).find((k) => k.startsWith("__reactFiber$"))
+          if (!k) continue
+          // @ts-expect-error fiber access for test
+          let f = el[k]
+          while (f) {
+            if (f.memoizedProps?.blueprint?.cells) {
+              return f.memoizedProps.blueprint.width as number
+            }
+            f = f.return
+          }
+        }
+        return null
+      })
+
+    // Default is bus-tree, so just snap the baseline. (Don't call
+    // selectOption to "pin" bus-tree first — Playwright's selectOption
+    // when the option is already selected suppresses the React state
+    // events on the SUBSEQUENT selectOption call, leaving the picker
+    // stuck visually-changed-but-uncommitted.)
+    expect(await picker.inputValue()).toBe("bus-tree")
+    const busTreeWidth = await readWidth()
+    expect(busTreeWidth).toBeGreaterThan(0)
+
+    // Switch to auto-bus. On this factory the heuristic flags
+    // iron-plate (8 consumers, above the 6 threshold) and pushes it to
+    // L2 — adding a trunk column, so the blueprint widens.
+    await picker.selectOption("auto-bus")
+    await expect
+      .poll(readWidth, { timeout: 5000 })
+      .toBeGreaterThan(busTreeWidth!)
+  })
 })
 
 test.describe("QA §9 — Recipe picker (multi-recipe target)", () => {
