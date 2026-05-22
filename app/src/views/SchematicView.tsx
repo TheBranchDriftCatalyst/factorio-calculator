@@ -91,7 +91,6 @@ export function SchematicView({
       config.groupGapY,
       config.trunkMinConsumers,
       config.maxNestingDepth,
-      config.outputBusSide,
       config.beltAssignments,
       config.heavyConsumerThreshold,
       config.layoutEffort,
@@ -265,6 +264,14 @@ export function SchematicView({
   return (
     <div className="flex flex-col gap-2 flex-1 min-h-0" data-testid="schematic-view">
       <div className="flex items-center gap-3 text-xs flex-wrap flex-shrink-0">
+        <span
+          className="font-mono uppercase tracking-wider opacity-75"
+          style={{ color: "rgba(186, 230, 253, 0.85)" }}
+          data-testid="active-algorithm"
+          title="Currently active layout algorithm — toggle in the Topology panel"
+        >
+          {deferredInputs.algo}
+        </span>
         <span className="opacity-60">
           {blueprint.cells.length} cells · {groupCount} group
           {groupCount === 1 ? "" : "s"} · {trunkBeltCount} trunk belts ·{" "}

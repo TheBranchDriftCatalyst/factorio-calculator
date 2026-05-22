@@ -18,9 +18,6 @@ import {
   type LayoutAlgorithmId,
 } from "../../blueprint/layout/algorithms"
 
-/** Where final-output belts live relative to cells. */
-export type OutputBusSide = "left" | "right" | "split"
-
 /**
  * LAYOUT controls — feed busLayout(). Changing any of these reshapes the
  * blueprint (cells move, belts repack, sub-buses re-cluster). A future
@@ -45,12 +42,6 @@ export interface LayoutConfig {
    * factory feels too cramped or too splintered.
    */
   maxNestingDepth: number
-  /**
-   * Where the bus for final-output products lives. "left" keeps the
-   * legacy single-bus layout; "right" mirrors it; "split" puts inputs
-   * on the left and final outputs on the right with cells between them.
-   */
-  outputBusSide: OutputBusSide
   cellGapY: number
   groupGapY: number
   /**
@@ -124,7 +115,6 @@ export function layoutConfig(c: SchematicConfig): LayoutConfig {
     beltWidth: c.beltWidth,
     trunkMinConsumers: c.trunkMinConsumers,
     maxNestingDepth: c.maxNestingDepth,
-    outputBusSide: c.outputBusSide,
     cellGapY: c.cellGapY,
     groupGapY: c.groupGapY,
     beltAssignments: c.beltAssignments,
@@ -152,7 +142,6 @@ export const DEFAULT_CONFIG: SchematicConfig = {
   beltWidth: 2,
   trunkMinConsumers: 2,
   maxNestingDepth: 4,
-  outputBusSide: "split",
   cellGapY: 2,
   groupGapY: 3,
   showCrossings: true,

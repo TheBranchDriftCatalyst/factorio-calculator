@@ -60,7 +60,6 @@ const LAYOUT_DEFAULTS: LayoutConfig = {
   groupGapY: 3,
   trunkMinConsumers: 2,
   maxNestingDepth: 4,
-  outputBusSide: "split",
   beltAssignments: {},
   // Auto-bus only — bus-tree ignores both but they have to be present
   // to satisfy the LayoutConfig type.
@@ -301,11 +300,11 @@ export function busLayout(
   const result = partition(allRecipeIds, 0, LEFT_MARGIN, TOP_MARGIN, ctx, "root")
   const root = result.node
 
-  // Right-bus pass (split mode + multi-bus): now that cells are placed
-  // and we know the rightmost cell edge, pack each deferred output port's
-  // target bus as a separate column to the right of cells. R-suffixed
-  // buses go further right; the default "right" bus is closest to cells.
-  if (o.outputBusSide === "split" && ctx.deferredOutputPorts.length > 0) {
+  // Right-bus pass: now that cells are placed and we know the rightmost
+  // cell edge, pack each deferred output port's target bus as a separate
+  // column to the right of cells. R-suffixed buses go further right; the
+  // default "right" bus is closest to cells.
+  if (ctx.deferredOutputPorts.length > 0) {
     const assignments = o.beltAssignments
     // Group deferred ports by their assigned right-side busId.
     const rightBuckets = new Map<string, typeof ctx.deferredOutputPorts>()
@@ -493,17 +492,12 @@ function partition(
   // promote them explicitly.
   const rawInputRates = new Map<string, number>()
   if (depth === 0) {
-    // In split mode the final outputs go on the RIGHT bus (packed after
-    // cells), so we MUST NOT promote them to the left scope-trunk here —
-    // doing so would duplicate them on both buses.
-    const splitMode = o.outputBusSide === "split"
+    // Final outputs go on the RIGHT bus (packed after cells), so we MUST
+    // NOT promote them to the left scope-trunk here — doing so would
+    // duplicate them on both buses.
     for (const e of flow.edges) {
       const fromSource = e.source.startsWith("source:") || e.source.startsWith("input:")
-      const toOutput = e.target.startsWith("output:")
       if (fromSource && scopeSet.has(e.target)) {
-        scopeTrunkItems.add(e.item)
-        rawInputRates.set(e.item, (rawInputRates.get(e.item) ?? 0) + e.rate)
-      } else if (toOutput && scopeSet.has(e.source) && !splitMode) {
         scopeTrunkItems.add(e.item)
         rawInputRates.set(e.item, (rawInputRates.get(e.item) ?? 0) + e.rate)
       }
@@ -580,7 +574,6 @@ function partition(
     // side. If the user assigned a non-output item to a right bus we
     // silently fall back to "left" so it still appears somewhere.
     const assignments = o.beltAssignments
-    const splitMode = o.outputBusSide === "split"
     const busBuckets = new Map<string, Array<[string, number]>>()
     for (const [item, rate] of beltsSorted) {
       let busId = assignments[item]
@@ -589,7 +582,7 @@ function partition(
         busId = "left" // fall back so the item stays visible
       }
       if (!busId) {
-        busId = splitMode && isOutput ? "right" : "left"
+        busId = isOutput ? "right" : "left"
       }
       if (!busBuckets.has(busId)) busBuckets.set(busId, [])
       busBuckets.get(busId)!.push([item, rate])
@@ -839,12 +832,11 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
     })
   }
   const [mw, mh] = size
-  const splitMode = o.outputBusSide === "split"
 
   // Inputs (all go WEST). Output products are classified by destination:
-  //   - Final outputs in split mode → EAST edge (belt sits on the right
-  //     bus, packed AFTER cells are placed; ports DEFERRED until then).
-  //   - All other outputs (intermediate, or non-split mode) → WEST edge.
+  //   - Final outputs → EAST edge (belt sits on the right bus, packed
+  //     AFTER cells are placed; ports DEFERRED until then).
+  //   - Intermediate outputs → WEST edge.
   //   - Direct-connection items (1:1) → WEST edge, beltX = the direct
   //     column for this scope (not a shared bus column).
   // For ingredients/products without a belt in scope (raw-only items not
@@ -865,7 +857,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
   const finalOuts: Prod[] = []
   const localOuts: Prod[] = []
   for (const p of recipe.products) {
-    if (splitMode && ctx.finalOutputItems.has(p.item)) {
+    if (ctx.finalOutputItems.has(p.item)) {
       finalOuts.push(p)
     } else if (ctx.beltXByItem.has(p.item) || isDirectOut(p.item)) {
       localOuts.push(p)

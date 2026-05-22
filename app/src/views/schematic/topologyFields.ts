@@ -41,13 +41,6 @@ export const TOPOLOGY_FIELDS: ReadonlyArray<TopologyField> = [
     field: { kind: "slider", min: 2, max: 6, step: 1 } },
   { key: "maxNestingDepth", label: "Max sub-bus depth", group: "Belt",
     field: { kind: "slider", min: 1, max: 6, step: 1 } },
-  // "right" mode (all belts mirrored to the right of cells) is conceptually
-  // straightforward but adds significant layout complexity (mirror all X
-  // coordinates post-pack). Deferred until there's a clear need; the
-  // useful split is "left" (single bus, legacy) vs "split" (inputs left,
-  // outputs right).
-  { key: "outputBusSide", label: "Output bus", group: "Belt",
-    field: { kind: "segmented", options: ["left", "split"] } },
   // Layout
   { key: "cellGapY", label: "Cell gap", group: "Layout",
     field: { kind: "slider", min: 0, max: 4, step: 1 } },
