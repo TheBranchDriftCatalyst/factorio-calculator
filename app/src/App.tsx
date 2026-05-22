@@ -28,8 +28,10 @@ import type { RateUnit } from "./util/format"
 // machineCategoryDefaults into their dedicated keys. After that, App owns
 // these maps directly and no longer needs to subscribe to schematic
 // config events — view-only knobs (zoom, beltSpacing) are encapsulated in
-// SchematicView and don't bleed up.
-import { loadConfig as loadSchematicConfig } from "./views/schematic/SchematicConfig"
+// SchematicView and don't bleed up. `loadLegacyOverrides` is a focused
+// helper that ONLY exposes the legacy solver maps; the active
+// SchematicConfig (layout + render) no longer carries them.
+import { loadLegacyOverrides } from "./views/schematic/SchematicConfig"
 
 const DEFAULT_DATASET = "space-age-2.0.55.json"
 const DEFAULT_TARGETS: Target[] = [{ item: "electronic-circuit", rate: 1 }]
@@ -199,20 +201,20 @@ export function App() {
   const [machineOverrides, setMachineOverrides] = useState<Record<string, string>>(() =>
     loadStringMap(
       MACHINE_OVERRIDES_KEY,
-      typeof window === "undefined" ? undefined : loadSchematicConfig().machineOverrides,
+      typeof window === "undefined" ? undefined : loadLegacyOverrides().machineOverrides,
     ),
   )
   const [recipeChoices, setRecipeChoices] = useState<Record<string, string>>(() =>
     loadStringMap(
       RECIPE_CHOICES_KEY,
-      typeof window === "undefined" ? undefined : loadSchematicConfig().recipeChoices,
+      typeof window === "undefined" ? undefined : loadLegacyOverrides().recipeChoices,
     ),
   )
   const [machineCategoryDefaults, setMachineCategoryDefaults] = useState<Record<string, string>>(
     () =>
       loadStringMap(
         MACHINE_CATEGORY_DEFAULTS_KEY,
-        typeof window === "undefined" ? undefined : loadSchematicConfig().machineCategoryDefaults,
+        typeof window === "undefined" ? undefined : loadLegacyOverrides().machineCategoryDefaults,
       ),
   )
 

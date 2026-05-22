@@ -17,6 +17,7 @@
 
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
+import type { LayoutConfig } from "../../views/schematic/SchematicConfig"
 import type {
   Blueprint,
   BusBelt,
@@ -31,47 +32,38 @@ import type {
   PortScope,
 } from "../types"
 
-interface Opts {
-  cellGapY?: number
-  groupLeftOffset?: number
-  cellLeftOffset?: number
-  beltGroupSize?: number
-  beltSpacing?: number
-  /** Tiles per belt (each carries 2 sub-lanes). Default 2 for legible labels. */
-  beltWidth?: number
-  defaultMachineSize?: readonly [number, number]
-  groupGapY?: number
-  groupPadY?: number
-  trunkMinConsumers?: number
-  /** Cap on nested sub-bus recursion. Defaults to 4. */
-  maxNestingDepth?: number
-  /** Where final-output belts live: same bus, separate bus on right, or split. */
-  outputBusSide?: "left" | "right" | "split"
-  /**
-   * Per-item bus assignment. Maps item key → busId. BusIds:
-   *   - "left", "right": default buses (legacy 2-bus split)
-   *   - "L2", "L3", ...: additional left-side buses (further from cells)
-   *   - "R2", "R3", ...: additional right-side buses
-   * Unassigned items fall through to "left" (non-output) or "right" (output in split).
-   */
-  beltAssignments?: Record<string, string>
+/**
+ * Internal-only layout knobs that aren't user-facing schematic config —
+ * fixed footprints, padding constants, perimeter offsets. Kept private
+ * so the public surface stays exactly the LayoutConfig fields.
+ */
+interface InternalOpts {
+  groupLeftOffset: number
+  cellLeftOffset: number
+  defaultMachineSize: readonly [number, number]
+  groupPadY: number
 }
 
-const DEFAULTS: Required<Opts> = {
-  cellGapY: 2,
+const INTERNAL_DEFAULTS: InternalOpts = {
   groupLeftOffset: 1,
   cellLeftOffset: 1,
+  defaultMachineSize: [3, 3],
+  groupPadY: 1,
+}
+
+const LAYOUT_DEFAULTS: LayoutConfig = {
+  cellGapY: 2,
   beltGroupSize: 4,
   beltSpacing: 1,
   beltWidth: 2,
-  defaultMachineSize: [3, 3],
   groupGapY: 3,
-  groupPadY: 1,
   trunkMinConsumers: 2,
   maxNestingDepth: 4,
   outputBusSide: "split",
   beltAssignments: {},
 }
+
+type ResolvedOpts = LayoutConfig & InternalOpts
 
 /** Pack items into 2-lane vertical belt columns starting at `startX`. */
 function packBeltsAt(
@@ -152,7 +144,7 @@ function topoSort<T extends string>(
 
 interface LayoutContext {
   flow: FlowGraph
-  o: Required<Opts>
+  o: ResolvedOpts
   cells: Cell[]
   inserters: InserterPlacement[]
   unsupported: Array<{ recipeKey: string; reason: string }>
@@ -216,8 +208,12 @@ function busSortKey(id: string): number {
   return m ? Number(m[1]) : 0
 }
 
-export function busLayout(catalog: Catalog, flow: FlowGraph, opts: Opts = {}): Blueprint {
-  const o = { ...DEFAULTS, ...opts }
+export function busLayout(
+  catalog: Catalog,
+  flow: FlowGraph,
+  opts: Partial<LayoutConfig> = {},
+): Blueprint {
+  const o: ResolvedOpts = { ...LAYOUT_DEFAULTS, ...INTERNAL_DEFAULTS, ...opts }
   const nodeById = new Map(flow.nodes.map((n) => [n.id, n]))
   const allRecipeIds = flow.nodes.filter((n) => n.recipe).map((n) => n.id)
   const isFluid = (item: string) => catalog.fluidItems.has(item)

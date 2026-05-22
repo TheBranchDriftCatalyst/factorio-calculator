@@ -18,6 +18,7 @@ import { BomPanel } from "./schematic/BomPanel"
 import { InspectorPanel } from "./schematic/inspector/InspectorPanel"
 import {
   DEFAULT_CONFIG,
+  layoutConfig,
   loadConfig,
   saveConfig,
   type SchematicConfig,
@@ -74,21 +75,12 @@ export function SchematicView({
   const { zoom, bottleneckMode, beltTier } = config
 
   const blueprint = useMemo(
-    () =>
-      busLayout(catalog, flow, {
-        beltSpacing: config.beltSpacing,
-        beltGroupSize: config.beltGroupSize,
-        beltWidth: config.beltWidth,
-        cellGapY: config.cellGapY,
-        groupGapY: config.groupGapY,
-        trunkMinConsumers: config.trunkMinConsumers,
-        maxNestingDepth: config.maxNestingDepth,
-        outputBusSide: config.outputBusSide,
-        beltAssignments: config.beltAssignments,
-      }),
+    () => busLayout(catalog, flow, layoutConfig(config)),
     [
       catalog,
       flow,
+      // Depend on the LayoutConfig fields explicitly so render-only knobs
+      // (zoom, bottleneckMode, etc.) don't trigger a re-layout.
       config.beltSpacing,
       config.beltGroupSize,
       config.beltWidth,
@@ -348,6 +340,7 @@ export function SchematicView({
               updateConfig={updateConfig}
               machineOverrides={machineOverrides}
               setMachineOverrides={setMachineOverrides}
+              machineCategoryDefaults={machineCategoryDefaults}
             />
             <TopologyPanel config={config} update={updateConfig} />
             <MachineCategoryPicker

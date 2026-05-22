@@ -2,15 +2,27 @@
 // Adding a new knob = add a field here + a row in topologyFields.ts; the
 // panel UI auto-renders the right control. Persisted to localStorage so
 // user prefs survive reloads.
+//
+// The shape splits into two cohesive subtypes so the boundary at busLayout()
+// (and any future "render only" pass) is obvious from the types alone:
+//   - LayoutConfig: feeds busLayout(). Changing any of these reshapes the
+//     blueprint (cells move, belts repack, sub-buses re-cluster).
+//   - RenderConfig: feeds CanvasTiles. Purely visual — change them and the
+//     blueprint stays the same, only the pixels change.
+// Consumers that want everything just use the SchematicConfig intersection.
 
 import type { BeltTier } from "../../blueprint/util/utilization"
 
 /** Where final-output belts live relative to cells. */
 export type OutputBusSide = "left" | "right" | "split"
 
-export interface SchematicConfig {
-  // Belts
-  beltTier: BeltTier
+/**
+ * LAYOUT controls — feed busLayout(). Changing any of these reshapes the
+ * blueprint (cells move, belts repack, sub-buses re-cluster). A future
+ * panel author looking at busLayout's signature will see `LayoutConfig`
+ * and immediately know they shouldn't add a zoom prop here.
+ */
+export interface LayoutConfig {
   beltSpacing: number       // tiles between trunk belts
   beltGroupSize: number     // belts per packed block
   beltWidth: number         // tiles per belt (each holds 2 sub-lanes)
@@ -34,39 +46,8 @@ export interface SchematicConfig {
    * on the left and final outputs on the right with cells between them.
    */
   outputBusSide: OutputBusSide
-  // Layout
   cellGapY: number
   groupGapY: number
-  showCrossings: boolean
-  // Camera & display
-  zoom: number
-  bottleneckMode: boolean
-  /**
-   * Per-recipe machine override. Maps recipeKey → machineKey. When set,
-   * the solver uses the named machine instead of its default (fastest)
-   * pick from the recipe's category. Empty by default.
-   */
-  machineOverrides: Record<string, string>
-  /**
-   * Per-item belt-tier override. Maps item key → BeltTier. When set,
-   * utilization math for THAT item's lane uses this tier instead of the
-   * global `beltTier`. Empty by default.
-   */
-  beltOverrides: Record<string, BeltTier>
-  /**
-   * Per-item recipe choice. Maps item key → recipe key. The solver
-   * consults this BEFORE its default heuristic. Used when an item has
-   * multiple recipes (e.g. petroleum-gas via basic vs advanced oil).
-   */
-  recipeChoices: Record<string, string>
-  /**
-   * Per-category default machine. Maps recipe-category → machineKey.
-   * Applied to every recipe of that category unless a per-recipe
-   * `machineOverrides` entry takes precedence. Lets the user say
-   * "use Assembling machine 1 for everything" instead of having to
-   * pin each recipe individually.
-   */
-  machineCategoryDefaults: Record<string, string>
   /**
    * Per-item bus assignment. Maps item key → busId. BusIds follow a
    * convention:
@@ -78,6 +59,57 @@ export interface SchematicConfig {
    * Unassigned items fall through to the default bus for their role.
    */
   beltAssignments: Record<string, string>
+}
+
+/**
+ * RENDER controls — feed CanvasTiles. Pure visual: change them and the
+ * blueprint stays the same, only the pixels change.
+ */
+export interface RenderConfig {
+  beltTier: BeltTier
+  /**
+   * Per-item belt-tier override. Maps item key → BeltTier. When set,
+   * utilization math for THAT item's lane uses this tier instead of the
+   * global `beltTier`. Empty by default.
+   */
+  beltOverrides: Record<string, BeltTier>
+  zoom: number
+  bottleneckMode: boolean
+  showCrossings: boolean
+}
+
+/**
+ * Full schematic config — the intersection of layout + render. Consumers
+ * that want the whole thing still get every field. Use `layoutConfig(c)`
+ * or `renderConfig(c)` to project a SchematicConfig down to just the
+ * subset a particular pipeline stage actually consumes.
+ */
+export type SchematicConfig = LayoutConfig & RenderConfig
+
+/** Project a SchematicConfig down to just the busLayout()-relevant fields. */
+export function layoutConfig(c: SchematicConfig): LayoutConfig {
+  return {
+    beltSpacing: c.beltSpacing,
+    beltGroupSize: c.beltGroupSize,
+    beltWidth: c.beltWidth,
+    trunkMinConsumers: c.trunkMinConsumers,
+    maxNestingDepth: c.maxNestingDepth,
+    outputBusSide: c.outputBusSide,
+    cellGapY: c.cellGapY,
+    groupGapY: c.groupGapY,
+    beltAssignments: c.beltAssignments,
+  }
+}
+
+/** Project a SchematicConfig down to just the CanvasTiles-relevant fields. */
+export function renderConfig(c: SchematicConfig): RenderConfig {
+  return {
+    beltTier: c.beltTier,
+    beltOverrides: c.beltOverrides,
+    zoom: c.zoom,
+    bottleneckMode: c.bottleneckMode,
+    showCrossings: c.showCrossings,
+  }
 }
 
 export const DEFAULT_CONFIG: SchematicConfig = {
@@ -93,14 +125,22 @@ export const DEFAULT_CONFIG: SchematicConfig = {
   showCrossings: true,
   zoom: 18,
   bottleneckMode: false,
-  machineOverrides: {},
   beltOverrides: {},
-  recipeChoices: {},
-  machineCategoryDefaults: {},
   beltAssignments: {},
 }
 
 export const STORAGE_KEY = "schematic.config.v1"
+
+/**
+ * Legacy solver-relevant maps that used to live on SchematicConfig but have
+ * since been hoisted up to App. Kept here ONLY so the one-time migration
+ * in App.tsx can recover prior persisted values. Do not add new fields.
+ */
+export interface LegacySchematicOverrides {
+  machineOverrides: Record<string, string>
+  recipeChoices: Record<string, string>
+  machineCategoryDefaults: Record<string, string>
+}
 
 export function loadConfig(): SchematicConfig {
   try {
@@ -111,15 +151,34 @@ export function loadConfig(): SchematicConfig {
     return {
       ...DEFAULT_CONFIG,
       ...parsed,
-      // Ensure new map-typed fields are always objects (defensive against
+      // Ensure map-typed fields are always objects (defensive against
       // stale persisted blobs from before these fields existed).
-      machineOverrides: parsed.machineOverrides ?? {},
       beltOverrides: parsed.beltOverrides ?? {},
+      beltAssignments: parsed.beltAssignments ?? {},
+    }
+  } catch {
+    return DEFAULT_CONFIG
+  }
+}
+
+/**
+ * Read the legacy solver-override maps out of the persisted SchematicConfig
+ * JSON. Used ONCE by App.tsx to migrate prior values into App-owned state;
+ * after that, App owns these maps directly and writes them under their own
+ * localStorage keys.
+ */
+export function loadLegacyOverrides(): LegacySchematicOverrides {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return { machineOverrides: {}, recipeChoices: {}, machineCategoryDefaults: {} }
+    const parsed = JSON.parse(raw) as Partial<LegacySchematicOverrides>
+    return {
+      machineOverrides: parsed.machineOverrides ?? {},
       recipeChoices: parsed.recipeChoices ?? {},
       machineCategoryDefaults: parsed.machineCategoryDefaults ?? {},
     }
   } catch {
-    return DEFAULT_CONFIG
+    return { machineOverrides: {}, recipeChoices: {}, machineCategoryDefaults: {} }
   }
 }
 

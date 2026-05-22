@@ -19,9 +19,13 @@ interface Props {
   beltTier: BeltTier
   config: SchematicConfig
   updateConfig: <K extends keyof SchematicConfig>(key: K, value: SchematicConfig[K]) => void
-  // App-owned solver-relevant override; CellDetails dispatches edits via the setter.
+  // App-owned solver-relevant overrides; CellDetails dispatches edits via
+  // the setter. machineCategoryDefaults is read-only here (edited via the
+  // MachineCategoryPicker panel) but plumbed through so CellDetails can
+  // reflect the active default when computing the displayed machine.
   machineOverrides: Record<string, string>
   setMachineOverrides: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  machineCategoryDefaults: Record<string, string>
 }
 
 export function InspectorPanel({
@@ -36,6 +40,7 @@ export function InspectorPanel({
   updateConfig,
   machineOverrides,
   setMachineOverrides,
+  machineCategoryDefaults,
 }: Props) {
   // Lane selected — show its details + consumers/producers list.
   if (selectedLane) {
@@ -83,7 +88,7 @@ export function InspectorPanel({
           beltOverrides={config.beltOverrides ?? {}}
           machineOverrides={machineOverrides}
           setMachineOverrides={setMachineOverrides}
-          machineCategoryDefaults={config.machineCategoryDefaults ?? {}}
+          machineCategoryDefaults={machineCategoryDefaults}
         />
       </div>
     )
@@ -125,7 +130,7 @@ export function InspectorPanel({
           beltOverrides={config.beltOverrides ?? {}}
           machineOverrides={machineOverrides}
           setMachineOverrides={setMachineOverrides}
-          machineCategoryDefaults={config.machineCategoryDefaults ?? {}}
+          machineCategoryDefaults={machineCategoryDefaults}
         />
       </div>
     )
