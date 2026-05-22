@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Input, Target } from "../../solver/expand"
+import { useStorage } from "../../storage"
+import { SyncSettings } from "./SyncSettings"
 import {
   deleteProfile,
   listProfiles,
@@ -32,46 +34,61 @@ const DRAWER_WIDTH = 280
  * to App, so this component owns its localStorage I/O.
  */
 export function ProfileSidebar({ currentTargets, currentInputs, onLoad }: Props) {
+  const { store } = useStorage()
   const [open, setOpen] = useState(false)
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [adding, setAdding] = useState(false)
   const [draftName, setDraftName] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Initial load + refresh-on-open so multi-tab edits don't go stale.
+  // Initial load + refresh-on-open so multi-tab edits and remote sync
+  // pulls don't leave stale profiles in the drawer.
   useEffect(() => {
-    setProfiles(listProfiles())
-  }, [])
+    listProfiles(store).then(setProfiles).catch(() => setProfiles([]))
+  }, [store])
   useEffect(() => {
-    if (open) setProfiles(listProfiles())
-  }, [open])
+    if (open) {
+      listProfiles(store).then(setProfiles).catch(() => {})
+    }
+  }, [open, store])
 
   // Autofocus the inline input as soon as the add-row appears.
   useEffect(() => {
     if (adding) inputRef.current?.focus()
   }, [adding])
 
-  const beginAdd = useCallback(() => {
-    setDraftName(nextProfileName())
+  const beginAdd = useCallback(async () => {
+    setDraftName(await nextProfileName(store))
     setAdding(true)
-  }, [])
+  }, [store])
 
-  const commitAdd = useCallback(() => {
-    const created = saveProfile(draftName, currentTargets, currentInputs)
-    setProfiles((p) => [...p, created])
+  const commitAdd = useCallback(async () => {
+    const created = await saveProfile(store, draftName, currentTargets, currentInputs)
+    setProfiles((p) => {
+      const idx = p.findIndex((x) => x.id === created.id)
+      if (idx >= 0) {
+        const next = [...p]
+        next[idx] = created
+        return next
+      }
+      return [...p, created]
+    })
     setAdding(false)
     setDraftName("")
-  }, [draftName, currentTargets, currentInputs])
+  }, [store, draftName, currentTargets, currentInputs])
 
   const cancelAdd = useCallback(() => {
     setAdding(false)
     setDraftName("")
   }, [])
 
-  const remove = useCallback((id: string) => {
-    deleteProfile(id)
-    setProfiles((p) => p.filter((x) => x.id !== id))
-  }, [])
+  const remove = useCallback(
+    async (id: string) => {
+      await deleteProfile(store, id)
+      setProfiles((p) => p.filter((x) => x.id !== id))
+    },
+    [store],
+  )
 
   return (
     <div
@@ -263,6 +280,12 @@ export function ProfileSidebar({ currentTargets, currentInputs, onLoad }: Props)
               onDelete={() => remove(p.id)}
             />
           ))}
+        </div>
+
+        {/* Sync settings — pushed to the bottom so it doesn't compete
+            visually with the profile list. */}
+        <div style={{ marginTop: "auto" }}>
+          <SyncSettings />
         </div>
       </div>
     </div>

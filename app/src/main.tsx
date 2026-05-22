@@ -6,6 +6,7 @@ import { ThemeProvider } from "@thebranchdriftcatalyst/catalyst-ui"
 import "@thebranchdriftcatalyst/catalyst-ui/themes/catalyst"
 import "./index.css"
 import { App } from "./App"
+import { StorageProvider } from "./storage"
 
 // Default to catalyst dark for first-time visitors. Subsequent loads honor
 // whatever the user selected (persisted by ThemeProvider).
@@ -15,7 +16,9 @@ if (!localStorage.getItem("theme:variant")) localStorage.setItem("theme:variant"
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <StorageProvider>
+        <App />
+      </StorageProvider>
     </ThemeProvider>
   </StrictMode>,
 )
