@@ -46,12 +46,16 @@ export const MACHINE_SLOTS: Record<string, MachineSlots> = {
     input: { solid: 2, fluid: 0 },
     output: { solid: 1, fluid: 0 },
   },
+  // AM-2: 4 ingredient slots in vanilla 2.0 (was incorrectly 2 here,
+  // causing 3+-input recipes like military-science-pack to be flagged
+  // ⚠ infeasible when they're actually buildable).
   "assembling-machine-2": {
-    input: { solid: 2, fluid: 1 },
+    input: { solid: 4, fluid: 1 },
     output: { solid: 1, fluid: 1 },
   },
+  // AM-3: 6 ingredient slots in vanilla 2.0. Same correction.
   "assembling-machine-3": {
-    input: { solid: 2, fluid: 1 },
+    input: { solid: 6, fluid: 1 },
     output: { solid: 1, fluid: 1 },
   },
   // Chemistry

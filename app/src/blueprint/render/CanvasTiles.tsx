@@ -941,6 +941,12 @@ export function CanvasTiles({
       }
       for (const port of cell.outputs) {
         if (port.scope.kind === "direct") continue
+        // E-edge outputs (interleaved layout) emit horizontal side-
+        // belts to the EAST of the cell — they don't need an interior
+        // rail running through the cell. Drawing one here would overlap
+        // with the side-belt drawn earlier, producing the "lanes
+        // overlapping coming off the factory manifolds" effect.
+        if (port.edge === "E") continue
         drawManifoldRail(cell, [port], "output", focused, dim)
       }
     }

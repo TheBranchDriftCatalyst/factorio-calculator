@@ -781,14 +781,15 @@ function emitCell(
 
   const strip = tileStrip(node.id, machine?.key ?? "unknown", demanded, mw, mh, xStart, yStart)
   const isManifold = strip.machines.length > 1
-  // For multi-machine cells, allocate input rails at top + output rails
-  // at bottom. For single-machine cells, ports distribute down the
-  // edges as before.
+  // For multi-machine cells, allocate input rails at top. NO bottom
+  // rails — interleaved always sends outputs on the E edge (no
+  // horizontal collect rail through the cell). Earlier the bottom
+  // rails were allocated but produced double-drawing with the E-side-
+  // belts → "lanes overlapping coming off manifolds".
   const inputBelts = isManifold ? Math.ceil(inIngs.length / 2) : inIngs.length
-  const outputRails = isManifold ? outs.length : 0
   const cellW = Math.max(strip.w, mw)
   const cellH = isManifold
-    ? Math.max(strip.h + inputBelts + outputRails, 1)
+    ? Math.max(strip.h + inputBelts, Math.max(inIngs.length, outs.length) + 1)
     : Math.max(strip.h, Math.max(inIngs.length, outs.length) + 1)
   const stripDY = isManifold ? inputBelts : Math.floor((cellH - strip.h) / 2)
   const machines: MachinePlacement[] = strip.machines.map((m) => ({
@@ -807,7 +808,11 @@ function emitCell(
       return i % 2 === 0 ? "A" : "B"
     }
     inputLanes = inIngs.map((_, i) => pairedLane(i))
-    outputSlots = outs.map((_, i) => yStart + cellH - outputRails + i)
+    // Outputs distribute along the E edge in the strip's y range so
+    // each output's side-belt exits at its own row.
+    outputSlots = outs.map(
+      (_, i) => yStart + stripDY + Math.floor(((i + 1) * strip.h) / (outs.length + 1)),
+    )
   } else {
     const inSlots = inIngs.map((_, i) =>
       yStart + Math.floor(((i + 1) * cellH) / (inIngs.length + 1)),
