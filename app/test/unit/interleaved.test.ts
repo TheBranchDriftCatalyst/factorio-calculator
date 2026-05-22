@@ -238,6 +238,42 @@ describe("interleaved · interleavedLayout", () => {
     }
   })
 
+  it("compacts safe chains: chain members share x with the chain head", () => {
+    // copper-plate → copper-cable forms a 2-cell chain (copper-plate's
+    // sole consumer is copper-cable). In the mini-dataset both members
+    // only consume raw items + chain-internal items (copper-plate uses
+    // raw copper-ore; copper-cable uses copper-plate from the chain),
+    // so it's compaction-safe — both cells should end up at the same x.
+    const flow = expand({ catalog, targets: [{ item: "copper-cable", rate: 1 }] })
+    const bp = interleavedLayout(catalog, flow, {})
+    const cellByKey = new Map(bp.cells.map((c) => [c.recipeKey, c]))
+    const cp = cellByKey.get("copper-plate")
+    const cc = cellByKey.get("copper-cable")
+    if (cp && cc) {
+      // Compaction places them at the same x (chain head's stage column).
+      expect(cp.x).toBe(cc.x)
+      // And one is below the other.
+      expect(cp.y).not.toBe(cc.y)
+    }
+  })
+
+  it("does NOT compact chains with external recipe-produced inputs", () => {
+    // electronic-circuit consumes iron-plate (a recipe, not raw). The
+    // chain copper-plate → copper-cable → electronic-circuit is NOT
+    // compaction-safe because EC has an external non-raw input. It
+    // should stay framed but spread across stages.
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const bp = interleavedLayout(catalog, flow, {})
+    const cellByKey = new Map(bp.cells.map((c) => [c.recipeKey, c]))
+    const cp = cellByKey.get("copper-plate")
+    const ec = cellByKey.get("electronic-circuit")
+    if (cp && ec) {
+      // NOT compacted — copper-plate (stage 0) and EC (stage 2) at
+      // different x positions.
+      expect(cp.x).toBeLessThan(ec.x)
+    }
+  })
+
   it("emits a CellGroup frame per multi-cell chain", () => {
     // electronic-circuit chain: iron-plate (stage 0) is its own cell.
     // copper-plate → copper-cable → electronic-circuit forms a 3-cell

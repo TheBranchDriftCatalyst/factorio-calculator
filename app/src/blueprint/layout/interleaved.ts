@@ -297,12 +297,7 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
   }
 
   // Direct links: exactly one producer + one consumer, both recipes,
-  // AND producer/consumer in ADJACENT stages. Cross-stage directs
-  // (e.g. stage 0 → stage 3) route through intermediate cells and
-  // produce visually wonky Z-bend belts — they should go via the
-  // bus instead. Same-stage directs aren't useful here either (cells
-  // in the same stage share an x column; a direct connector would
-  // just zig-zag along the column).
+  // AND producer/consumer in ADJACENT stages.
   const directLinks = new Map<string, { from: string; to: string; rate: number }>()
   for (const [item, stat] of items) {
     if (stat.finalRate > 0) continue
@@ -313,14 +308,12 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
     const fromStage = stages.get(from)
     const toStage = stages.get(to)
     if (fromStage == null || toStage == null) continue
-    // ONLY adjacent stages — keeps the connector confined to the
-    // inter-stage gutter so it doesn't cross other cells' x ranges.
     if (toStage - fromStage !== 1) continue
     directLinks.set(item, { from, to, rate: stat.rate })
   }
 
   // Bus items per stage: each item appears once, in its earliest
-  // consumer's stage column.
+  // (effective) consumer's stage column.
   for (const [item, stat] of items) {
     if (directLinks.has(item)) continue
     // Items going only to output: sinks aren't bus items — they go on
@@ -353,34 +346,28 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
  * are detected by walking each cell's predecessor/successor via the
  * directLinks map.
  *
- * Returns each chain as a list of recipeKeys in flow order. Cells not
- * part of any chain appear as a single-element chain (filtered out by
- * the caller when only multi-cell chains matter).
+ * Returns each chain as a list of recipeKeys in flow order.
  */
-function buildChains(
-  cells: Cell[],
+function buildChainsFromLinks(
   directLinks: Map<string, { from: string; to: string; rate: number }>,
 ): string[][] {
-  // Build successor / predecessor maps from directLinks.
   const successor = new Map<string, string>()
   const predecessor = new Map<string, string>()
+  const allNodes = new Set<string>()
   for (const link of directLinks.values()) {
-    // If a cell already has a successor (multi-output direct), keep
-    // the FIRST; chains are tree-like in pathological cases but the
-    // direct-link filter ensures 1:1 producer→consumer.
     if (!successor.has(link.from)) successor.set(link.from, link.to)
     if (!predecessor.has(link.to)) predecessor.set(link.to, link.from)
+    allNodes.add(link.from)
+    allNodes.add(link.to)
   }
   const visited = new Set<string>()
   const chains: string[][] = []
-  for (const cell of cells) {
-    if (visited.has(cell.recipeKey)) continue
-    // Walk to the start (no predecessor).
-    let head = cell.recipeKey
+  for (const id of allNodes) {
+    if (visited.has(id)) continue
+    let head = id
     while (predecessor.has(head) && !visited.has(predecessor.get(head)!)) {
       head = predecessor.get(head)!
     }
-    // Walk forward from head, collecting the chain.
     const chain: string[] = []
     let cur: string | undefined = head
     while (cur && !visited.has(cur)) {
@@ -388,9 +375,24 @@ function buildChains(
       visited.add(cur)
       cur = successor.get(cur)
     }
-    chains.push(chain)
+    if (chain.length >= 2) chains.push(chain)
   }
   return chains
+}
+
+/** Legacy adapter — kept for the existing post-cells frame pass. */
+function buildChains(
+  cells: Cell[],
+  directLinks: Map<string, { from: string; to: string; rate: number }>,
+): string[][] {
+  const chainsFromLinks = buildChainsFromLinks(directLinks)
+  const inSome = new Set<string>()
+  for (const c of chainsFromLinks) for (const k of c) inSome.add(k)
+  const result: string[][] = [...chainsFromLinks]
+  for (const cell of cells) {
+    if (!inSome.has(cell.recipeKey)) result.push([cell.recipeKey])
+  }
+  return result
 }
 
 /**
@@ -408,6 +410,42 @@ export function interleavedLayout(
   // path computation.
   const stages = opts._stagesOverride ?? computeStages(flow)
   const { plans, finalOutputs, directLinks } = planStages(flow, stages)
+
+  // Chain compaction: stack multi-cell chains vertically at the
+  // chain's FIRST cell's stage column. Internal direct connections
+  // become short vertical mini-bus segments adjacent to the chain
+  // block. Non-head chain members are SKIPPED from their original
+  // stage's cell list and re-emitted alongside the head.
+  //
+  // This is the "compound super-cell" model: the chain visually
+  // reads as one block (with internal direct links) instead of
+  // sprawling across multiple stage columns.
+  //
+  // Compaction is SAFE only when every chain member's external
+  // inputs come from RAW SOURCES (or other chain members). If a
+  // chain consumes a recipe-produced item from outside the chain,
+  // that item lives on a bus column EAST of the compacted block,
+  // and the chain member's input side-belt would have to run east
+  // and back — visually worse than no compaction. We filter those
+  // chains out and leave them in the framed-but-spread state.
+  const allChains = buildChainsFromLinks(directLinks)
+  const isCompactionSafe = (chain: string[]): boolean => {
+    const chainSet = new Set(chain)
+    for (const e of flow.edges) {
+      if (!chainSet.has(e.target)) continue
+      if (e.source.startsWith("source:") || e.source.startsWith("input:")) continue
+      if (chainSet.has(e.source)) continue
+      return false // external non-raw producer
+    }
+    return true
+  }
+  const compactionChains = allChains.filter(isCompactionSafe)
+  const chainHead = new Map<string, string[]>() // headCellId → chain order
+  const chainMemberSkip = new Set<string>() // cellIds to skip in their original stage
+  for (const chain of compactionChains) {
+    chainHead.set(chain[0], chain)
+    for (let i = 1; i < chain.length; i++) chainMemberSkip.add(chain[i])
+  }
 
   const isFluid = (item: string) => catalog.fluidItems.has(item)
 
@@ -455,10 +493,14 @@ export function interleavedLayout(
     }
     const stageCellX = packed.gutterX + 1
 
-    // 2. Stack cells vertically in this stage's cell column.
+    // 2. Stack cells vertically in this stage's cell column. Chain
+    //    members beyond the head are SKIPPED here — they'll be emitted
+    //    when their head's stage is processed (which is THIS stage if
+    //    head's stage == plan.index).
     let cursorY = TOP_MARGIN
     let stageRightEdge = stageCellX
     for (const node of plan.cells) {
+      if (chainMemberSkip.has(node.id)) continue
       const cell = emitCell(
         node,
         stageCellX,
@@ -474,6 +516,32 @@ export function interleavedLayout(
       stageRightEdge = Math.max(stageRightEdge, cell.x + cell.w)
       totalMachines += node.count
       totalPowerW += node.powerW
+      // If this cell is a chain head, emit the rest of the chain
+      // stacked directly below at the SAME x. The chain becomes a
+      // visual block; direct connections between adjacent members
+      // become vertical segments handled by the renderer.
+      const chain = chainHead.get(node.id)
+      if (chain && chain.length > 1) {
+        for (let i = 1; i < chain.length; i++) {
+          const memberNode = flow.nodes.find((n) => n.id === chain[i])
+          if (!memberNode || !memberNode.recipe) continue
+          const memberCell = emitCell(
+            memberNode,
+            stageCellX,
+            cursorY,
+            beltXByItem,
+            inserters,
+            unsupported,
+            directLinks,
+            o,
+          )
+          cells.push(memberCell)
+          cursorY += memberCell.h + o.cellGapY
+          stageRightEdge = Math.max(stageRightEdge, memberCell.x + memberCell.w)
+          totalMachines += memberNode.count
+          totalPowerW += memberNode.powerW
+        }
+      }
     }
     maxY = Math.max(maxY, cursorY)
 
