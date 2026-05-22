@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
 import type { Catalog } from "../factorio"
 import type { FlowGraph } from "../solver/expand"
@@ -74,15 +74,15 @@ export function SchematicView({
   }, [config])
   const { zoom, bottleneckMode, beltTier } = config
 
-  const blueprint = useMemo(
-    () => runLayout(config.layoutAlgorithm, catalog, flow, layoutConfig(config)),
+  // Layout inputs that DRIVE busLayout. Memoized into a stable object
+  // reference so useDeferredValue can do reference-equality comparison
+  // to detect 'config has changed but render hasn't caught up yet'.
+  const layoutInputs = useMemo(
+    () => ({
+      algo: config.layoutAlgorithm,
+      cfg: layoutConfig(config),
+    }),
     [
-      catalog,
-      flow,
-      // Depend on the LayoutConfig fields explicitly so render-only knobs
-      // (zoom, bottleneckMode, etc.) don't trigger a re-layout. The
-      // algorithm id is on RenderConfig but DOES trigger a re-layout
-      // because it picks the whole pipeline.
       config.layoutAlgorithm,
       config.beltSpacing,
       config.beltGroupSize,
@@ -93,7 +93,20 @@ export function SchematicView({
       config.maxNestingDepth,
       config.outputBusSide,
       config.beltAssignments,
+      config.heavyConsumerThreshold,
+      config.layoutEffort,
     ],
+  )
+  // useDeferredValue lets React render the OLD blueprint while it
+  // schedules the new (potentially expensive) layout compute as a
+  // low-priority update. The `isCalculating` flag flips true while the
+  // deferred value lags the current — a real signal we can render a
+  // small "calculating" chip from.
+  const deferredInputs = useDeferredValue(layoutInputs)
+  const isCalculating = layoutInputs !== deferredInputs
+  const blueprint = useMemo(
+    () => runLayout(deferredInputs.algo, catalog, flow, deferredInputs.cfg),
+    [catalog, flow, deferredInputs],
   )
   const [hoveredCell, setHoveredCell] = useState<Cell | null>(null)
   const [selectedLane, setSelectedLane] = useState<{
@@ -317,6 +330,7 @@ export function SchematicView({
           <CameraHint />
           {bottleneckMode && <BottleneckBadge />}
           {bottleneckMode && <BottleneckLegend />}
+          {isCalculating && <CalculatingBadge />}
         </div>
       </div>
       {/* Right-rail content portaled into App's page-level outlet. The
@@ -392,6 +406,46 @@ function CameraHint() {
       <span style={{ color: "#FFC940" }}>⌘+wheel</span> zoom ·{" "}
       <span style={{ color: "#FFC940" }}>B</span> bottleneck ·{" "}
       <span style={{ color: "#FFC940" }}>⌘K</span> palette
+    </div>
+  )
+}
+
+// Small "calculating" chip — top-left, out of the way, only visible
+// while React's deferred layout compute lags the live config. Gives
+// the user a clear "yes, we got your slider change, layout is on the
+// way" signal so they don't think the UI is stuck.
+function CalculatingBadge() {
+  return (
+    <div
+      data-testid="calculating-badge"
+      className="absolute top-2 left-2 text-[9px] font-mono pointer-events-none select-none inline-flex items-center gap-1.5"
+      style={{
+        background: "rgba(125, 211, 252, 0.14)",
+        color: "rgba(186, 230, 253, 0.95)",
+        border: "1px solid rgba(125, 211, 252, 0.45)",
+        padding: "3px 8px",
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        borderRadius: 2,
+      }}
+    >
+      <span
+        style={{
+          display: "inline-block",
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: "rgba(125, 211, 252, 0.9)",
+          animation: "fbp-calc-pulse 1.2s ease-in-out infinite",
+        }}
+      />
+      Calculating
+      <style>{`
+        @keyframes fbp-calc-pulse {
+          0%, 100% { opacity: 0.4; transform: scale(0.85); }
+          50% { opacity: 1; transform: scale(1.15); }
+        }
+      `}</style>
     </div>
   )
 }
