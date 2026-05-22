@@ -536,3 +536,108 @@ test.describe("QA — BOM panel mixed tier rows", () => {
     await expect(page.getByTestId("bom-belts-yellow")).toBeVisible()
   })
 })
+
+test.describe("Cell Inspector — feasibility chip", () => {
+  test("flags infeasible (machine, recipe) pairs", async ({ page, schematic }) => {
+    // engine-unit has 3 solid ingredients (iron-gear-wheel, iron-plate,
+    // pipe). assembler-1 has 2 solid input slots. Force this infeasible
+    // pair via machineOverrides — UI must flag it.
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "fbp.targets.v1",
+        JSON.stringify([{ item: "engine-unit", rate: 1 }]),
+      )
+      localStorage.setItem("fbp.inputs.v1", JSON.stringify([]))
+      localStorage.setItem(
+        "fbp.machineOverrides.v1",
+        JSON.stringify({ "engine-unit": "assembling-machine-1" }),
+      )
+    })
+    await page.reload()
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+
+    // Click the engine-unit cell to pin its details. Use the schematic
+    // test hook + the click handler that the existing cell-pin test
+    // uses — no canvas fuzzing.
+    await page.locator("body").press("f")
+    await page.evaluate(() => {
+      const all = document.querySelectorAll("*")
+      for (const el of all) {
+        const k = Object.keys(el).find((k) => k.startsWith("__reactFiber$"))
+        if (!k) continue
+        // @ts-expect-error fiber access for test
+        let f = el[k]
+        while (f) {
+          if (f.memoizedProps?.onClickCell) {
+            f.memoizedProps.onClickCell("engine-unit", {
+              shiftKey: false,
+              metaKey: false,
+              ctrlKey: false,
+            })
+            return
+          }
+          f = f.return
+        }
+      }
+    })
+
+    const chip = page.getByTestId("cell-io-shape")
+    await expect(chip).toBeVisible()
+    await expect(chip).toHaveAttribute("data-feasible", "false")
+    const text = (await chip.textContent()) ?? ""
+    expect(text).toMatch(/⚠/)
+    expect(text).toMatch(/infeasible/i)
+  })
+
+  test("shows the feasible state when the (machine, recipe) pair fits", async ({
+    page,
+    schematic,
+  }) => {
+    // electronic-circuit has 2 solid ingredients. assembler-1 has 2
+    // solid slots → feasible. Default flow uses electronic-circuit as
+    // the target, so we just need to pin assembler-1 explicitly to
+    // avoid the solver picking electromagnetic-plant by default.
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "fbp.targets.v1",
+        JSON.stringify([{ item: "electronic-circuit", rate: 1 }]),
+      )
+      localStorage.setItem(
+        "fbp.machineOverrides.v1",
+        JSON.stringify({ "electronic-circuit": "assembling-machine-1" }),
+      )
+    })
+    await page.reload()
+    await openSchematic(page)
+    await schematic.waitForCanvas()
+    await page.locator("body").press("f")
+    await page.evaluate(() => {
+      const all = document.querySelectorAll("*")
+      for (const el of all) {
+        const k = Object.keys(el).find((k) => k.startsWith("__reactFiber$"))
+        if (!k) continue
+        // @ts-expect-error fiber access for test
+        let f = el[k]
+        while (f) {
+          if (f.memoizedProps?.onClickCell) {
+            f.memoizedProps.onClickCell("electronic-circuit", {
+              shiftKey: false,
+              metaKey: false,
+              ctrlKey: false,
+            })
+            return
+          }
+          f = f.return
+        }
+      }
+    })
+
+    const chip = page.getByTestId("cell-io-shape")
+    await expect(chip).toBeVisible()
+    await expect(chip).toHaveAttribute("data-feasible", "true")
+    const text = (await chip.textContent()) ?? ""
+    expect(text).not.toMatch(/⚠/)
+    expect(text).not.toMatch(/infeasible/i)
+  })
+})

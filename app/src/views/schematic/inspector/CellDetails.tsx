@@ -13,6 +13,7 @@ import { laneUtilization, type BeltTier } from "../../../blueprint/util/utilizat
 import { ItemIcon } from "../../../components/Icon"
 import { pickMachineCandidates } from "../../../solver/expand"
 import { computeIOShape, ioShapeLabel } from "../../../solver/ioShape"
+import { checkFeasibility } from "../../../solver/feasibility"
 
 interface Props {
   cell: Cell
@@ -73,6 +74,15 @@ export function CellDetails({
     return ioShapeLabel(computeIOShape(recipe, catalog.fluidItems))
   }, [recipe, catalog])
 
+  // Feasibility check for the (machine, recipe) pair. When infeasible
+  // (e.g. user pinned assembler-1 onto a 3-input recipe), surface the
+  // reason in the I/O row so the user knows the layout won't actually
+  // be buildable in Factorio.
+  const feasibility = useMemo(() => {
+    if (!recipe || !machine) return null
+    return checkFeasibility(machine, recipe, catalog.fluidItems)
+  }, [recipe, machine, catalog])
+
   const onMachineChange = (v: string) => {
     setMachineOverrides((prev) => {
       const next = { ...prev }
@@ -108,12 +118,22 @@ export function CellDetails({
           </div>
           {shapeLabel && (
             <div
-              className="opacity-60 font-mono"
+              className="font-mono"
               data-testid="cell-io-shape"
-              style={{ fontSize: 10 }}
-              title="I/O shape: solid/fluid input streams → solid/fluid output streams"
+              data-feasible={feasibility ? (feasibility.ok ? "true" : "false") : undefined}
+              style={{
+                fontSize: 10,
+                color: feasibility && !feasibility.ok ? "rgba(255,46,99,0.95)" : undefined,
+                opacity: feasibility && !feasibility.ok ? 1 : 0.6,
+              }}
+              title={
+                feasibility && !feasibility.ok
+                  ? `Recipe does NOT fit machine slots:\n  • ${feasibility.reasons.join("\n  • ")}`
+                  : "I/O shape: solid/fluid input streams → solid/fluid output streams"
+              }
             >
-              I/O {shapeLabel}
+              {feasibility && !feasibility.ok ? "⚠ " : ""}I/O {shapeLabel}
+              {feasibility && !feasibility.ok ? " (infeasible)" : ""}
             </div>
           )}
         </div>
