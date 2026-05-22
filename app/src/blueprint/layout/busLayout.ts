@@ -18,6 +18,7 @@
 import type { Catalog } from "../../factorio"
 import type { FlowGraph } from "../../solver/expand"
 import type { LayoutConfig } from "../../views/schematic/SchematicConfig"
+import { orderByTapDistance, type CostNode } from "./cost"
 import type {
   Blueprint,
   BusBelt,
@@ -140,6 +141,39 @@ function topoSort<T extends string>(
   // Cycle remainder — append in insertion order to keep determinism.
   for (const n of nodes) if (!out.includes(n)) out.push(n)
   return out
+}
+
+/**
+ * Reorder a scope's recipe IDs to minimize total belt-tap vertical span
+ * (see cost.ts). Producer→consumer topological ordering is preserved.
+ * Returns the reordered IDs; falls back to plain topoSort when fewer
+ * than 2 cells (where there's nothing to gain).
+ */
+function reorderByCost(
+  scope: ReadonlyArray<string>,
+  scopeEdges: ReadonlyArray<{ source: string; target: string; item: string }>,
+  ctx: LayoutContext,
+): string[] {
+  if (scope.length <= 1) return [...scope]
+  const inScope = new Set(scope)
+  // For each cell in scope, gather its input items (from the underlying
+  // recipe) and the IDs of its in-scope producers (from scopeEdges).
+  const producersOf = new Map<string, Set<string>>()
+  for (const id of scope) producersOf.set(id, new Set())
+  for (const e of scopeEdges) {
+    if (inScope.has(e.source) && inScope.has(e.target)) {
+      producersOf.get(e.target)?.add(e.source)
+    }
+  }
+  const nodes: CostNode[] = scope.map((id) => {
+    const node = ctx.nodeById.get(id)
+    const inputs = new Set<string>()
+    if (node?.recipe) {
+      for (const ing of node.recipe.ingredients) inputs.add(ing.item)
+    }
+    return { id, inputs, producers: producersOf.get(id) ?? new Set() }
+  })
+  return orderByTapDistance(nodes)
 }
 
 interface LayoutContext {
@@ -668,11 +702,11 @@ function partition(
 
   if ((singleClusterCoversScope && depth > 0) || depthCapHit) {
     // Indivisible scope at depth ≥ 1 — emit cells directly as leaves of
-    // THIS node, ordered by topo (producer above consumer).
-    const topoCells = topoSort(
-      [...scope],
-      scopeEdges.map((e) => ({ from: e.source, to: e.target })),
-    )
+    // THIS node. Ordering: similarity-aware reorder that minimizes total
+    // belt-tap vertical span (cells consuming overlapping inputs are
+    // placed adjacent) while preserving topological order (in-scope
+    // producers always come before consumers). See cost.ts.
+    const topoCells = reorderByCost(scope, scopeEdges, ctx)
     for (const id of topoCells) {
       const cell = emitLeafCell(id, childContentX, cursorY, ctx)
       leafCellKeys.push(cell.recipeKey)

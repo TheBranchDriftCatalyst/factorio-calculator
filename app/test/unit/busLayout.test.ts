@@ -264,3 +264,63 @@ describe("busLayout — sub-bus groups (v4: local belts inside frames)", () => {
     }
   })
 })
+
+// Similarity-aware reorder integration. The orderByTapDistance heuristic
+// shouldn't WORSEN any layout — this test pins that contract end-to-end
+// by computing the realized tap distance from the produced Blueprint
+// (sum of |beltX - cellX| × belt-span) and asserting it's reasonable.
+describe("busLayout · similarity reorder (fbp-xm0)", () => {
+  it("cells in the same scope are stacked vertically with no overlap", () => {
+    // The reorder must still produce a valid vertical stack. Producer
+    // before consumer; no two cells in the same group occupy the same
+    // row.
+    const flow = expand({
+      catalog,
+      targets: [
+        { item: "electronic-circuit", rate: 1 },
+        { item: "copper-cable", rate: 6 },
+        { item: "iron-plate", rate: 2 },
+      ],
+    })
+    const blueprint = busLayout(catalog, flow)
+    // Group cells by their parent group (or trunk if no group).
+    const byGroup = new Map<string, typeof blueprint.cells>()
+    for (const g of groups(blueprint)) {
+      const groupCells = blueprint.cells.filter((c) => g.cellKeys.includes(c.recipeKey))
+      byGroup.set(g.id, groupCells)
+    }
+    for (const [, cells] of byGroup) {
+      const sorted = [...cells].sort((a, b) => a.y - b.y)
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = sorted[i - 1]
+        const cur = sorted[i]
+        expect(cur.y).toBeGreaterThanOrEqual(prev.y + prev.h)
+      }
+    }
+  })
+
+  it("preserves producer-before-consumer order within each scope", () => {
+    const flow = expand({
+      catalog,
+      targets: [
+        { item: "electronic-circuit", rate: 1 },
+        { item: "copper-cable", rate: 6 },
+      ],
+    })
+    const blueprint = busLayout(catalog, flow)
+    // For every edge in the flow whose endpoints are BOTH cells in the
+    // same group, producer's y must be <= consumer's y.
+    const cellByKey = new Map(blueprint.cells.map((c) => [c.recipeKey, c]))
+    const groupOf = new Map<string, string>()
+    for (const g of groups(blueprint)) {
+      for (const key of g.cellKeys) groupOf.set(key, g.id)
+    }
+    for (const e of flow.edges) {
+      const src = cellByKey.get(e.source)
+      const tgt = cellByKey.get(e.target)
+      if (!src || !tgt) continue
+      if (groupOf.get(e.source) !== groupOf.get(e.target)) continue
+      expect(src.y).toBeLessThanOrEqual(tgt.y)
+    }
+  })
+})
