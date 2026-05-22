@@ -1,29 +1,60 @@
 // Belt + pipe utilization heatmap helpers.
 //
-// Factorio belt tiers (items/sec per lane):
-//   yellow → 15  (tier 1)
-//   red    → 30  (tier 2)
-//   blue   → 45  (tier 3)
-//   turbo  → 60  (Space Age)
+// Factorio belt tier throughput, verified against the wiki
+// (https://wiki.factorio.com/Belt_transport_system) May 2026:
 //
-// Factorio pipe throughput depends on segment length, but for a short
-// connector (≤17 pipes) the standard throughput is 1200 fluid units/sec.
+//   tier    speed     belt total   per lane
+//   yellow  1.875 t/s 15 items/s   7.5 items/s
+//   red     3.75  t/s 30 items/s   15  items/s
+//   blue    5.625 t/s 45 items/s   22.5 items/s
+//   turbo   7.5   t/s 60 items/s   30  items/s
+//
+// Belts are 2 lanes; on a straight belt items stay on their lane.
+// fbp-aae bead is the canonical reference for all belt/lane mechanics.
+//
+// Pipe throughput depends on segment length, but for a short connector
+// (≤17 pipes) the standard throughput is 1200 fluid units/sec.
 // Long pipe runs degrade. We default to the "short segment" throughput.
 
 export type BeltTier = "yellow" | "red" | "blue" | "turbo"
 
+/**
+ * Items per second PER LANE (one of the two lanes of a belt).
+ * Half of the commonly-quoted full-belt throughput.
+ *
+ * Originally these were half this large (mislabeled — the source
+ * wiki number is FULL belt throughput, and we were treating it as
+ * per-lane). Corrected May 2026 — utilization rendering pre-fix was
+ * showing 2× the real available capacity.
+ */
 export const BELT_TIER_LANE_CAPACITY: Record<BeltTier, number> = {
+  yellow: 7.5,
+  red: 15,
+  blue: 22.5,
+  turbo: 30,
+}
+
+/** Full belt throughput across BOTH lanes — commonly quoted number. */
+export const BELT_TIER_BELT_CAPACITY: Record<BeltTier, number> = {
   yellow: 15,
   red: 30,
   blue: 45,
   turbo: 60,
 }
 
+/** Belt linear speed in tiles/sec. */
+export const BELT_TIER_SPEED: Record<BeltTier, number> = {
+  yellow: 1.875,
+  red: 3.75,
+  blue: 5.625,
+  turbo: 7.5,
+}
+
 export const BELT_TIER_LABELS: Record<BeltTier, string> = {
-  yellow: "Yellow · 15/s",
-  red: "Red · 30/s",
-  blue: "Blue · 45/s",
-  turbo: "Turbo · 60/s",
+  yellow: "Yellow · 15/s belt",
+  red: "Red · 30/s belt",
+  blue: "Blue · 45/s belt",
+  turbo: "Turbo · 60/s belt",
 }
 
 /** Vanilla pipe throughput, fluid units / sec, short segment. */
