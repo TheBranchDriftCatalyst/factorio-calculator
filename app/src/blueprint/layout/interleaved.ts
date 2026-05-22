@@ -202,16 +202,26 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
     }
   }
 
-  // Direct links: exactly one producer + one consumer, both recipes.
-  // Skip items also going to output: sinks (those need bus visibility).
+  // Direct links: exactly one producer + one consumer, both recipes,
+  // AND producer/consumer in ADJACENT stages. Cross-stage directs
+  // (e.g. stage 0 → stage 3) route through intermediate cells and
+  // produce visually wonky Z-bend belts — they should go via the
+  // bus instead. Same-stage directs aren't useful here either (cells
+  // in the same stage share an x column; a direct connector would
+  // just zig-zag along the column).
   const directLinks = new Map<string, { from: string; to: string; rate: number }>()
   for (const [item, stat] of items) {
     if (stat.finalRate > 0) continue
     if (stat.producers.size !== 1 || stat.consumers.size !== 1) continue
     const from = [...stat.producers][0]
     const to = [...stat.consumers][0]
-    // Skip self-loops (shouldn't happen, but defensive).
     if (from === to) continue
+    const fromStage = stages.get(from)
+    const toStage = stages.get(to)
+    if (fromStage == null || toStage == null) continue
+    // ONLY adjacent stages — keeps the connector confined to the
+    // inter-stage gutter so it doesn't cross other cells' x ranges.
+    if (toStage - fromStage !== 1) continue
     directLinks.set(item, { from, to, rate: stat.rate })
   }
 
@@ -240,6 +250,53 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
   finalOutputs.sort((a, b) => b[1] - a[1])
 
   return { plans, finalOutputs, directLinks }
+}
+
+/**
+ * Build maximal chains of direct-linked cells. A chain is a sequence
+ * cell_0 → cell_1 → ... → cell_n where each arrow is a direct link
+ * (single-producer, single-consumer item, adjacent stages). Chains
+ * are detected by walking each cell's predecessor/successor via the
+ * directLinks map.
+ *
+ * Returns each chain as a list of recipeKeys in flow order. Cells not
+ * part of any chain appear as a single-element chain (filtered out by
+ * the caller when only multi-cell chains matter).
+ */
+function buildChains(
+  cells: Cell[],
+  directLinks: Map<string, { from: string; to: string; rate: number }>,
+): string[][] {
+  // Build successor / predecessor maps from directLinks.
+  const successor = new Map<string, string>()
+  const predecessor = new Map<string, string>()
+  for (const link of directLinks.values()) {
+    // If a cell already has a successor (multi-output direct), keep
+    // the FIRST; chains are tree-like in pathological cases but the
+    // direct-link filter ensures 1:1 producer→consumer.
+    if (!successor.has(link.from)) successor.set(link.from, link.to)
+    if (!predecessor.has(link.to)) predecessor.set(link.to, link.from)
+  }
+  const visited = new Set<string>()
+  const chains: string[][] = []
+  for (const cell of cells) {
+    if (visited.has(cell.recipeKey)) continue
+    // Walk to the start (no predecessor).
+    let head = cell.recipeKey
+    while (predecessor.has(head) && !visited.has(predecessor.get(head)!)) {
+      head = predecessor.get(head)!
+    }
+    // Walk forward from head, collecting the chain.
+    const chain: string[] = []
+    let cur: string | undefined = head
+    while (cur && !visited.has(cur)) {
+      chain.push(cur)
+      visited.add(cur)
+      cur = successor.get(cur)
+    }
+    chains.push(chain)
+  }
+  return chains
 }
 
 /**
@@ -403,10 +460,68 @@ export function interleavedLayout(
     }
   }
 
-  // 4. Wrap everything in a single root BusNode so the renderer can
-  // walk belts via its existing tree walkers. Stages share one root
-  // since interleaved doesn't NEST — it just lays them out side by
-  // side.
+  // 6. Sub-bus groups via chain detection.
+  //
+  // A "sub-bus group" in the interleaved model is a chain of cells
+  // linked by direct connections across adjacent stages: A → B → C.
+  // Each pair (A, B), (B, C) is a directLink, so the items in the
+  // chain never appear on the main bus — they're a self-contained
+  // mini-factory. Visually framing the chain as a CellGroup lets the
+  // user read "these N cells together produce X" at a glance.
+  //
+  // Single-cell groups (no chain) aren't framed — they're just leaf
+  // cells like any other.
+  const chains = buildChains(cells, directLinks)
+  const groupNodes: BusNode[] = []
+  for (let i = 0; i < chains.length; i++) {
+    const chain = chains[i]
+    if (chain.length < 2) continue
+    const chainCells = chain.map((k) => cellByKey.get(k)!).filter(Boolean)
+    if (chainCells.length < 2) continue
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxYY = -Infinity
+    let cMachines = 0, cPowerW = 0
+    for (const c of chainCells) {
+      if (c.x < minX) minX = c.x
+      if (c.y < minY) minY = c.y
+      if (c.x + c.w > maxX) maxX = c.x + c.w
+      if (c.y + c.h > maxYY) maxYY = c.y + c.h
+      const node = flow.nodes.find((n) => n.id === c.recipeKey)
+      if (node) {
+        cMachines += node.count
+        cPowerW += node.powerW
+      }
+    }
+    groupNodes.push({
+      id: `chain-${i}`,
+      depth: 1,
+      x: minX - 1,
+      y: minY - 1,
+      w: maxX - minX + 2,
+      h: maxYY - minY + 2,
+      belts: [],
+      gutterX: -1,
+      scopeItems: chain
+        .map((_, idx) => chain[idx + 1])
+        .filter((nextId): nextId is string => !!nextId)
+        .map((nextId) => {
+          // Pull the linked item from directLinks for whichever entry's
+          // `to` === nextId. We just need a representative label.
+          for (const [item, link] of directLinks) {
+            if (link.to === nextId) return item
+          }
+          return ""
+        })
+        .filter(Boolean),
+      children: [],
+      cellKeys: chain,
+      totalMachines: cMachines,
+      totalPowerW: cPowerW,
+    })
+  }
+
+  // 7. Wrap everything in a single root BusNode so the renderer can
+  // walk belts via its existing tree walkers. Chains land in
+  // root.children so flattenGroups() renders them as frames.
   const root: BusNode = {
     id: "root",
     depth: 0,
@@ -417,7 +532,7 @@ export function interleavedLayout(
     belts: allBelts,
     gutterX: -1, // no single gutter for interleaved
     scopeItems: [...new Set(allBelts.flatMap((b) => [b.laneA?.item, b.laneB?.item].filter(Boolean) as string[]))],
-    children: [],
+    children: groupNodes,
     cellKeys: cells.map((c) => c.recipeKey),
     totalMachines,
     totalPowerW,

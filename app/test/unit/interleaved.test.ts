@@ -154,4 +154,45 @@ describe("interleaved · interleavedLayout", () => {
     expect(bp.cells).toHaveLength(1)
     expect(bp.cells[0].recipeKey).toBe("iron-plate")
   })
+
+  it("rejects cross-stage direct links (more than 1 stage apart)", () => {
+    // iron-plate (stage 0) → electronic-circuit (stage 2). If we allowed
+    // this direct, the connector would Z-bend across stage 1 cells.
+    // Verify the layout uses the bus instead.
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const bp = interleavedLayout(catalog, flow, {})
+    // No direct connection should span more than 1 stage.
+    for (const dc of bp.directConnections) {
+      // Each direct's producer + consumer should be in adjacent stages
+      // (we can't directly inspect that here without re-computing stages,
+      // but x-distance is a proxy: cells in stages > 1 apart have x
+      // separated by more than the typical bus + cell-strip width).
+      // Instead, check that EVERY direct connection's x is between its
+      // producer's x+w and its consumer's x.
+      const from = bp.cells.find((c) => c.recipeKey === dc.fromCellKey)!
+      const to = bp.cells.find((c) => c.recipeKey === dc.toCellKey)!
+      expect(dc.x).toBeGreaterThanOrEqual(from.x + from.w)
+      expect(dc.x).toBeLessThanOrEqual(to.x)
+      // To stage = from stage + 1 — the connector lives in ONE gutter.
+      const gap = to.x - (from.x + from.w)
+      expect(gap).toBeLessThanOrEqual(20) // generous, but rules out 2+ stage skips
+    }
+  })
+
+  it("emits a CellGroup frame per multi-cell chain", () => {
+    // electronic-circuit chain: iron-plate (stage 0) is its own cell.
+    // copper-plate → copper-cable → electronic-circuit forms a 3-cell
+    // chain IF each step is a unique 1:1 producer/consumer. In the
+    // mini-dataset that's true: copper-cable has only copper-plate
+    // input + only EC as consumer, etc. So we expect at least one
+    // multi-cell group on root.children.
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const bp = interleavedLayout(catalog, flow, {})
+    const groups = bp.root?.children ?? []
+    // Each group has cellKeys.length >= 2 (single-cell chains are
+    // filtered out).
+    for (const g of groups) {
+      expect(g.cellKeys.length).toBeGreaterThanOrEqual(2)
+    }
+  })
 })

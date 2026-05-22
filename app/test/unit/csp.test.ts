@@ -201,4 +201,40 @@ describe("csp · solveCsp", () => {
     expect(bp.width).toBeGreaterThan(0)
     expect(bp.height).toBeGreaterThan(0)
   })
+
+  it("considers interleaved layout per leaf when considerInterleaved is true", () => {
+    // With interleaved enabled, the solver scores BOTH the bus-tree
+    // (anneal-result) blueprint AND the interleaved blueprint per
+    // leaf, picking the lower-scored. We can't easily assert which
+    // one wins on the mini-dataset, but we CAN verify the solver
+    // doesn't crash and produces a valid blueprint with the option on.
+    const flow = expand({
+      catalog,
+      targets: [
+        { item: "electronic-circuit", rate: 1 },
+        { item: "copper-cable", rate: 6 },
+      ],
+    })
+    const result = solveCsp(catalog, flow, {}, {
+      annealIterationsPerLeaf: 3,
+      maxLeaves: 5,
+      considerInterleaved: true,
+    })
+    expect(result.blueprint.cells.length).toBeGreaterThan(0)
+    expect(result.score).toBeGreaterThan(0)
+  })
+
+  it("considerInterleaved: false skips interleaved scoring", () => {
+    // Sanity: turning the option off uses ONLY the bus-tree path.
+    // The score should equal the considerInterleaved-true result IF
+    // bus-tree happened to win; on small flows it may also equal IF
+    // interleaved was no better. We just check it doesn't crash.
+    const flow = expand({ catalog, targets: [{ item: "electronic-circuit", rate: 1 }] })
+    const result = solveCsp(catalog, flow, {}, {
+      annealIterationsPerLeaf: 3,
+      maxLeaves: 5,
+      considerInterleaved: false,
+    })
+    expect(result.blueprint.cells.length).toBeGreaterThan(0)
+  })
 })

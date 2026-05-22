@@ -32,6 +32,7 @@ import type { Blueprint } from "../types"
 import { busLayout } from "./busLayout"
 import { scoreBlueprint, annealAssignments } from "./anneal"
 import { computeAutoBusAssignments } from "./autoBus"
+import { interleavedLayout } from "./interleaved"
 import { LAYOUT_TEMPLATES, templatesFor, type TemplateId } from "./templates"
 
 /**
@@ -134,6 +135,15 @@ export interface CspOptions {
   maxLeaves?: number
   /** Objective weights override. */
   objective?: CspObjective
+  /**
+   * Whether to ALSO score the interleaved layout for each leaf and
+   * pick the lower-scored one. Doubles the inner-loop cost but lets
+   * the solver swap layout strategies when one fits the flow better
+   * (e.g. interleaved wins on multi-stage chains; bus-tree wins when
+   * everything taps a single bus). Defaults to true since the cost
+   * is small and the alternative wins frequently.
+   */
+  considerInterleaved?: boolean
 }
 
 /**
@@ -149,6 +159,7 @@ export function solveCsp(
   const obj = cspOpts.objective ?? DEFAULT_OBJECTIVE
   const annealIters = cspOpts.annealIterationsPerLeaf ?? 30
   const maxLeaves = cspOpts.maxLeaves ?? 200
+  const considerInterleaved = cspOpts.considerInterleaved ?? true
 
   // 1. Build a baseline blueprint to discover which cells are multi-
   //    demanded (template candidates).
@@ -218,13 +229,32 @@ export function solveCsp(
     // 3b. Apply templates to the anneal's best blueprint and score.
     const candidateBp = cloneBlueprint(inner.blueprint)
     applyTemplates(candidateBp, templateChoices)
-    const score = scoreCspBlueprint(candidateBp, templateChoices, obj)
+    let score = scoreCspBlueprint(candidateBp, templateChoices, obj)
+    let winningBp = candidateBp
+    let winningAssignments = inner.assignments
+
+    // 3c. ALSO try interleaved layout — it sidesteps the auto-bus
+    // assignments entirely (each item lives in exactly one stage
+    // column) so the anneal's choices don't apply. We just score the
+    // raw interleaved output with the same templates applied and
+    // pick the lower-scored layout.
+    if (considerInterleaved) {
+      const interleavedBp = cloneBlueprint(interleavedLayout(catalog, flow, baseOpts))
+      applyTemplates(interleavedBp, templateChoices)
+      const interleavedScore = scoreCspBlueprint(interleavedBp, templateChoices, obj)
+      busCalls += 1
+      if (interleavedScore < score) {
+        score = interleavedScore
+        winningBp = interleavedBp
+        winningAssignments = {}
+      }
+    }
 
     if (!best || score < best.score) {
       best = {
         templateChoices,
-        assignments: inner.assignments,
-        blueprint: candidateBp,
+        assignments: winningAssignments,
+        blueprint: winningBp,
         score,
         leavesExplored: leaves,
         busLayoutCalls: busCalls,
