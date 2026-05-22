@@ -231,17 +231,29 @@ interface StagePlanning {
 }
 
 /**
- * Build per-stage plans. Key invariant for fbp-tj6 Phase 2:
- *   Every bus item appears in EXACTLY ONE stage column — the EARLIEST
- *   stage that consumes it. Cells in later stages tap that same column
- *   via long horizontal side-belts. This avoids the prior bug where
- *   an item used by stages 1 AND 3 got TWO disconnected belt columns
- *   and the producer dropped on the wrong one.
+ * Build per-stage plans with ITEM PROPAGATION (fbp-tj6 Phase 4).
  *
- * Items going to output: sinks become final-bus items (rightmost column).
+ * Items now appear in EVERY transit stage's bus column — from the
+ * earliest stage they could come from (producer + 1, or 0 for raw)
+ * through the latest stage that consumes them (or the final bus).
+ * This is the canonical Factorio "main bus that grows" pattern:
+ *   bus[0] carries raw items
+ *   bus[1] carries items consumed by stage 1 cells (could be raw +
+ *          stage-0-products) — items physically continue through
+ *   bus[2] carries items needed by stage 2 + still-in-transit items
+ *   …
  *
- * Items with exactly one (producer, consumer) pair become direct links
- * instead of bus belts — see fbp-tj6 sub-task 2.
+ * Why propagation matters: WITHOUT it, an item produced at stage 0
+ * and consumed at stage 3 lives only on bus[3]. The producer at
+ * stage 0 has to drop east via a long side-belt that crosses
+ * stages 1 + 2's cell columns. With propagation, the producer drops
+ * onto bus[1] (one stage away — short), and the bus continuity
+ * carries the item through bus[2], bus[3] to its consumer.
+ *
+ * Items going to output: sinks also flow through to the final bus.
+ *
+ * Items with exactly one (producer, consumer) pair become direct
+ * links instead of bus belts (chain detection downstream).
  */
 function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning {
   const maxStage = stages.size === 0 ? -1 : Math.max(...stages.values())
@@ -255,12 +267,14 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
     plans[s]?.cells.push(n)
   }
 
-  // Per-item analysis: producers, consumers, earliest consumer stage,
-  // total rate, final-sink rate.
+  // Per-item analysis. Track BOTH earliest producer (-1 if from raw)
+  // AND latest consumer (maxStage+1 if final). Propagation range is
+  // [earliestProducer + 1, lastConsumer].
   type ItemStats = {
     producers: Set<string>
     consumers: Set<string>
-    earliestConsumerStage: number
+    earliestProducerStage: number // -1 = raw / source
+    lastConsumerStage: number     // maxStage+1 = goes to final bus
     rate: number
     finalRate: number
   }
@@ -271,7 +285,8 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
       s = {
         producers: new Set(),
         consumers: new Set(),
-        earliestConsumerStage: Number.POSITIVE_INFINITY,
+        earliestProducerStage: Number.POSITIVE_INFINITY,
+        lastConsumerStage: Number.NEGATIVE_INFINITY,
         rate: 0,
         finalRate: 0,
       }
@@ -282,18 +297,24 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
   for (const e of flow.edges) {
     const s = upsert(e.item)
     s.rate += e.rate
-    if (e.source && !e.source.startsWith("source:") && !e.source.startsWith("input:")) {
+    const fromRaw = e.source.startsWith("source:") || e.source.startsWith("input:")
+    if (fromRaw) {
+      // Raw source: producer stage is "before stage 0".
+      if (-1 < s.earliestProducerStage) s.earliestProducerStage = -1
+    } else {
       s.producers.add(e.source)
+      const ps = stages.get(e.source)
+      if (ps != null && ps < s.earliestProducerStage) s.earliestProducerStage = ps
     }
     if (e.target.startsWith("output:")) {
       s.finalRate += e.rate
+      const finalIdx = maxStage + 1
+      if (finalIdx > s.lastConsumerStage) s.lastConsumerStage = finalIdx
       continue
     }
     s.consumers.add(e.target)
     const stage = stages.get(e.target)
-    if (stage != null && stage < s.earliestConsumerStage) {
-      s.earliestConsumerStage = stage
-    }
+    if (stage != null && stage > s.lastConsumerStage) s.lastConsumerStage = stage
   }
 
   // Direct links: exactly one producer + one consumer, both recipes,
@@ -312,18 +333,27 @@ function planStages(flow: FlowGraph, stages: Map<string, number>): StagePlanning
     directLinks.set(item, { from, to, rate: stat.rate })
   }
 
-  // Bus items per stage: each item appears once, in its earliest
-  // (effective) consumer's stage column.
+  // Bus items per stage with PROPAGATION. Item I is on bus[s] iff:
+  //   earliestProducerStage(I) < s <= lastConsumerStage(I)
+  // Final outputs route to a separate maxStage+1 bus, NOT to per-
+  // stage buses (the rightmost column holds them).
   for (const [item, stat] of items) {
     if (directLinks.has(item)) continue
-    // Items going only to output: sinks aren't bus items — they go on
-    // the final bus.
-    if (stat.consumers.size === 0) continue
-    const stage = stat.earliestConsumerStage
-    if (!Number.isFinite(stage)) continue
-    const plan = plans[stage]
-    if (!plan) continue
-    plan.inputs.push([item, stat.rate - stat.finalRate])
+    if (stat.consumers.size === 0 && stat.finalRate === 0) continue
+    const startStage = Math.max(0, stat.earliestProducerStage + 1)
+    // Only propagate up to the last RECIPE consumer's stage. Final
+    // outputs live on the dedicated final bus.
+    const endStage =
+      stat.consumers.size > 0
+        ? Math.min(maxStage, stat.lastConsumerStage)
+        : -1
+    if (endStage < startStage) continue
+    const rate = stat.rate - stat.finalRate
+    for (let s = startStage; s <= endStage; s++) {
+      const plan = plans[s]
+      if (!plan) continue
+      plan.inputs.push([item, rate])
+    }
   }
   for (const plan of plans) {
     plan.inputs.sort((a, b) => b[1] - a[1])
@@ -414,28 +444,32 @@ export function interleavedLayout(
   // Chain compaction: stack multi-cell chains vertically at the
   // chain's FIRST cell's stage column. Internal direct connections
   // become short vertical mini-bus segments adjacent to the chain
-  // block. Non-head chain members are SKIPPED from their original
-  // stage's cell list and re-emitted alongside the head.
+  // block.
   //
-  // This is the "compound super-cell" model: the chain visually
-  // reads as one block (with internal direct links) instead of
-  // sprawling across multiple stage columns.
+  // With item propagation (above), most chains are now safe to
+  // compact: items consumed by chain members appear in every
+  // transit bus including the chain head's stage column, so the
+  // side-belt from bus[head.stage] east to a compacted member is
+  // SHORT (one stage at most).
   //
-  // Compaction is SAFE only when every chain member's external
-  // inputs come from RAW SOURCES (or other chain members). If a
-  // chain consumes a recipe-produced item from outside the chain,
-  // that item lives on a bus column EAST of the compacted block,
-  // and the chain member's input side-belt would have to run east
-  // and back — visually worse than no compaction. We filter those
-  // chains out and leave them in the framed-but-spread state.
+  // Remaining unsafe case: chain member consumes an item produced
+  // AT OR AFTER the chain head's stage. The producer's output
+  // can't be on bus[head.stage] (you can't drop onto a bus that's
+  // east of the producer). Filter those out.
   const allChains = buildChainsFromLinks(directLinks)
   const isCompactionSafe = (chain: string[]): boolean => {
     const chainSet = new Set(chain)
+    const headStage = stages.get(chain[0])
+    if (headStage == null) return false
     for (const e of flow.edges) {
       if (!chainSet.has(e.target)) continue
       if (e.source.startsWith("source:") || e.source.startsWith("input:")) continue
       if (chainSet.has(e.source)) continue
-      return false // external non-raw producer
+      const producerStage = stages.get(e.source)
+      // External producer must be at a stage STRICTLY BEFORE the
+      // chain head — otherwise propagation can't make the item
+      // available on bus[head.stage].
+      if (producerStage == null || producerStage >= headStage) return false
     }
     return true
   }
@@ -450,10 +484,12 @@ export function interleavedLayout(
   const isFluid = (item: string) => catalog.fluidItems.has(item)
 
   const allBelts: BusBelt[] = []
-  // ONE bus column per item, placed at its first-consuming stage.
-  // Late-stage cells tap from this same column via long horizontal
-  // side-belts. No overwrites — beltXByItem is set exactly once per
-  // item during the stage-packing loop.
+  // Per-stage beltX lookups: beltXByItemPerStage[s] = Map<item, x>.
+  // With propagation, an item can appear in MULTIPLE stage buses;
+  // each cell looks up the bus for its own stage. The legacy
+  // beltXByItem (global, "last writer wins") is kept as a fallback
+  // for code paths that don't yet know about per-stage lookups.
+  const beltXByItemPerStage: Array<Map<string, number>> = []
   const beltXByItem = new Map<string, number>()
   const cells: Cell[] = []
   const inserters: InserterPlacement[] = []
@@ -487,8 +523,12 @@ export function interleavedLayout(
       isFluid,
     )
     allBelts.push(...packed.belts)
+    beltXByItemPerStage[plan.index] = packed.beltXByItem
     for (const [item, x] of packed.beltXByItem) {
-      // Set once — every item appears in exactly one stage.
+      // Global fallback: last-writer-wins (latest stage's bus). Used
+      // by emitCell's input lookup as a coarse "anywhere on the bus"
+      // signal. emitCell's port.beltX gets patched to per-stage values
+      // in the post-cell pass below.
       beltXByItem.set(item, x)
     }
     const stageCellX = packed.gutterX + 1
@@ -566,26 +606,54 @@ export function interleavedLayout(
     cursorX = packed.gutterX + 1
   }
 
-  // 4. Patch every cell's E-edge output ports now that all bus columns
-  // are settled. Direct ports were already emitted with the right
-  // beltX (their producer→consumer connector x).
+  // 4. Patch cell ports per propagation rules.
+  //   • INPUTS: resolve from bus[cell.stage].x of the item. With
+  //     propagation the item is on bus[cell.stage] for every consumer
+  //     stage in [producer+1, lastConsumer].
+  //   • OUTPUTS (E-edge): resolve from bus[cell.stage + 1].x — the
+  //     adjacent next-stage bus. Falls back to final bus for
+  //     items going only to output: sinks, OR the global beltXByItem
+  //     when the per-stage lookup misses (e.g. for items only in
+  //     final bus).
+  // Direct ports keep the beltX their connector emission assigns.
+  const cellStageOf = (cell: Cell): number => stages.get(cell.recipeKey) ?? 0
   for (const cell of cells) {
+    const cellStage = cellStageOf(cell)
+    for (const port of cell.inputs) {
+      if (port.scope.kind === "direct") continue
+      const stageMap = beltXByItemPerStage[cellStage]
+      const resolved = stageMap?.get(port.item) ?? beltXByItem.get(port.item)
+      if (resolved != null) port.beltX = resolved
+    }
     for (const port of cell.outputs) {
       if (port.edge !== "E") continue
       if (port.scope.kind === "direct") continue
+      // Output drops on the NEXT stage's bus (item moves forward).
+      const nextStageMap = beltXByItemPerStage[cellStage + 1]
       const finalX = finalBeltXByItem.get(port.item)
-      const intermediateX = beltXByItem.get(port.item)
-      const resolved = finalX ?? intermediateX
+      const resolved =
+        nextStageMap?.get(port.item) ?? finalX ?? beltXByItem.get(port.item)
       if (resolved != null) port.beltX = resolved
     }
   }
+  // Mirror the patching for inserters so the renderer's side-belts
+  // align with the ports.
+  const inserterCellStage = new Map<string, number>()
+  for (const cell of cells) inserterCellStage.set(cell.recipeKey, cellStageOf(cell))
   for (const ins of inserters) {
-    if (ins.direction !== "output") continue
     if (ins.scope === "direct") continue
-    const finalX = finalBeltXByItem.get(ins.item)
-    const intermediateX = beltXByItem.get(ins.item)
-    const resolved = finalX ?? intermediateX
-    if (resolved != null) ins.beltX = resolved
+    const cellStage = inserterCellStage.get(ins.cellKey) ?? 0
+    if (ins.direction === "input") {
+      const stageMap = beltXByItemPerStage[cellStage]
+      const resolved = stageMap?.get(ins.item) ?? beltXByItem.get(ins.item)
+      if (resolved != null) ins.beltX = resolved
+    } else {
+      const nextStageMap = beltXByItemPerStage[cellStage + 1]
+      const finalX = finalBeltXByItem.get(ins.item)
+      const resolved =
+        nextStageMap?.get(ins.item) ?? finalX ?? beltXByItem.get(ins.item)
+      if (resolved != null) ins.beltX = resolved
+    }
   }
 
   // 5. Emit DirectConnection entries — chains' producer→consumer links
