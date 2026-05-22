@@ -485,6 +485,15 @@ export function App() {
                     setMachineOverrides={setMachineOverrides}
                     machineCategoryDefaults={machineCategoryDefaults}
                     setMachineCategoryDefaults={setMachineCategoryDefaults}
+                    onAddTarget={(t) =>
+                      setTargets((prev) => {
+                        // Dedup: don't add the same item twice. If the user
+                        // clicks a suggestion that's already a target,
+                        // leave the list unchanged.
+                        if (prev.some((p) => p.item === t.item)) return prev
+                        return [...prev, t]
+                      })
+                    }
                   />
                 </Suspense>
               </CardContent>

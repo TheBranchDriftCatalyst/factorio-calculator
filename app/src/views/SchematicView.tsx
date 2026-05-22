@@ -15,6 +15,7 @@ import { MachineCategoryPicker } from "./schematic/MachineCategoryPicker"
 import { IntermediatesPanel } from "./schematic/IntermediatesPanel"
 import { FuelsPanel } from "./schematic/FuelsPanel"
 import { BomPanel } from "./schematic/BomPanel"
+import { RecipeAdditionsPanel } from "./schematic/RecipeAdditionsPanel"
 import { InspectorPanel } from "./schematic/inspector/InspectorPanel"
 import {
   DEFAULT_CONFIG,
@@ -44,6 +45,12 @@ interface Props {
   setMachineCategoryDefaults: React.Dispatch<
     React.SetStateAction<Record<string, string>>
   >
+  /**
+   * Add a new target to the App-level targets list. Used by the Recipe
+   * Additions panel so users can grow their factory by clicking
+   * suggested intermediates without leaving the schematic view.
+   */
+  onAddTarget?: (target: { item: string; rate: number }) => void
 }
 
 export function SchematicView({
@@ -55,6 +62,7 @@ export function SchematicView({
   setMachineOverrides,
   machineCategoryDefaults,
   setMachineCategoryDefaults,
+  onAddTarget,
 }: Props) {
   const [config, setConfig] = useState<SchematicConfig>(() => {
     // SSR-safe lazy init from localStorage.
@@ -383,6 +391,11 @@ export function SchematicView({
               flow={flow}
               highlightedItem={highlightedItem}
               onItemClick={setHighlightedItem}
+            />
+            <RecipeAdditionsPanel
+              catalog={catalog}
+              flow={flow}
+              onAddTarget={onAddTarget}
             />
           </div>,
           rightRailEl,
