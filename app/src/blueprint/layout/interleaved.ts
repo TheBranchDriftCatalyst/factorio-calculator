@@ -788,10 +788,11 @@ export function interleavedLayout(
       }
       absorbedDirectItems.add(item)
     }
-    // Frame extends to cover the leftmost nested belt.
-    const effectiveMinX = nestedBelts.length > 0
-      ? Math.min(minX - 1, minX - 1 - (beltIdx) * beltStride)
-      : minX
+    // Frame extends to cover the leftmost nested belt. (The prior
+    // Math.min was vacuous — the second operand is always smaller
+    // when beltIdx > 0, so we just use it directly.)
+    const effectiveMinX =
+      nestedBelts.length > 0 ? minX - 1 - beltIdx * beltStride : minX
     groupNodes.push({
       id: `chain-${i}`,
       depth: 1,

@@ -156,10 +156,13 @@ interface LayoutContext {
   /**
    * Output ports whose belts haven't been packed yet (split mode: final
    * outputs go on the right bus which is sized AFTER cells are placed).
-   * Walked post-cells to patch in beltX + emit the inserter.
+   * Walked post-cells to patch in beltX + emit the inserter. Each
+   * entry references its owning cell by recipeKey (not Cell ref)
+   * because the cell isn't constructed yet when the port is queued.
+   * The post-cells patch-up pass looks up cells via ctx.cells.
    */
   deferredOutputPorts: Array<{
-    cell: Cell
+    cellKey: string
     port: CellPort
     rate: number
     item: string
@@ -300,11 +303,15 @@ export function busLayout(
       root.scopeItems = [...root.scopeItems, ...items.map(([i]) => i)]
       for (const [item, x] of packed.beltXByItem) ctx.beltXByItem.set(item, x)
       // Patch each port belonging to this bus + emit its inserter.
+      // Cells are looked up by recipeKey now (was a stashed Cell
+      // reference back when ports were queued before the cell was
+      // built; type-unsafe and replaced with key-based resolution).
+      const cellByKey = new Map(ctx.cells.map((c) => [c.recipeKey, c]))
       for (const dp of ports) {
         const beltX = packed.beltXByItem.get(dp.item)
         if (beltX == null) continue
         dp.port.beltX = beltX
-        const cell = dp.cell
+        const cell = cellByKey.get(dp.cellKey)
         const ePerimeterX = cell ? cell.x + cell.w : beltX - 1
         ctx.inserters.push({
           x: ePerimeterX,
@@ -1024,7 +1031,7 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
       slot: dropY - yStart,
     }
     outputs.push(port)
-    ctx.deferredOutputPorts.push({ cell: null as unknown as Cell, port, rate, item: p.item })
+    ctx.deferredOutputPorts.push({ cellKey: recipeId, port, rate, item: p.item })
   }
 
   const portsByEdge: Record<Edge, CellPort[]> = {
@@ -1048,13 +1055,6 @@ function emitLeafCell(recipeId: string, xStart: number, yStart: number, ctx: Lay
     portsByEdge,
   }
   ctx.cells.push(cell)
-  // Patch the cell reference on any deferred output ports we just emitted.
-  for (let i = ctx.deferredOutputPorts.length - 1; i >= 0; i--) {
-    const dp = ctx.deferredOutputPorts[i]
-    if (dp.cell === (null as unknown as Cell) && cell.outputs.includes(dp.port)) {
-      dp.cell = cell
-    }
-  }
   return cell
 }
 
