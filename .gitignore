@@ -17,3 +17,4 @@
 # Ad-hoc debug screenshots dumped at repo root (keep favicon.png)
 /*.png
 !/favicon.png
+.DS_Store

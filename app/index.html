@@ -3,15 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <!--
-      Favicon: we ship 3 sizes (32 / 64 / 128) for crisp display from
-      pinned-tab (16px renders from 32) up to retina tabs (128). The
-      id="app-favicon" element is the one src/util/rotatingFavicon
-      cycles between the 4 quadrant variants — the others stay
-      static fallbacks if the rotation is disabled (reduced-motion).
+      Static favicon — bold gear+factory mark that reads at any
+      size. Multiple sizes declared so the browser picks the right
+      one per surface (16px = pinned tab, 32px = standard tab bar,
+      192px = Android home screen / PWA).
     -->
-    <link id="app-favicon" rel="icon" type="image/png" sizes="64x64" href="./favicon-tl-64.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-tl-32.png" />
-    <link rel="icon" type="image/png" sizes="128x128" href="./favicon-tl-128.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-x-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-x-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="./favicon-x-64.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="./favicon-x-128.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="./favicon-x-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
