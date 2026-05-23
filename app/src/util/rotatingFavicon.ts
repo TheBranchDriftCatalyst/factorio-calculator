@@ -15,11 +15,16 @@
 // for less motion, we lock to the first frame and skip the timer
 // entirely.
 
+// Paths are RELATIVE to the deployed base (Vite serves the app under
+// /app/ in dev and on GH Pages). `import.meta.env.BASE_URL` gives us
+// that prefix at build time so the favicons resolve correctly in
+// both environments without hard-coded "/app/".
+const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/")
 const FRAMES: ReadonlyArray<string> = [
-  "/favicon-tl.png",
-  "/favicon-tr.png",
-  "/favicon-br.png",
-  "/favicon-bl.png", // clockwise order
+  `${BASE}favicon-tl.png`,
+  `${BASE}favicon-tr.png`,
+  `${BASE}favicon-br.png`,
+  `${BASE}favicon-bl.png`, // clockwise order
 ]
 const PAUSE_MS = 2500
 const LINK_ID = "app-favicon"
