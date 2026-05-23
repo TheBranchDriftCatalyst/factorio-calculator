@@ -24,7 +24,12 @@ except ImportError:
     sys.exit(1)
 
 
-def split(input_path: Path, out_dir: Path, prefix: str) -> list[Path]:
+def split(
+    input_path: Path,
+    out_dir: Path,
+    prefix: str,
+    sizes: list[int] | None = None,
+) -> list[Path]:
     img = Image.open(input_path)
     w, h = img.size
     if w % 2 or h % 2:
@@ -43,10 +48,21 @@ def split(input_path: Path, out_dir: Path, prefix: str) -> list[Path]:
     }
     written: list[Path] = []
     for tag, box in crops.items():
-        out_path = out_dir / f"{prefix}-{tag}.png"
-        img.crop(box).save(out_path, format="PNG")
-        written.append(out_path)
-        print(f"wrote {out_path} ({box[2] - box[0]}x{box[3] - box[1]})")
+        quad = img.crop(box)
+        if sizes:
+            # Emit one file per requested size, suffixed with -{N}.
+            # Lanczos resample produces the cleanest downscale.
+            for size in sizes:
+                resized = quad.resize((size, size), Image.Resampling.LANCZOS)
+                out_path = out_dir / f"{prefix}-{tag}-{size}.png"
+                resized.save(out_path, format="PNG")
+                written.append(out_path)
+                print(f"wrote {out_path} ({size}x{size})")
+        else:
+            out_path = out_dir / f"{prefix}-{tag}.png"
+            quad.save(out_path, format="PNG")
+            written.append(out_path)
+            print(f"wrote {out_path} ({box[2] - box[0]}x{box[3] - box[1]})")
     return written
 
 
@@ -64,13 +80,28 @@ def main() -> int:
         default=None,
         help="Output filename prefix (default: input's stem)",
     )
+    p.add_argument(
+        "--sizes",
+        default=None,
+        help=(
+            "Comma-separated pixel sizes for resized output (e.g. '32,48,64,192'). "
+            "When omitted, writes one file per quadrant at the source resolution."
+        ),
+    )
     args = p.parse_args()
     if not args.input.exists():
         print(f"error: {args.input} not found", file=sys.stderr)
         return 1
     out_dir = args.out_dir or args.input.parent
     prefix = args.prefix or args.input.stem
-    split(args.input, out_dir, prefix)
+    sizes: list[int] | None = None
+    if args.sizes:
+        try:
+            sizes = [int(s) for s in args.sizes.split(",") if s.strip()]
+        except ValueError:
+            print(f"error: --sizes must be comma-separated ints, got '{args.sizes}'", file=sys.stderr)
+            return 1
+    split(args.input, out_dir, prefix, sizes)
     return 0
 
 

@@ -19,14 +19,23 @@
 // /app/ in dev and on GH Pages). `import.meta.env.BASE_URL` gives us
 // that prefix at build time so the favicons resolve correctly in
 // both environments without hard-coded "/app/".
+//
+// We rotate the 64-px variants — large enough that browsers don't
+// alias them down to mush in pinned tabs, small enough that the
+// network swap is instant. The static <link> tags in index.html
+// supply additional 32/128 sizes as fallback context for the
+// browser's icon picker.
 const BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/?$/, "/")
 const FRAMES: ReadonlyArray<string> = [
-  `${BASE}favicon-tl.png`,
-  `${BASE}favicon-tr.png`,
-  `${BASE}favicon-br.png`,
-  `${BASE}favicon-bl.png`, // clockwise order
+  `${BASE}favicon-tl-64.png`,
+  `${BASE}favicon-tr-64.png`,
+  `${BASE}favicon-br-64.png`,
+  `${BASE}favicon-bl-64.png`, // clockwise order
 ]
-const PAUSE_MS = 2500
+// 6s is a slow, breathing cadence — fast enough to be noticed but
+// well past the "is this animating?" threshold where users squint at
+// the tab. 2.5s was too snappy and read as a glitch.
+const PAUSE_MS = 6000
 const LINK_ID = "app-favicon"
 
 let timer: number | null = null
