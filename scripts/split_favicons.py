@@ -24,11 +24,39 @@ except ImportError:
     sys.exit(1)
 
 
+def trim_transparent(img: Image.Image, alpha_threshold: int = 10) -> Image.Image:
+    """Crop transparent/near-transparent padding around the subject.
+
+    Useful when source quadrants have lots of empty alpha around the
+    actual content — without trimming, a 32x32 downsample devotes most
+    pixels to padding and the subject becomes unreadable.
+
+    Pads back to a square so circles don't stretch.
+    """
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+    # Threshold the alpha channel so anti-aliased edges don't count
+    # as "content" and prevent a tight crop.
+    alpha = img.getchannel("A")
+    mask = alpha.point(lambda a: 255 if a > alpha_threshold else 0)
+    bbox = mask.getbbox()
+    if bbox is None:
+        return img  # fully transparent — nothing to trim
+    cropped = img.crop(bbox)
+    # Square-pad so the icon doesn't stretch when resized to NxN.
+    cw, ch = cropped.size
+    side = max(cw, ch)
+    canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    canvas.paste(cropped, ((side - cw) // 2, (side - ch) // 2))
+    return canvas
+
+
 def split(
     input_path: Path,
     out_dir: Path,
     prefix: str,
     sizes: list[int] | None = None,
+    trim: bool = False,
 ) -> list[Path]:
     img = Image.open(input_path)
     w, h = img.size
@@ -49,6 +77,10 @@ def split(
     written: list[Path] = []
     for tag, box in crops.items():
         quad = img.crop(box)
+        if trim:
+            before = quad.size
+            quad = trim_transparent(quad)
+            print(f"  {tag}: trimmed {before[0]}x{before[1]} → {quad.size[0]}x{quad.size[1]}")
         if sizes:
             # Emit one file per requested size, suffixed with -{N}.
             # Lanczos resample produces the cleanest downscale.
@@ -62,7 +94,7 @@ def split(
             out_path = out_dir / f"{prefix}-{tag}.png"
             quad.save(out_path, format="PNG")
             written.append(out_path)
-            print(f"wrote {out_path} ({box[2] - box[0]}x{box[3] - box[1]})")
+            print(f"wrote {out_path} ({quad.size[0]}x{quad.size[1]})")
     return written
 
 
@@ -88,6 +120,15 @@ def main() -> int:
             "When omitted, writes one file per quadrant at the source resolution."
         ),
     )
+    p.add_argument(
+        "--trim",
+        action="store_true",
+        help=(
+            "Auto-crop transparent padding around the subject of each quadrant. "
+            "Critical for favicons — without it a small subject in a padded "
+            "canvas vanishes when downsampled to 16/32 px."
+        ),
+    )
     args = p.parse_args()
     if not args.input.exists():
         print(f"error: {args.input} not found", file=sys.stderr)
@@ -101,7 +142,7 @@ def main() -> int:
         except ValueError:
             print(f"error: --sizes must be comma-separated ints, got '{args.sizes}'", file=sys.stderr)
             return 1
-    split(args.input, out_dir, prefix, sizes)
+    split(args.input, out_dir, prefix, sizes, trim=args.trim)
     return 0
 
 
