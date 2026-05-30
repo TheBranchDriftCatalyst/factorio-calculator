@@ -1,0 +1,15 @@
+.git
+.github
+.beads
+.claude
+.dolt
+.playwright-mcp
+.DS_Store
+app/node_modules
+app/dist
+app/.vite
+node_modules
+*.tsbuildinfo
+*.swp
+*.db
+.beads-credential-key
