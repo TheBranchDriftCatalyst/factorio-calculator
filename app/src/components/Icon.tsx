@@ -1,5 +1,6 @@
 // Renders a single 32×32 sprite from the active Factorio sprite sheet.
-// In dev the sheet is served at /app/images/, in prod at /images/.
+// app/public/images is a symlink to ../../images, so Vite emits the sheet
+// under ${BASE_URL}images/ for both dev and prod deploys.
 
 import type { Catalog } from "../factorio"
 
@@ -13,8 +14,7 @@ interface Props {
 }
 
 function sheetUrl(hash: string): string {
-  const base = import.meta.env.DEV ? import.meta.env.BASE_URL : "/"
-  return `${base}images/sprite-sheet-${hash}.png`
+  return `${import.meta.env.BASE_URL}images/sprite-sheet-${hash}.png`
 }
 
 export function Icon({ catalog, iconCol, iconRow, size = 32, title, className }: Props) {

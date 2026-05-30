@@ -112,8 +112,7 @@ export function SankeyView({ flow, catalog, rateUnit = "sec" }: Props) {
     const color = d3.scaleOrdinal(d3.schemeTableau10)
 
     // Sprite-sheet URL — matches the Icon component's path scheme.
-    const base = import.meta.env.DEV ? import.meta.env.BASE_URL : "/"
-    const sheetUrl = `${base}images/sprite-sheet-${catalog.sprites.hash}.png`
+    const sheetUrl = `${import.meta.env.BASE_URL}images/sprite-sheet-${catalog.sprites.hash}.png`
     const SHEET_W = catalog.sprites.width
     const SHEET_H = catalog.sprites.height
     const SHEET_CELL = catalog.sprites.cell

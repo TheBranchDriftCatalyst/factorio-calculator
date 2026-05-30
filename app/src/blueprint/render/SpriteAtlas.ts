@@ -83,8 +83,7 @@ export function useSpriteAtlas(catalog: Catalog): { atlas: SpriteAtlas | null } 
       setAtlas(null)
       return
     }
-    const base = import.meta.env.DEV ? import.meta.env.BASE_URL : "/"
-    const url = `${base}images/sprite-sheet-${hash}.png`
+    const url = `${import.meta.env.BASE_URL}images/sprite-sheet-${hash}.png`
     const img = new Image()
     let cancelled = false
     img.src = url
