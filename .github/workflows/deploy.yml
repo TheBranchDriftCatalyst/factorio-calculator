@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [master, catalyst-upgrade]
+    branches: [master]
   workflow_dispatch:
 
 permissions:
@@ -49,6 +49,8 @@ jobs:
             --exclude='.claude/' \
             --exclude='.playwright-mcp/' \
             --exclude='.dolt/' \
+            --exclude='.agents/' \
+            --exclude='.codex/' \
             --exclude='scripts/' \
             --exclude='docs/' \
             --exclude='posts/' \

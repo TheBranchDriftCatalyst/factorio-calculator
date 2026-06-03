@@ -2,7 +2,7 @@ name: Build & publish Docker image
 
 on:
   push:
-    branches: [master, catalyst-upgrade]
+    branches: [master]
     tags: ["v*"]
   pull_request:
     branches: [master]

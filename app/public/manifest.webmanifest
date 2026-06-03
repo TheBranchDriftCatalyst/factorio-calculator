@@ -1,0 +1,19 @@
+{
+  "name": "Factorio Calculator",
+  "short_name": "Factorio Calc",
+  "description": "Production-ratio calculator for Factorio and the Space Age expansion. Multi-target solver, Sankey + Box-Line visualizations.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "categories": ["games", "utilities", "productivity"],
+  "lang": "en-US",
+  "icons": [
+    { "src": "./favicon-x-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "./favicon-x-64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "./favicon-x-128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "./favicon-x-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

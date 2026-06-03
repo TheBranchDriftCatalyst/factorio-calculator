@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Don't waste crawl budget on the sprite-sheet binary blobs.
+Disallow: /images/sprite-sheet-
+
+Sitemap: https://thebranchdriftcatalyst.github.io/factorio-calculator/sitemap.xml

@@ -23,8 +23,8 @@ RUN cd app && npm run build
 RUN mkdir -p /out && \
     cp -R /src/. /out/ && \
     rm -rf /out/app /out/.git /out/.github /out/.beads /out/.claude \
-           /out/.playwright-mcp /out/.dolt /out/scripts /out/docs \
-           /out/posts /out/node_modules && \
+           /out/.playwright-mcp /out/.dolt /out/.agents /out/.codex \
+           /out/scripts /out/docs /out/posts /out/node_modules && \
     mkdir -p /out/app && \
     cp -R /src/app/dist/. /out/app/
 

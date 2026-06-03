@@ -2,6 +2,26 @@
 <html lang="en" class="theme-catalyst dark">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ───── Primary SEO ───── -->
+    <title>Factorio Calculator — Production Ratios, Blueprints & Space Age Planner</title>
+    <meta
+      name="description"
+      content="Free open-source Factorio production calculator. Solve ratios for assemblers, miners, foundries, biochambers, and cryogenic plants across vanilla 1.1, 2.0, and the Space Age expansion. Interactive Sankey, Box-Line, and Schematic visualizations. Multi-target solver. Modules + beacons. No login, no ads."
+    />
+    <meta
+      name="keywords"
+      content="factorio calculator, factorio production planner, factorio ratio calculator, factorio space age calculator, factorio blueprint calculator, factorio sankey, factorio megabase planner, factorio modules beacons, factorio belt calculator, factorio assembler ratios, kirk mcdonald calculator"
+    />
+    <meta name="author" content="Kirk McDonald, TheBranchDriftCatalyst" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#1a1a2e" />
+    <meta name="color-scheme" content="dark light" />
+
+    <link rel="canonical" href="https://thebranchdriftcatalyst.github.io/factorio-calculator/app/" />
+
+    <!-- ───── Favicons ───── -->
     <!--
       Static favicon — bold gear+factory mark that reads at any
       size. Multiple sizes declared so the browser picks the right
@@ -13,17 +33,103 @@
     <link rel="icon" type="image/png" sizes="64x64" href="./favicon-x-64.png" />
     <link rel="icon" type="image/png" sizes="128x128" href="./favicon-x-128.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="./favicon-x-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- ───── PWA / installable app ───── -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Factorio Calc" />
+
+    <!-- ───── OpenGraph (Facebook, LinkedIn, Discord, Slack, iMessage) ───── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Factorio Calculator" />
+    <meta property="og:title" content="Factorio Calculator — Production Ratios, Blueprints & Space Age Planner" />
+    <meta
+      property="og:description"
+      content="Free open-source Factorio production calculator. Multi-target solver, interactive Sankey + Box-Line views, full Space Age support. Plan your megabase like an adult."
+    />
+    <meta property="og:url" content="https://thebranchdriftcatalyst.github.io/factorio-calculator/app/" />
+    <meta property="og:image" content="https://thebranchdriftcatalyst.github.io/factorio-calculator/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Factorio Calculator — Sankey + Box-Line production planner UI" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- ───── Twitter / X ───── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Factorio Calculator — Production Ratios, Blueprints & Space Age Planner" />
+    <meta
+      name="twitter:description"
+      content="Free open-source Factorio production calculator. Multi-target solver, Sankey + Box-Line views, full Space Age support."
+    />
+    <meta name="twitter:image" content="https://thebranchdriftcatalyst.github.io/factorio-calculator/og-image.png" />
+    <meta name="twitter:image:alt" content="Factorio Calculator UI" />
+
+    <!-- ───── Structured data (Google rich results) ───── -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Factorio Calculator",
+        "alternateName": ["Factorio Production Calculator", "Factorio Ratio Calculator", "Kirk McDonald Calculator"],
+        "description": "Free open-source production-ratio calculator for Factorio and the Space Age expansion. Multi-target solver, interactive Sankey, Box-Line, and Schematic visualizations.",
+        "applicationCategory": "GameApplication",
+        "applicationSubCategory": "Calculator",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript. Modern browser (Chrome, Firefox, Safari, Edge).",
+        "url": "https://thebranchdriftcatalyst.github.io/factorio-calculator/app/",
+        "image": "https://thebranchdriftcatalyst.github.io/factorio-calculator/og-image.png",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "license": "https://www.apache.org/licenses/LICENSE-2.0",
+        "author": [
+          {
+            "@type": "Person",
+            "name": "Kirk McDonald",
+            "url": "https://github.com/KirkMcDonald"
+          },
+          {
+            "@type": "Person",
+            "name": "TheBranchDriftCatalyst",
+            "url": "https://github.com/TheBranchDriftCatalyst"
+          }
+        ],
+        "codeRepository": "https://github.com/TheBranchDriftCatalyst/factorio-calculator",
+        "programmingLanguage": ["TypeScript", "JavaScript"],
+        "keywords": "factorio, factorio calculator, space age, production planner, ratio calculator, blueprint, sankey, megabase",
+        "about": {
+          "@type": "VideoGame",
+          "name": "Factorio",
+          "url": "https://factorio.com/",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Wube Software"
+          }
+        }
+      }
+    </script>
+
+    <!-- ───── Fonts (preconnect for faster LCP) ───── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&family=JetBrains+Mono:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
     />
-    <title>Factorio Blueprint Calculator</title>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p style="padding: 2rem; font-family: sans-serif; max-width: 640px; margin: 2rem auto;">
+        <strong>Factorio Calculator</strong> is an interactive web app and requires JavaScript.
+        If you'd rather use the original static-HTML version, try the
+        <a href="../calc.html">classic Kirk McDonald calculator</a> instead.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
