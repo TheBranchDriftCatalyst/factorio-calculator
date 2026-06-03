@@ -47,6 +47,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           # Container serves at /, no path prefix needed.
           build-args: |
-            VITE_BASE=/app/
+            VITE_BASE=/
           cache-from: type=gha
           cache-to: type=gha,mode=max

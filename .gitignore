@@ -14,9 +14,8 @@
 # Local Claude Code settings
 .claude/settings.json
 
-# Ad-hoc debug screenshots dumped at repo root (keep favicon.png)
+# Ad-hoc debug screenshots dumped at repo root
 /*.png
-!/favicon.png
 .DS_Store
 
 # Beads / Dolt files (added by bd init)

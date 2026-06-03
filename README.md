@@ -14,7 +14,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/TheBranchDriftCatalyst/factorio-calculator?style=social)](https://github.com/TheBranchDriftCatalyst/factorio-calculator/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/TheBranchDriftCatalyst/factorio-calculator?style=social)](https://github.com/TheBranchDriftCatalyst/factorio-calculator/network/members)
 
-**[🚀 Live Demo](https://thebranchdriftcatalyst.github.io/factorio-calculator/app/)**  ·  **[📜 Classic UI](https://thebranchdriftcatalyst.github.io/factorio-calculator/)**  ·  **[🐳 Docker Image](https://github.com/TheBranchDriftCatalyst/factorio-calculator/pkgs/container/factorio-calculator)**  ·  **[🐛 Report a bug](https://github.com/TheBranchDriftCatalyst/factorio-calculator/issues/new)**
+**[🚀 Live Demo](https://thebranchdriftcatalyst.github.io/factorio-calculator/)**  ·  **[🐳 Docker Image](https://github.com/TheBranchDriftCatalyst/factorio-calculator/pkgs/container/factorio-calculator)**  ·  **[🐛 Report a bug](https://github.com/TheBranchDriftCatalyst/factorio-calculator/issues/new)**
 
 </div>
 
@@ -22,9 +22,9 @@
 
 ## What is this?
 
-**Factorio Calculator** is the most flexible open-source **production-ratio calculator** for [Factorio](https://factorio.com/) and the **Space Age** expansion. Punch in a target — *"I want 60 green circuits per second"* — and get back the exact number of assemblers, miners, refineries, foundries, and biochambers you need, the raw resources to feed them, the power draw to run them, and a beautiful interactive **Sankey / Box-Line / Schematic** diagram of the whole supply chain.
+**Factorio Calculator** is a modern open-source **production-ratio calculator** for [Factorio](https://factorio.com/) and the **Space Age** expansion. Punch in a target — *"I want 60 green circuits per second"* — and get back the exact number of assemblers, miners, refineries, foundries, and biochambers you need, the raw resources to feed them, the power draw to run them, and a beautiful interactive **Sankey / Box-Line / Schematic** diagram of the whole supply chain.
 
-Built on top of [Kirk McDonald's legendary calculator](https://kirkmcdonald.github.io/calc.html) (still bundled at `/`), this fork adds a **modern React 19 + TypeScript + Tailwind v4** rewrite (served at `/app/`) with a multi-target solver, fuzzy command palette, drag-rearrangeable graphs, a planned blueprint exporter, and full Space Age recipe support.
+Built on the [Kirk McDonald](https://github.com/KirkMcDonald/kirkmcdonald.github.io) dataset format, this is a from-scratch **React 19 + TypeScript + Tailwind v4** rewrite with a multi-target solver, fuzzy command palette, drag-rearrangeable graphs, a planned blueprint exporter, and full Space Age recipe support.
 
 > *Stop scribbling ratios on a napkin. Plan your megabase like an adult.*
 
@@ -33,7 +33,6 @@ Built on top of [Kirk McDonald's legendary calculator](https://kirkmcdonald.gith
 - [Features](#features)
 - [Live Demo](#live-demo)
 - [Screenshots](#screenshots)
-- [Why this calculator?](#why-this-calculator)
 - [Quick Start](#quick-start)
 - [Running with Docker](#running-with-docker)
 - [Self-Hosting / Deployment](#self-hosting--deployment)
@@ -64,83 +63,44 @@ Built on top of [Kirk McDonald's legendary calculator](https://kirkmcdonald.gith
 ### Developer experience
 - **TypeScript end-to-end** with strict mode.
 - **Vitest** unit + integration suite, **Playwright** E2E suite — 32 tests at last count.
-- **Single typed `Catalog`** boundary — only `src/factorio/` touches Kirk's raw JSON; swap datasets without touching the solver or views.
+- **Single typed `Catalog`** boundary — only `src/factorio/` touches raw dataset JSON; swap datasets without touching the solver or views.
 - **GitHub Pages auto-deploy** + **GHCR Docker image** on every push to `master`.
 - **Fuzzy command palette** (`cmdk`) — `Cmd+K` to jump to any item, recipe, or setting.
 
 ## Live Demo
 
-| Build | URL | Notes |
-|---|---|---|
-| **React app** (recommended) | <https://thebranchdriftcatalyst.github.io/factorio-calculator/app/> | New UI, multi-target solver, drag-rearrangeable graphs. |
-| **Classic UI** | <https://thebranchdriftcatalyst.github.io/factorio-calculator/> | Kirk McDonald's original calculator, preserved verbatim. |
-| **Docker** | `ghcr.io/thebranchdriftcatalyst/factorio-calculator:latest` | Self-hostable, both UIs in one image. |
+| Build | URL |
+|---|---|
+| **Web** | <https://thebranchdriftcatalyst.github.io/factorio-calculator/> |
+| **Docker** | `ghcr.io/thebranchdriftcatalyst/factorio-calculator:latest` |
 
 ## Screenshots
 
-> *Modern React UI — Sankey + Box-Line views, drag-rearrangeable, full Space Age dataset.*
->
-> *(Drop screenshots into `docs/` and link them here once you grab fresh captures of the new UI.)*
-
-| Sankey flow | Box-Line layout | Recipe picker |
-|---|---|---|
-| ![Sankey](docs/curves.png) | ![Box-Line](docs/breakdown.png) | ![Recipes](docs/recipes.png) |
-
-## Why this calculator?
-
-If you've used the original Kirk McDonald calculator, you already know it's the gold standard for Factorio ratio math. This fork keeps **100% of the original UI** at `/` and adds a **rewritten React frontend** at `/app/` that picks up where the original left off:
-
-| | Original Kirk McDonald | This fork (React app) |
-|---|:-:|:-:|
-| Vanilla 1.1 + 2.0 datasets | ✅ | ✅ |
-| Space Age recipes | ✅ | ✅ |
-| Single-target solver | ✅ | ✅ |
-| **Multi-target solver** (shared intermediates merge into one DAG) | — | ✅ |
-| **Drag-rearrangeable Sankey + Box-Line views** | — | ✅ |
-| **Fuzzy command palette** (`Cmd+K`) | — | ✅ |
-| **Tile-grid schematic view** *(Phase 1, WIP)* | — | 🚧 |
-| **Blueprint string export** *(Phase 1, WIP)* | — | 🚧 |
-| Open-source (Apache 2.0) | ✅ | ✅ |
-| **GHCR Docker image** | — | ✅ |
-| TypeScript codebase | — | ✅ |
-
-If you love the original, you'll love this too — it's the same trustworthy math, just with a modern UI and a few new tricks.
+> Fresh React-UI screenshots are pending — see [issue `factorio-calculator-bqx`](https://github.com/TheBranchDriftCatalyst/factorio-calculator/issues) for the capture list. In the meantime, the live demo is one click away.
 
 ## Quick Start
 
 ### Option 1 — Just use the live site
 
-Go to <https://thebranchdriftcatalyst.github.io/factorio-calculator/app/>. No install needed.
+Go to <https://thebranchdriftcatalyst.github.io/factorio-calculator/>. No install needed.
 
-### Option 2 — Run the React app locally
+### Option 2 — Run locally
 
 ```bash
 git clone https://github.com/TheBranchDriftCatalyst/factorio-calculator.git
 cd factorio-calculator/app
 npm install
 npm run dev
-# → http://localhost:5179/app/
-```
-
-### Option 3 — Run the classic calculator locally
-
-The original kirkmcdonald site is pure static HTML/JS/CSS at the repo root:
-
-```bash
-git clone https://github.com/TheBranchDriftCatalyst/factorio-calculator.git
-cd factorio-calculator
-python3 -m http.server 8000
-# → http://localhost:8000/calc.html
+# → http://localhost:5179/
 ```
 
 ## Running with Docker
 
-A pre-built image is published to GHCR on every push to `master`. It serves the classic UI at `/` and the React app at `/app/` from a single nginx container.
+A pre-built image is published to GHCR on every push to `master`, served by nginx.
 
 ```bash
 docker run --rm -p 8080:80 ghcr.io/thebranchdriftcatalyst/factorio-calculator:latest
-# Classic UI: http://localhost:8080/
-# React app: http://localhost:8080/app/
+# → http://localhost:8080/
 ```
 
 Or build locally:
@@ -154,22 +114,22 @@ docker run --rm -p 8080:80 factorio-calculator
 
 The project ships two production deploy targets out of the box:
 
-- **GitHub Pages** — `.github/workflows/deploy.yml`. Pushes to `master` rebuild both the classic site and the React app under `/<repo>/` and `/<repo>/app/`.
+- **GitHub Pages** — `.github/workflows/deploy.yml`. Every push to `master` rebuilds the app and publishes it at `/<repo>/`.
 - **GHCR Docker image** — `.github/workflows/docker.yml`. Pushes to `master` and version tags publish a multi-arch image to `ghcr.io/<owner>/factorio-calculator`.
 
-For a path-prefixed deploy (e.g. project pages), set `VITE_BASE` at build time:
+For a path-prefixed deploy, set `VITE_BASE` at build time:
 
 ```bash
 cd app
-VITE_BASE=/factorio-calculator/app/ npm run build
+VITE_BASE=/factorio-calculator/ npm run build
 ```
 
 ## Architecture
 
-The React app is built around one strict boundary: **only `src/factorio/` knows the shape of Kirk's raw JSON.** Everything else consumes a typed `Catalog`, so swapping datasets (vanilla → Space Age → modpack) only touches one directory.
+The React app is built around one strict boundary: **only `src/factorio/` knows the shape of the raw dataset JSON.** Everything else consumes a typed `Catalog`, so swapping datasets (vanilla → Space Age → modpack) only touches one directory.
 
 ```
-data/*.json (Kirk McDonald datasets)
+data/*.json (Kirk McDonald dataset format)
         │
         ▼
 src/factorio/    ◄── only place that touches raw JSON
@@ -212,13 +172,13 @@ Open issues track ready-to-work tasks — see [issues](https://github.com/TheBra
 
 ## Updating Game Data
 
-The datasets in [`data/`](data/) are JSON dumps from the game generated by `factoriodump` (from the [factorio-tools](https://github.com/KirkMcDonald/factorio-tools) repository). When a new Factorio patch or expansion drops:
+The datasets in [`data/`](data/) and sprite sheets in [`images/`](images/) are kept verbatim from upstream so they can be refreshed in place when Factorio patches drop. They're generated by `factoriodump` (from the [factorio-tools](https://github.com/KirkMcDonald/factorio-tools) repository). The in-tree `dump.lua` and `process_data.py` are the legacy data-extraction scripts and are preserved for the same reason.
+
+When a new Factorio patch or expansion drops:
 
 1. Run `factoriodump` against your installed game + mods to produce a new `<name>-<version>.json`.
 2. Drop it into `data/`.
 3. The dataset picker in the UI auto-discovers any JSON in that directory.
-
-Sprite sheets are regenerated by the same tool and live in `images/`.
 
 ## Contributing
 
@@ -226,18 +186,17 @@ PRs welcome. Please:
 
 1. Open an issue first if it's a meaningful change — let's talk through scope before you spend a weekend on it.
 2. `cd app && npm install && npm test && npm run test:e2e` should all pass.
-3. Match the existing code style — TS strict, no `any`, no raw Kirk-JSON access outside `src/factorio/`.
-4. New features go in `app/`; the classic UI at `/` is preserved as Kirk shipped it — only additive SEO meta tags have been added to `calc.html`.
+3. Match the existing code style — TS strict, no `any`, no raw dataset-JSON access outside `src/factorio/`.
 
 If you're not sure where to start, look for `good first issue` labels.
 
 ## Credits & Lineage
 
-This is a fork of [**Kirk McDonald's Factorio Calculator**](https://github.com/KirkMcDonald/kirkmcdonald.github.io) — the canonical Factorio production-ratio calculator that the whole community has relied on for nearly a decade. The classic UI is preserved at `/` and remains 100% Kirk's work.
+This project stands on the shoulders of [**Kirk McDonald's Factorio Calculator**](https://github.com/KirkMcDonald/kirkmcdonald.github.io) — the canonical Factorio production-ratio calculator that the whole community has relied on for nearly a decade. The dataset format, the game-data extraction pipeline (`dump.lua`, `process_data.py`), and the underlying ratio math all originate from Kirk's work.
 
 If this calculator has saved you spreadsheet time, **please consider supporting Kirk's work** on [his Patreon](https://www.patreon.com/kirkmcdonald) — he built the foundation everything here stands on.
 
-The React rewrite at `/app/`, the multi-target solver, the new visualizations, the schematic view, and all CI/Docker tooling are by [@TheBranchDriftCatalyst](https://github.com/TheBranchDriftCatalyst).
+The React rewrite, the multi-target solver, the new visualizations, the schematic view, and all CI/Docker tooling are by [@TheBranchDriftCatalyst](https://github.com/TheBranchDriftCatalyst).
 
 ## License
 

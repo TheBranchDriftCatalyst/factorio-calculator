@@ -33,42 +33,12 @@ jobs:
       - name: Build app
         working-directory: app
         env:
-          VITE_BASE: /${{ github.event.repository.name }}/app/
+          VITE_BASE: /${{ github.event.repository.name }}/
         run: npm run build
-
-      - name: Assemble site
-        run: |
-          mkdir -p _site
-          # Copy the legacy kirkmcdonald static site at the root, excluding
-          # the React app source, scratch files, and dev-only directories.
-          rsync -a \
-            --exclude='app/' \
-            --exclude='.github/' \
-            --exclude='.git/' \
-            --exclude='.beads/' \
-            --exclude='.claude/' \
-            --exclude='.playwright-mcp/' \
-            --exclude='.dolt/' \
-            --exclude='.agents/' \
-            --exclude='.codex/' \
-            --exclude='scripts/' \
-            --exclude='docs/' \
-            --exclude='posts/' \
-            --exclude='AGENTS.md' \
-            --exclude='CLAUDE.md' \
-            --exclude='Dockerfile' \
-            --exclude='.dockerignore' \
-            --exclude='.gitignore' \
-            --exclude='*.md' \
-            ./ _site/
-          # Place the built React app under /app/ so it deploys to
-          # /<repo>/app/ alongside the legacy site at /<repo>/.
-          mkdir -p _site/app
-          cp -R app/dist/. _site/app/
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: app/dist
 
   deploy:
     needs: build
